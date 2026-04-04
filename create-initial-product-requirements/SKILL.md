@@ -165,13 +165,3 @@ Once the user confirms your understanding, generate the PRD:
 8. **Cross-reference.** Ensure `dependencies`, `context_refs`, and `architecture_refs` are consistent. Every referenced ID must exist. Inline ID references in description text should also be valid.
 9. **Validate** the generated PRD against the schema for structural correctness.
 
----
-
-## TODOs
-
-Items for future enhancement of this skill and its supporting infrastructure:
-
-- **`references/cli-design-guide.md`**: A comprehensive CLI design conventions document to be linked from context items. Should cover exit code conventions, flag naming, stdin/stdout contracts, error output formatting, and composability patterns.
-- **`scripts/validate-prd.sh`**: Schema validation script that checks a PRD file against `assets/prd-schema.json` using a JSON Schema validator (e.g. `ajv`). Should report structural errors and warn on missing cross-references.
-- **`scripts/check-consistency.sh`**: Consistency checker that verifies all ID cross-references (dependencies, context_refs, architecture_refs, inline ID mentions in description text) point to existing items.
-- **`scripts/validate-diagrams.sh`**: Validates that architecture diagram files referenced by `diagram_file` fields exist and are parseable by their respective tools (Mermaid CLI, PlantUML).
