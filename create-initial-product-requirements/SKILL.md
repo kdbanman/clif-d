@@ -111,7 +111,15 @@ A condensed summary of the product concept, with a `reference_link` to the full 
 
 Shared context items that inform or constrain multiple requirements. Each has an `id`, `title`, `description`, `type`, and optional `reference_link`.
 
-The `type` field is a **freeform string** — choose whatever fits the project. Do not force context into predetermined categories. Common types include things like `non_functional`, `constraint`, `persona`, `domain`, `convention`, `assumption`, but use whatever is natural.
+The `type` field is an enum with five values, each implying a different focus during interrogation and documentation:
+
+- **`non_functional`**: Broad quality attributes — performance, security, accessibility, reliability. State measurable thresholds and rationale.
+- **`constraint`**: Non-negotiable solution boundaries — tech mandates, platform targets, compliance, resource limits. State the constraint, its source, and design impact.
+- **`persona`**: A user type whose workflows shape requirements. Specific enough for acceptance criteria to reference meaningfully.
+- **`domain`**: Core concepts, entities, relationships, terminology. The shared glossary and entity model for the PRD.
+- **`product_goal`**: High-level objectives from the concept document — the "why" behind groups of requirements. Maintains traceability from implementation to purpose.
+
+See `assets/prd-schema.json` for full documentation of each type and its expected documentation style.
 
 Context items exist to **avoid repetition** in requirements. If a constraint applies to many requirements, make it a context item and reference it by ID, rather than restating it in each requirement's description.
 
