@@ -1,0 +1,282 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Product Requirements Document (PRD)",
+  "description": "A flat, behavior-focused product requirements document structured for CLI-First Decomposition (CLIF-D). Requirements are not hierarchical — high-level and low-level requirements coexist as peers, differentiated by abstraction_level, and linked via explicit dependency and context references. This schema is self-documenting: every field includes a description explaining its purpose, type expectations, and usage guidance.",
+  "type": "object",
+  "required": ["$schema", "product_name", "concept_summary", "context", "architecture", "requirements"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema file from the PRD file. Serves two purposes: (1) enables machine validation of the PRD, and (2) makes the PRD self-documenting by pointing the reader to full field definitions."
+    },
+    "product_name": {
+      "type": "string",
+      "description": "The name of the product or system being specified."
+    },
+    "concept_summary": {
+      "type": "object",
+      "description": "A condensed summary of the product concept that this PRD elaborates into requirements. Links to the full concept document for traceability. This is the starting context — the 'why this product exists' — not a requirement itself.",
+      "required": ["description", "reference_link"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "A concise summary of the product concept: the functionality gap it fills, the value proposition, and why it's newly possible (e.g. due to LLMs or other enablers). Should be self-contained enough to orient a reader who hasn't read the full concept document."
+        },
+        "reference_link": {
+          "type": "string",
+          "description": "Path to the full product concept document (project-local file path or HTTP URL). This is the authoritative source for the product vision."
+        }
+      },
+      "additionalProperties": false
+    },
+    "context": {
+      "type": "array",
+      "description": "Shared context items that inform or constrain multiple requirements but are not requirements themselves. Examples include non-functional constraints, user personas, domain definitions, platform targets, or product goals. Requirements reference these by ID via context_refs, avoiding repetition and keeping requirements focused on behavior.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "description", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^CTX-\\d{3}$",
+            "description": "Unique identifier for this context item. Format: CTX-NNN (e.g. CTX-001). Used by requirements to reference this context via context_refs."
+          },
+          "title": {
+            "type": "string",
+            "description": "A short, descriptive title for this context item."
+          },
+          "description": {
+            "type": "string",
+            "description": "The substance of the context item. Should be detailed enough that a requirement referencing it by ID doesn't need to repeat the information. For constraints, state the constraint and why it exists. For personas, describe the user and their relevant characteristics. For domain definitions, explain the concept and its boundaries."
+          },
+          "type": {
+            "type": "string",
+            "description": "A freeform short descriptor for the kind of context this represents. Not constrained to an enum — choose whatever fits the project. Examples: 'non_functional', 'constraint', 'persona', 'domain', 'product_goal', 'convention', 'assumption', 'external_dependency'. The value should help readers quickly filter and categorize context items."
+          },
+          "reference_link": {
+            "type": "string",
+            "description": "Optional. A project-local file path or HTTP URL pointing to more detailed information about this context item. Use when the context has an authoritative external source (e.g. a design system spec, a regulatory document, a CLI conventions guide)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "architecture": {
+      "type": "array",
+      "description": "Architectural descriptions scoped to what is necessary to support CLI-First Decomposition (CLIF-D). Each item describes a subsystem, boundary, or structural relationship at a level informed by the C4 model (Context, Container, Component). Architecture items should only be specified as far as needed to make the CLIF-D decomposition clear — do not over-specify. Requirements reference these by ID via architecture_refs.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "description", "level"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ARCH-\\d{3}$",
+            "description": "Unique identifier for this architecture item. Format: ARCH-NNN (e.g. ARCH-001). Used by requirements to reference this architecture via architecture_refs."
+          },
+          "title": {
+            "type": "string",
+            "description": "A short, descriptive title for this architecture element (e.g. 'Data Ingestion Subsystem', 'CLI-to-Core Boundary')."
+          },
+          "description": {
+            "type": "string",
+            "description": "A prose description of this architectural element: what it is, what responsibility it has, what boundaries it defines, and how it relates to other elements. Focus on contracts and responsibilities, not implementation details."
+          },
+          "level": {
+            "type": "string",
+            "enum": ["context", "container", "component"],
+            "description": "The C4 model abstraction level of this architecture element. 'context': the system and its external actors/dependencies (C4 Level 1). 'container': major deployable/runnable units within the system (C4 Level 2). 'component': internal modules or structural groupings within a container (C4 Level 3). Most PRDs should only need context and container levels."
+          },
+          "diagram_file": {
+            "type": "string",
+            "description": "Optional. Relative path to a generated architecture diagram file (e.g. 'architecture/system-context.mmd'). Diagrams should use a human-readable textual syntax (Mermaid or PlantUML) and be concise — they supplement the prose description, not replace it."
+          },
+          "reference_link": {
+            "type": "string",
+            "description": "Optional. A project-local file path or HTTP URL to additional architectural documentation or external system specs."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "description": "A flat list of functional requirements at two abstraction levels. High-level requirements form a COMPLETE picture of the system's intended behavior. Low-level requirements form a PARTIAL picture — only the clear first steps are specified; the rest are deferred to future planning. Requirements are peers, not parent-child. Linkage is via explicit dependencies and context_refs. Field order within each requirement object should be: id, description, title, acceptance_criteria, priority, dependencies, abstraction_level, context_refs, architecture_refs, cli_spec.",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "title", "acceptance_criteria", "abstraction_level"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^REQ-\\d{3}$",
+            "description": "Unique identifier for this requirement. Format: REQ-NNN (e.g. REQ-001). Referenced by other requirements via dependencies, and used for traceability."
+          },
+          "description": {
+            "type": "string",
+            "description": "The motivating context and substance of the requirement. For high-level requirements, this should be rich with context: why this behavior matters, what user problem it solves, what happens without it. For low-level requirements, this should provide enough context that the requirement is understandable in isolation, linking to other requirements or context items where needed to avoid repetition."
+          },
+          "title": {
+            "type": "string",
+            "description": "A concise, descriptive title summarizing the requirement (e.g. 'User Authentication via OAuth', 'CSV Export with Configurable Delimiters')."
+          },
+          "acceptance_criteria": {
+            "description": "How to verify this requirement is satisfied. Format depends on abstraction_level:\n\n- HIGH-LEVEL: A prose string describing what 'done' looks like. Aim for verifiable criteria, but accept that some ambiguity is inevitable at this level. A slightly ambiguous acceptance criterion is better than none.\n\n- LOW-LEVEL: A structured object with 'given', 'when', 'then' fields (Given-When-Then / BDD style). Each field is a string. This format ensures unambiguous, testable acceptance criteria.\n\nExamples:\n  High-level (string): \"Users can authenticate with at least two OAuth providers and maintain sessions across browser restarts.\"\n  Low-level (object): { \"given\": \"A valid OAuth token from a supported provider\", \"when\": \"The user runs `auth login --provider=github`\", \"then\": \"A session token is stored locally and the CLI prints the authenticated username to stdout\" }",
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Prose acceptance criteria for high-level requirements."
+              },
+              {
+                "type": "object",
+                "description": "Structured Given-When-Then acceptance criteria for low-level requirements.",
+                "required": ["given", "when", "then"],
+                "properties": {
+                  "given": {
+                    "type": "string",
+                    "description": "The precondition or initial state before the behavior occurs."
+                  },
+                  "when": {
+                    "type": "string",
+                    "description": "The action or trigger that initiates the behavior."
+                  },
+                  "then": {
+                    "type": "string",
+                    "description": "The expected outcome or observable result. Should be unambiguously verifiable."
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional. Relative priority of this requirement. 1 is the highest priority. Requirements without a priority are unranked, not low-priority."
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^REQ-\\d{3}$"
+            },
+            "description": "Optional. IDs of other requirements that must be satisfied before this one can be implemented. These are hard dependencies — blocking relationships. For non-blocking relationships (additional context, related reading), reference the other requirement by ID inline in the description field instead."
+          },
+          "abstraction_level": {
+            "type": "string",
+            "enum": ["high", "low"],
+            "description": "Whether this is a high-level or low-level requirement. 'high': Part of the complete picture of system behavior. Richer motivating context, prose acceptance criteria, may be slightly ambiguous. 'low': A specific, implementable behavior. Part of the partial picture — only clear first steps. Uses structured Given-When-Then acceptance criteria, must be unambiguously verifiable."
+          },
+          "context_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^CTX-\\d{3}$"
+            },
+            "description": "Optional. IDs of context items that inform or constrain this requirement. Avoids repeating shared context (e.g. personas, constraints, conventions) in every requirement."
+          },
+          "architecture_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^ARCH-\\d{3}$"
+            },
+            "description": "Optional. IDs of architecture items that this requirement relates to (e.g. the subsystem it belongs to, the boundary it defines behavior for)."
+          },
+          "cli_spec": {
+            "type": "object",
+            "description": "Optional. CLI specification for this requirement, following CLI-First Decomposition (CLIF-D). A requirement may define a new CLI tool, add a command to an existing tool, or specify behavior of an existing command. Should be included everywhere a CLI surface is meaningful — which, under CLIF-D, is most requirements.",
+            "properties": {
+              "tool_name": {
+                "type": "string",
+                "description": "The name of the CLI tool (e.g. 'mytool'). A requirement may introduce a new tool or add to one defined by a previous requirement."
+              },
+              "command": {
+                "type": "string",
+                "description": "The command and optional subcommand structure (e.g. 'auth login', 'export csv'). Use the 'tool command [subcommand]' convention."
+              },
+              "arguments": {
+                "type": "array",
+                "description": "Positional arguments for this command.",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "description", "required"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Argument name as it appears in usage help."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "What this argument represents and any validation constraints."
+                    },
+                    "required": {
+                      "type": "boolean",
+                      "description": "Whether this argument is required."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "flags": {
+                "type": "array",
+                "description": "Named flags/options for this command.",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "description"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The long flag name with -- prefix (e.g. '--output', '--verbose')."
+                    },
+                    "short": {
+                      "type": "string",
+                      "description": "Optional single-character short flag (e.g. '-o', '-v')."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "What this flag controls, its default value, and any validation."
+                    },
+                    "default": {
+                      "type": "string",
+                      "description": "Optional. The default value if the flag is not provided."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "usage_help": {
+                "type": "string",
+                "description": "Optional. The expected output of 'tool command -h'. A concise specification of how the command presents itself."
+              },
+              "stdin": {
+                "type": "string",
+                "description": "Optional. Description of expected stdin behavior. What input the command reads from stdin, if any, and in what format."
+              },
+              "stdout": {
+                "type": "string",
+                "description": "Description of what the command writes to stdout on success. Include format (e.g. JSON, plain text, CSV) and structure."
+              },
+              "stderr": {
+                "type": "string",
+                "description": "Description of what the command writes to stderr. Typically error messages, warnings, or progress information."
+              },
+              "exit_codes": {
+                "type": "object",
+                "description": "Map of exit code integers (as strings) to their meanings. At minimum, define '0' (success) and '1' (general error).",
+                "patternProperties": {
+                  "^\\d+$": {
+                    "type": "string",
+                    "description": "Human-readable description of what this exit code means."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,19 @@
+%% Example Mermaid C4 Context Diagram
+%% This is a template showing the expected style and conciseness.
+%% Diagrams should be human-readable, brief, and supplement prose — not replace it.
+%% Use C4 diagram types matching the architecture item's level:
+%%   context  -> C4Context
+%%   container -> C4Container
+%%   component -> C4Component
+
+C4Context
+    title System Context - Data Pipeline Tool
+
+    Person(analyst, "Data Analyst", "Runs pipelines via CLI")
+    System(pipeline, "pipeline-tool", "CLI tool for data transformation pipelines")
+    System_Ext(warehouse, "Data Warehouse", "Source and destination for datasets")
+    System_Ext(scheduler, "Cron / Task Scheduler", "Triggers scheduled pipeline runs")
+
+    Rel(analyst, pipeline, "Defines and runs pipelines")
+    Rel(pipeline, warehouse, "Reads from / writes to")
+    Rel(scheduler, pipeline, "Invokes on schedule")
