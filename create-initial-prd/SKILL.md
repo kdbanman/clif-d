@@ -1,8 +1,8 @@
 ---
-name: initial-product-requirements
+name: create-initial-prd
 description: >
   Generate an initial Product Requirements Document (PRD) from a product concept document.
-  Use this skill when the user has a product concept (from the product-concept skill or equivalent)
+  Use this skill when the user has a product concept (from the create-product-concept skill or equivalent)
   and wants to develop it into structured, actionable requirements. Conducts a focused interrogation
   to understand workflows, system boundaries, constraints, entities, and priorities, performs web
   research to ground technical and domain decisions, then produces a JSON PRD following CLI-First
@@ -36,6 +36,8 @@ CLIF-D applies at both high-level and low-level requirements. A requirement may 
 If the product will eventually have other interfaces (API, GUI, TUI), those are **separate concerns to be specified later**. The PRD focuses on the CLI surface first. This is a hard constraint.
 
 **Push CLIF-D everywhere a CLI surface is meaningful** — which is most requirements. When a requirement genuinely cannot be expressed as a CLI interaction (rare), omit the `cli_spec` field, but consider hard whether that's really the case.
+
+Consult `references/cli-design-guide.md` when specifying `cli_spec` fields — it defines conventions for exit codes, arguments, flags, stdin/stdout behavior, and other CLI design patterns that requirements should follow.
 
 ### Two levels of requirements
 
