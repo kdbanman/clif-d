@@ -131,7 +131,7 @@ Architectural descriptions at C4 model levels (context, container, component). E
 
 **Critical constraint: architecture should only be specified as far as necessary to support the CLIF-D decomposition.** Do not produce architecture for its own sake. Ask: "Does this architectural element help clarify which CLI tool(s) exist, what their responsibilities are, or how they interact?" If not, leave it out.
 
-When architecture diagrams are helpful, generate them as Mermaid (`.mmd`) files in an `architecture/` subdirectory alongside the PRD file. See `assets/architecture-diagram-example.mmd` for the expected style — **concise and human-readable**. Diagrams supplement prose, not replace it.
+When architecture diagrams are helpful, generate them as Mermaid (`.mmd`) files in `clif-d/architecture/` alongside the PRD file. See `assets/architecture-diagram-example.mmd` for the expected style — **concise and human-readable**. Diagrams supplement prose, not replace it.
 
 ### `requirements`
 
@@ -157,7 +157,7 @@ The core of the PRD. A flat array of requirements, each with fields in this orde
 
 Once the user confirms your understanding, generate the PRD:
 
-1. **Name the output file** using the convention `prd-<product-name>.json` (kebab-case), placed in the current working directory.
+1. **Name the output file** `prd.json`, placed in the project's `clif-d/` directory (at the root of the product repository). Create the directory if it does not yet exist. See the README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
 2. **Set `$schema`** to the relative path from the PRD file to `assets/prd-schema.json`.
 3. **Write `concept_summary`** by condensing the product concept document. Include the `reference_link` to the original concept file.
 4. **Write `context` items.** Derive these from the interrogation — constraints, personas, conventions, domain definitions. Assign IDs as `CTX-001`, `CTX-002`, etc.

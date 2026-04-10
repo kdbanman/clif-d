@@ -32,6 +32,82 @@ create-product-concept
                                                             └──▶ implement-plan  (repeats per plan)
 ```
 
+## The `clif-d/` directory
+
+All CLIF-D artifacts for a given product live in a single `clif-d/` directory at the root of the product repository. This directory is version-controlled alongside the code.
+
+### Layout
+
+```
+<product-repo>/
+  clif-d/
+    concept.md              # create-product-concept
+    prd.json                # create-initial-prd (living document)
+    architecture.md         # create-architecture
+    architecture/           # create-architecture (diagram files, optional)
+      *.mmd
+    backpressure.md         # design-backpressure
+    plans/
+      active/               # plan-requirement writes here
+        plan-REQ-NNN.md
+      archive/              # compact-planning-artifacts moves completed plans here
+        ...
+  QUALITY.md                # design-backpressure (practitioner-facing, at repo root)
+  <source code, tests, configs...>
+```
+
+The design documents (concept, PRD, architecture, backpressure) live inside `clif-d/`. The backpressure skill also writes a `QUALITY.md` at the repo root because it is practitioner-facing developer documentation, not a design artifact.
+
+### Artifact precedence and lifecycle
+
+Artifacts are listed here in **order of authority**. When two artifacts disagree, the earlier one takes precedence unless the later one has explicitly superseded it:
+
+1. **`concept.md`** — *Why this product exists.* Written once, changes rarely. Updated only when the product's fundamental purpose shifts.
+2. **`prd.json`** — *What the product does.* **Living document.** Grows continuously as implementation progresses and low-level requirements are added (the "bow wave"). Represents the current agreed-upon behavior of the system.
+3. **`architecture.md`** — *How the product is structured.* Updated when structural decisions change. New scaffolding requirements are added to `prd.json` when the architecture document is generated.
+4. **`backpressure.md`** — *What quality standards the product enforces.* Updated when guardrails change. Every change should be a deliberate, documented decision — relaxations especially.
+5. **`plans/active/*.md`** — *How specific requirements will be implemented.* Short-lived. Each plan targets a set of requirements and is consumed by `implement-plan`. After implementation is complete, plans are moved to `plans/archive/` by `compact-planning-artifacts`.
+6. **`plans/archive/*.md`** — *Historical record of what was implemented and how.* Compacted to preserve traceability (requirement IDs, commit SHAs, acceptance criteria verification) without keeping the full step-by-step detail.
+
+### The PRD as a living document
+
+The PRD (`clif-d/prd.json`) is the most operationally important artifact and deserves special attention. It is a **living document** — it grows and evolves throughout the project's life. High-level requirements are written early and change rarely. Low-level requirements are added continuously, as the "bow wave" of planning detail stays just ahead of the implementation ship.
+
+#### Principles
+
+- **The PRD tracks the state of implementation.** It is kept in sync with what has been built and what is next. It is not a snapshot from a kickoff meeting.
+- **High-level requirements form a complete picture.** They describe the whole system's intended behavior. They are rich with motivating context and may be slightly ambiguous.
+- **Low-level requirements form a partial picture.** Only the clear first steps are specified at any given time. Future planning fills in more low-level detail as needed — the bow wave metaphor from `create-initial-prd`.
+- **Text and documentation are executable infrastructure.** In the age of language models, a well-structured PRD is not a dead deliverable — it is a source of truth that agents read, reason about, and act on. Its structure matters because structure is what makes it machine-readable.
+- **Version control the PRD.** It lives in the repo because it must evolve in lockstep with the code. A PR that changes behavior should, when appropriate, also update the PRD. This is the only way to keep the two aligned.
+
+#### Benefits of living in the repo
+
+- **Single source of truth.** The PRD, the code, and the tests all travel together. A clone of the repo contains everything needed to understand and work on the product.
+- **Atomic changes.** A feature and its specification change in the same commit, reviewed together.
+- **Diffable history.** Git log shows how the product's intended behavior has evolved over time.
+- **Agent-accessible.** Agents working in the repo can read the PRD without any external integration.
+- **No synchronization lag.** Unlike an external spec tool, there is no gap between "what the spec says" and "what the latest version of the spec says."
+
+#### Drawbacks and what the PRD is NOT for
+
+The PRD's in-repo nature makes it unsuitable for certain coordination tasks:
+
+- **Cross-machine coordination.** Two developers (or agents) working in parallel on separate branches cannot use the PRD to coordinate who is doing what. Git will merge edits, but it will not prevent two people from starting work on the same requirement.
+- **Work assignment and claiming.** The PRD does not know who is working on what. It has no concept of "in progress by X" that survives across machines.
+- **Stakeholder and product-manager dashboards.** Stakeholders who are not working in the repo need a view into progress. The PRD is not that view — it is a source document, not a dashboard.
+- **External discussions.** Comments, questions, and debate about requirements do not belong in the PRD. They belong in an issue tracker or a design document.
+- **Scale beyond a single product.** The PRD covers one product per repo. Multi-product coordination needs to happen elsewhere.
+
+These use cases require **external, synchronized systems** — issue trackers (Linear, Jira, GitHub Issues), project management tools, communication platforms — and there will be **some degree of duplication** between those systems and the in-repo PRD. That duplication is acceptable: each system serves a different purpose. The in-repo PRD is the authoritative specification. The external system is the coordination layer. Keep them aligned, but do not conflate them.
+
+### Why `clif-d/` at the repo root
+
+- **Discoverability.** An agent or developer cloning the repo sees `clif-d/` immediately and knows where to look for design artifacts.
+- **Atomicity.** Code changes and design changes can be committed together.
+- **No path surprises.** Every CLIF-D skill knows the layout; no search or configuration is needed to find the PRD or architecture document.
+- **Separation from implementation.** Keeping design artifacts in a single subdirectory makes it easy to exclude them from search, build processes, or deployment artifacts if desired.
+
 ## Deployment
 
 This repo is a Claude Code plugin and marketplace. Skills are namespaced as `clif-d:<skill-name>` once installed.
@@ -63,8 +139,8 @@ The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalo
 
 ### Gaps in the initial/bootstrap phase
 
-- [ ] **Repo scaffolding skill** — there's currently no skill that initializes the empty product repo from the architecture document's decisions (package manifest, directory skeleton, git init, etc.). Falls into a gap between `create-architecture` and `design-backpressure`. Could be its own skill (`scaffold-repo`?) or folded into `design-backpressure`'s setup step.
-- [ ] **Design artifact location convention** — no skill has an opinion on where the concept/PRD/architecture/backpressure docs live relative to the product repo (inside the repo? sibling directory? separate docs repo?). Needs to be decided and enforced across skills before consistency-checking and `CLAUDE.md`-alignment skills can work reliably.
+- [x] **Repo scaffolding** — `create-architecture` now appends scaffolding requirements (package manifest, directory skeleton, baseline dependencies, test runner, minimal CLI entry point) to the PRD as low-level requirements. These flow through the standard `design-backpressure` → `plan-requirement` → `implement-plan` pipeline so scaffolding code is written to the same quality standards as feature code.
+- [x] **Design artifact location convention** — all CLIF-D artifacts live in `clif-d/` at the product repo root. See the "The `clif-d/` directory" section above for the full layout, lifecycle, and precedence rules.
 
 ### Continued execution phase
 

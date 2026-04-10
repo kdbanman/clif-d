@@ -109,7 +109,9 @@ Keep interrogation minimal. Prefer making reasonable assumptions (stated explici
 
 ## Output Structure
 
-The output is a Markdown file saved as `plan-<requirement-ids>.md` in the current working directory (e.g., `plan-REQ-003.md` or `plan-REQ-003-REQ-007.md` for multiple requirements).
+The output is a Markdown file saved as `clif-d/plans/active/plan-<requirement-ids>.md` in the product repository (e.g., `clif-d/plans/active/plan-REQ-003.md` or `clif-d/plans/active/plan-REQ-003-REQ-007.md` for multiple requirements). Create the `clif-d/plans/active/` directory if it does not yet exist. See the README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
+
+Active plans live in `clif-d/plans/active/`. Completed plans are moved to `clif-d/plans/archive/` by the future `compact-planning-artifacts` skill — this skill should not move or archive plans itself.
 
 ### Header
 
@@ -213,7 +215,7 @@ Any assumptions made during planning that the implementer should be aware of. An
 
 Once you've explored the codebase and resolved any ambiguities:
 
-1. **Name the output file** using the convention `plan-<requirement-ids>.md` (e.g., `plan-REQ-003.md`), placed in the current working directory.
+1. **Name the output file** using the convention `clif-d/plans/active/plan-<requirement-ids>.md` (e.g., `clif-d/plans/active/plan-REQ-003.md`) in the product repository. Create the directory if it does not yet exist.
 2. **Write the plan** following the output structure above.
 3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section. Every architecture element referenced by the requirements should appear in the Context Summary.
 4. **Verify completeness**: every file mentioned in Implementation Steps should appear in the Files Created or Modified summary. Every test mentioned should have a corresponding implementation step.

@@ -134,9 +134,9 @@ This skill produces **two categories of output**: a design document (the durable
 
 ---
 
-### Output 1: Design Document — `backpressure-<product-name>.md`
+### Output 1: Design Document — `clif-d/backpressure.md`
 
-A Markdown document saved in the current working directory alongside the other design artifacts (concept doc, PRD, architecture doc). This is the **authoritative record** of what quality guardrails were chosen, why, and what was deliberately relaxed.
+A Markdown document saved as `clif-d/backpressure.md` in the product repository, alongside the other design artifacts (concept, PRD, architecture). This is the **authoritative record** of what quality guardrails were chosen, why, and what was deliberately relaxed. See the README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
 
 #### Structure
 
@@ -265,7 +265,7 @@ The pre-commit hook should:
 
 Once the user confirms the plan:
 
-1. **Generate the design document** (`backpressure-<product-name>.md`) in the current working directory, following the structure above.
+1. **Generate the design document** at `clif-d/backpressure.md` in the product repository, following the structure above. Create the `clif-d/` directory if it does not yet exist.
 2. **Wait for user confirmation** of the design document before generating implementation artifacts.
 3. **Generate configuration files** for each tool, placed at their conventional locations in the product repository.
 4. **Generate the setup script** or `Makefile` targets.

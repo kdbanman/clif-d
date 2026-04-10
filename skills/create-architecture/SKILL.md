@@ -95,7 +95,12 @@ How are dependencies pinned? What's the update strategy? How are internal depend
 
 ## Output Structure
 
-The output is a **Markdown document** with Mermaid diagrams, saved as `architecture-<product-name>.md` in the current working directory.
+This skill produces **two outputs**:
+
+1. **A Markdown architecture document** with Mermaid diagrams, saved as `clif-d/architecture.md` in the product repository. This is the primary design artifact.
+2. **Scaffolding requirements appended to the PRD.** After the architecture is decided, enough is known to specify the concrete scaffolding work that must happen before any feature implementation — initializing the package manifest, creating the directory skeleton, adding baseline dependencies, wiring up the test runner, creating a minimal CLI entry point. These become **low-level requirements** added to `clif-d/prd.json`, which flow naturally through `plan-requirement` and `implement-plan` like any other low-level requirement.
+
+The architecture document structure below describes Output 1. The "Generation process" section describes how to produce both outputs.
 
 ### 1. Overview
 
@@ -205,8 +210,41 @@ A reference table linking architecture decisions back to PRD items:
 
 Once the user confirms your understanding:
 
-1. **Name the output file** using the convention `architecture-<product-name>.md` (kebab-case), placed in the current working directory.
+### Part A: Generate the architecture document
+
+1. **Name the output file** `architecture.md`, placed in the product repository's `clif-d/` directory. Create the directory if it does not yet exist. See the README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
 2. **Generate all sections** following the output structure above.
-3. **Generate Mermaid diagrams** as code blocks within the markdown document. Use C4Component diagrams for module decomposition and sequence/flowchart diagrams for data flow.
+3. **Generate Mermaid diagrams** as code blocks within the markdown document. Use C4Component diagrams for module decomposition and sequence/flowchart diagrams for data flow. Separate `.mmd` files (if used) go in `clif-d/architecture/`.
 4. **Cross-reference PRD items** by their IDs (ARCH-*, REQ-*, CTX-*) throughout the document.
 5. **Review for completeness**: every CLI tool from the PRD should appear in the CLI-to-Module Mapping. Every architectural component from the PRD should be decomposed at the code level.
+
+### Part B: Add scaffolding requirements to the PRD
+
+After the architecture is settled, the concrete scaffolding work is now fully specifiable. Append low-level requirements to `clif-d/prd.json` that capture this work, so the standard `plan-requirement` → `implement-plan` cycle will execute it as the first rounds of implementation. These are not part of the architecture document — they live in the PRD like any other requirement.
+
+**What scaffolding requirements typically cover:**
+
+- **Package manifest initialization**: Creating `Cargo.toml` / `package.json` / `pyproject.toml` / `go.mod` with the decided name, version, and baseline dependencies.
+- **Directory skeleton**: Creating the directories specified in the architecture document's Repository Structure section (empty or with placeholder files).
+- **Baseline dependencies**: Installing the core libraries chosen in the Technology Decisions table (CLI argument parser, serialization library, test framework).
+- **Test runner wiring**: Ensuring the chosen test framework is installed and a trivial test passes end-to-end.
+- **Minimal CLI entry point**: A "hello world" invocation of the primary CLI tool that exits successfully — enough to verify the argument parser, entry point, and build pipeline all work.
+- **Build verification**: A command that builds the project from scratch and succeeds.
+
+**How to write them:**
+
+- Use `abstraction_level: "low"` with structured Given-When-Then acceptance criteria — scaffolding work is concrete and must be unambiguously verifiable.
+- Assign new IDs continuing the PRD's existing sequence (`REQ-NNN`).
+- Set `architecture_refs` to the relevant ARCH items (repository structure, technology decisions).
+- Set `dependencies` to enforce ordering — package manifest before directory skeleton, directory skeleton before entry point, etc.
+- Use `priority: 1` — scaffolding blocks everything else.
+- Include a `cli_spec` where applicable (e.g., the minimal CLI entry point requirement should specify its command, stdout, stderr, and exit codes).
+
+**Important:** Do not perform the scaffolding yourself. The purpose of this step is to *specify* the scaffolding as requirements, so it flows through the standard backpressure → plan → implement pipeline. This ensures scaffolding code is written to the same quality standards as feature code and is covered by tests from day one.
+
+### Part C: Confirm
+
+Report to the user:
+- That `clif-d/architecture.md` has been written
+- How many scaffolding requirements were appended to the PRD (with their IDs and titles)
+- The recommended next step: run `design-backpressure`, then `plan-requirement` on the scaffolding requirements
