@@ -166,6 +166,11 @@
             "enum": ["high", "low"],
             "description": "Whether this is a high-level or low-level requirement. 'high': Part of the complete picture of system behavior. Richer motivating context, prose acceptance criteria, may be slightly ambiguous. 'low': A specific, implementable behavior. Part of the partial picture — only clear first steps. Uses structured Given-When-Then acceptance criteria, must be unambiguously verifiable."
           },
+          "status": {
+            "type": "string",
+            "enum": ["not_started", "in_progress", "done", "blocked"],
+            "description": "Optional. Implementation lifecycle state of this requirement. Omitting this field is equivalent to 'not_started'. Use 'in_progress' when work has begun but is not complete. Use 'done' when all acceptance criteria are verifiably satisfied. Use 'blocked' when progress is prevented by an unresolved external factor (note the blocker in the description or a comment). This field is the primary mechanism for tracking living-document state — the PRD evolves as implementation progresses."
+          },
           "context_refs": {
             "type": "array",
             "items": {
