@@ -2,7 +2,7 @@
 
 ## What They Are
 
-An integration test verifies that two or more components work together correctly. It exercises the seams between units — the interfaces, contracts, and data flows that connect them.
+An integration test verifies that two or more components work together correctly. It exercises the seams between units -- the interfaces, contracts, and data flows that connect them.
 
 The term "integration test" is notoriously fuzzy. Fowler observes that its definition varies more than almost any other testing term. For this document: an integration test exercises a collaboration between components that a unit test, by design, does not cover. The components might be classes within a single service, a service and its database, an API layer and its business logic, or two microservices.
 
@@ -58,7 +58,7 @@ class UserRepository:
         return User(id=row[0], name=row[1], email=row[2])
 ```
 
-**Good integration tests** — each focused on one boundary behavior:
+**Good integration tests** -- each focused on one boundary behavior:
 
 ```python
 @pytest.fixture
@@ -97,8 +97,8 @@ def test_save_duplicate_email_raises_error(db):
 ```
 
 **Why this is good:**
-- Uses a real (in-memory) database — catches real SQL bugs like the UNIQUE constraint.
-- Each test gets a fresh database via the fixture — no shared state.
+- Uses a real (in-memory) database -- catches real SQL bugs like the UNIQUE constraint.
+- Each test gets a fresh database via the fixture -- no shared state.
 - Each test verifies one boundary behavior.
 - Tests are fast (in-memory SQLite) and deterministic (no external dependencies).
 - The third test verifies behavior that a mock-based test would completely miss.
@@ -108,7 +108,7 @@ def test_save_duplicate_email_raises_error(db):
 Suppose you have a web controller that calls a service layer:
 
 ```python
-# BAD — mocking the service and only verifying calls
+# BAD -- mocking the service and only verifying calls
 def test_create_user_endpoint():
     mock_service = Mock()
     mock_service.create_user.return_value = User(id="1", name="Alice")
@@ -126,7 +126,7 @@ def test_create_user_endpoint():
 This test verifies *call wiring*, not behavior. If `create_user` changes its parameter order, the test breaks without any real bug.
 
 ```python
-# GOOD — real service with fake database
+# GOOD -- real service with fake database
 def test_create_user_endpoint():
     db = create_test_db()
     service = UserService(UserRepository(db))
@@ -144,14 +144,14 @@ def test_create_user_endpoint():
     assert service.get_user_by_email("alice@example.com") is not None
 ```
 
-This test exercises the real controller→service→repository chain with an in-memory database. It verifies the full behavior: correct HTTP response *and* actual persistence.
+This test exercises the real controller-to-service-to-repository chain with an in-memory database. It verifies the full behavior: correct HTTP response *and* actual persistence.
 
 ## Type-Specific Pitfalls (with Examples)
 
 ### Pitfall: Scope Creep
 
 ```python
-# BAD — this is really an E2E test wearing an integration test's name
+# BAD -- this is really a broad-scope test wearing an integration test's name
 def test_full_checkout_flow():
     db = create_test_db()
     app = create_app(db)
@@ -162,12 +162,12 @@ def test_full_checkout_flow():
     # (50 lines of test code spanning 6 components)
 ```
 
-This test spans too many boundaries. If it fails, you don't know which boundary is broken. Break it into focused tests: controller→service, service→repository, service→emailer.
+This test spans too many boundaries. If it fails, you don't know which boundary is broken. Break it into focused tests: controller-to-service, service-to-repository, service-to-emailer.
 
 ### Pitfall: Testing Logic at the Wrong Level
 
 ```python
-# BAD — using an integration test for pure logic
+# BAD -- using an integration test for pure logic
 def test_discount_calculation():
     db = create_test_db()
     seed_data(db, users=[make_user(tier="gold")])
@@ -178,10 +178,10 @@ def test_discount_calculation():
     assert discount == 15.00
 ```
 
-The discount calculation is pure logic — it doesn't need a database. Test it as a unit test:
+The discount calculation is pure logic -- it doesn't need a database. Test it as a unit test:
 
 ```python
-# GOOD — unit test for the logic, integration test only for the DB interaction
+# GOOD -- unit test for the logic, integration test only for the DB interaction
 def test_gold_tier_discount():
     discount = calculate_discount(customer_tier="gold", subtotal=100.00)
     assert discount == 15.00
@@ -192,7 +192,7 @@ Save the integration test for verifying that the repository correctly retrieves 
 ### Pitfall: Shared Test Database
 
 ```python
-# BAD — tests share a database and interfere with each other
+# BAD -- tests share a database and interfere with each other
 db = create_test_db()  # shared across all tests
 
 def test_create_user():
@@ -202,12 +202,12 @@ def test_create_user():
 
 def test_count_users():
     repo = UserRepository(db)
-    # FRAGILE — depends on how many users previous tests created
+    # FRAGILE -- depends on how many users previous tests created
     assert repo.count() == 0  # fails because test_create_user already ran
 ```
 
 ```python
-# GOOD — each test gets a fresh database
+# GOOD -- each test gets a fresh database
 @pytest.fixture
 def repo():
     db = sqlite3.connect(":memory:")
@@ -220,7 +220,7 @@ def test_create_user(repo):
     assert repo.find_by_email("alice@example.com") is not None
 
 def test_empty_repo_has_no_users(repo):
-    assert repo.count() == 0  # always passes — fresh database
+    assert repo.count() == 0  # always passes -- fresh database
 ```
 
 ## Checklist
@@ -228,11 +228,11 @@ def test_empty_repo_has_no_users(repo):
 When writing or reviewing an integration test, verify:
 
 - [ ] **Focused boundary:** The test verifies a specific interaction between a specific pair of components, not the entire system. *(avoid scope creep)*
-- [ ] **Real over fake when possible:** Dependencies are real implementations unless they are slow, flaky, or impractical. *(Principles §11)*
-- [ ] **Minimal fixture:** Only the data/state needed for this specific interaction. *(Principles §7)*
-- [ ] **Isolated state:** Does not share mutable state with other tests. Each test gets a fresh database, clean file system, etc. *(Principles §12, Erratic Test)*
-- [ ] **Behavior-focused name:** Describes the cross-boundary behavior, not internal methods. *(Principles §5)*
-- [ ] **Arrange-Act-Assert:** Clear three-phase structure. *(Principles §4)*
-- [ ] **Reasonable speed:** Completes in seconds, not minutes. *(Principles §12, Slow Tests)*
-- [ ] **Correct layer:** The behavior genuinely requires an integration test. If it's pure logic, push it to a unit test. If it's a full user workflow, push it to E2E. *(Overview: prefer lowest-scope test)*
-- [ ] **State verification:** Asserts on observable outcomes (data in the database, response body), not on which internal methods were called. *(Principles §3)*
+- [ ] **Real over fake when possible:** Dependencies are real implementations unless they are slow, flaky, or impractical. *([Principles](./testing-principles.md) -- Test Doubles)*
+- [ ] **Minimal fixture:** Only the data/state needed for this specific interaction. *([Principles](./testing-principles.md) -- Make Tests Complete and Concise)*
+- [ ] **Isolated state:** Does not share mutable state with other tests. Each test gets a fresh database, clean file system, etc. *([Principles](./testing-principles.md) -- Test Smells, Erratic Test)*
+- [ ] **Behavior-focused name:** Describes the cross-boundary behavior, not internal methods. *([Principles](./testing-principles.md) -- Test Behaviors Not Methods)*
+- [ ] **Arrange-Act-Assert:** Clear three-phase structure. *([Principles](./testing-principles.md) -- Arrange Act Assert)*
+- [ ] **Reasonable speed:** Completes in seconds, not minutes. *([Principles](./testing-principles.md) -- Test Smells, Slow Tests)*
+- [ ] **Correct layer:** The behavior genuinely requires an integration test. If it's pure logic, push it to a [unit test](./testing-unit.md). *([Overview](./testing-overview.md): prefer lowest-scope test)*
+- [ ] **State verification:** Asserts on observable outcomes (data in the database, response body), not on which internal methods were called. *([Principles](./testing-principles.md) -- Test State Not Interactions)*

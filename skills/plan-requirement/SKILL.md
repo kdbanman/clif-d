@@ -220,3 +220,16 @@ Once you've explored the codebase and resolved any ambiguities:
 3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section. Every architecture element referenced by the requirements should appear in the Context Summary.
 4. **Verify completeness**: every file mentioned in Implementation Steps should appear in the Files Created or Modified summary. Every test mentioned should have a corresponding implementation step.
 5. **Review step granularity**: each step should be completable and verifiable in isolation. If a step depends on uncommitted work from a previous step, that's fine — but if a step can't be tested without completing the *next* step, the plan needs restructuring.
+
+---
+
+## Testing References
+
+This skill's references directory contains guidance on *choosing* test types, proportions, and structure when planning implementation steps. Consult them when deciding what kind of test to specify for a step, where test files should live, or how to map acceptance criteria to tests.
+
+- **Strategy**: [Testing strategy](references/testing-strategy.md) — pyramid vs. trophy vs. honeycomb, risk-based prioritization, test size vs. scope
+- **Test types**: [Testing types overview](references/testing-types.md) — what each type is, when to use it, scope boundaries (unit, integration, E2E, acceptance, smoke)
+- **Acceptance tests**: [Acceptance test guide](references/testing-acceptance.md) — full guidance on mapping business requirements to executable specifications
+- **Organization**: [Test organization](references/testing-organization.md) — file structure, naming conventions, test independence, fixture management
+
+These references focus on *planning* which tests to write and how to structure them. The plan specifies the tests; the implement-plan skill writes them. This skill does not need to explain how to write test code — the implementer has their own detailed references for that. Similarly, enforcement of test quality (pre-commit hooks, coverage gates) is the design-backpressure skill's domain.

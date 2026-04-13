@@ -1,13 +1,13 @@
 # Testing Cheat Sheet
 
-Pin this next to your editor. For full explanations and examples, see [Principles & Practices](./01-principles-and-practices.md).
+Pin this next to your editor. For full explanations and examples, see [Principles & Practices](./testing-principles.md).
 
 ---
 
 ## Before You Write a Test, Ask:
 
 1. **What behavior am I testing?** (Not: what method am I calling.)
-2. **What's the lowest test level that can verify this?** (Unit > Integration > E2E.)
+2. **What's the lowest test level that can verify this?** (Unit > Integration > broader scope.)
 3. **Would a user of this code care if this behavior changed?** If yes, test it. If no, you may be testing implementation details.
 
 ---
@@ -15,9 +15,9 @@ Pin this next to your editor. For full explanations and examples, see [Principle
 ## The Structure of Every Test
 
 ```
-Arrange  →  set up preconditions
-Act      →  do the ONE thing being tested
-Assert   →  verify the expected outcome
+Arrange  ->  set up preconditions
+Act      ->  do the ONE thing being tested
+Assert   ->  verify the expected outcome
 ```
 
 One Act step. One behavior. One test. Separate with blank lines.
@@ -57,10 +57,10 @@ One Act step. One behavior. One test. Separate with blank lines.
 ## Test Doubles: Preference Order
 
 ```
-1. Real implementation  ← best fidelity, use when fast and deterministic
-2. Fake                 ← lightweight working implementation (in-memory DB, fake emailer)
-3. Stub                 ← returns pre-programmed responses
-4. Mock                 ← records calls for assertion (use sparingly)
+1. Real implementation  <- best fidelity, use when fast and deterministic
+2. Fake                 <- lightweight working implementation (in-memory DB, fake emailer)
+3. Stub                 <- returns pre-programmed responses
+4. Mock                 <- records calls for assertion (use sparingly)
 ```
 
 ---
@@ -98,7 +98,7 @@ Examples:
 ## Coverage: What It Does and Doesn't Tell You
 
 - **Low coverage = untested code.** Investigate high-risk uncovered areas.
-- **High coverage ≠ good tests.** A test with no assertions achieves coverage but catches nothing.
+- **High coverage does not equal good tests.** A test with no assertions achieves coverage but catches nothing.
 - **Watch for drops**, not just absolute numbers. Coverage decreasing means new code has no tests.
 - **Set per-component floors**, not one project-wide ceiling.
 
@@ -110,7 +110,4 @@ Examples:
 |---|---|---|
 | Testing a function, class, or module in isolation | Unit | Milliseconds |
 | Testing that two components work together (code + DB, API + service) | Integration | Seconds |
-| Testing a full user workflow end to end | E2E | Seconds to minutes |
-| Verifying a feature meets business requirements | Acceptance | Depends on scope |
-| Checking that a build/deploy isn't dead on arrival | Smoke | Seconds (whole suite < 2 min) |
 | Preventing a fixed bug from returning | Regression (at lowest viable level) | Depends on level |

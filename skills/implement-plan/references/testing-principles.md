@@ -1,6 +1,6 @@
 # Principles & Practices of Test Design
 
-This document contains the universal guidance that applies to every test you write, regardless of type. It is the most frequently consulted document in this set — the Test Type subdocs are thin by design and refer back here.
+This document contains the universal guidance that applies to every test you write, regardless of type. It is the most frequently consulted document in this set -- the Test Type subdocs are thin by design and refer back here.
 
 Each principle includes explicit **Do** and **Don't** examples. The examples use Python-like pseudocode for readability, but the principles are language-agnostic.
 
@@ -24,7 +24,7 @@ If you routinely update tests during refactoring or feature addition, your tests
 
 ### Do / Don't
 
-**Don't** — test that is coupled to implementation and breaks on refactoring:
+**Don't** -- test that is coupled to implementation and breaks on refactoring:
 
 ```python
 def test_calculate_discount():
@@ -35,7 +35,7 @@ def test_calculate_discount():
     assert adjusted == 15.0
 ```
 
-**Do** — test the observable behavior through the public interface:
+**Do** -- test the observable behavior through the public interface:
 
 ```python
 def test_gold_customer_summer_discount():
@@ -50,7 +50,7 @@ Now we can freely rename, merge, or split those internal methods without touchin
 
 ## 2. Test via Public APIs
 
-Invoke the system under test the same way its real users would — through its public interface, not its internal methods.
+Invoke the system under test the same way its real users would -- through its public interface, not its internal methods.
 
 **Why:** Tests that use public APIs are, by definition, exercising the system the way real consumers do. If such a test breaks, a real consumer might also be broken.
 
@@ -61,7 +61,7 @@ Invoke the system under test the same way its real users would — through its p
 
 ### Do / Don't
 
-**Don't** — remove `private` visibility to test internals:
+**Don't** -- remove `private` visibility to test internals:
 
 ```python
 def test_serialization_format():
@@ -71,9 +71,9 @@ def test_serialization_format():
     assert serialized == "me,you,100"
 ```
 
-This test breaks if we change the serialization format, the method name, or extract serialization into a helper class — even if external behavior is unchanged.
+This test breaks if we change the serialization format, the method name, or extract serialization into a helper class -- even if external behavior is unchanged.
 
-**Do** — test through the same interface a real caller uses:
+**Do** -- test through the same interface a real caller uses:
 
 ```python
 def test_successful_transfer():
@@ -97,7 +97,7 @@ Prefer verifying *what happened* (the resulting state) over *how it happened* (w
 
 ### Do / Don't
 
-**Don't** — interaction testing via mock call verification:
+**Don't** -- interaction testing via mock call verification:
 
 ```python
 def test_process_order():
@@ -117,9 +117,9 @@ def test_process_order():
     )
 ```
 
-This breaks if we rename `reserve` to `hold`, combine `reserve`+`commit` into one call, or change the email template parameter name — all internal refactors that don't affect the user.
+This breaks if we rename `reserve` to `hold`, combine `reserve`+`commit` into one call, or change the email template parameter name -- all internal refactors that don't affect the user.
 
-**Do** — state testing with lightweight fakes:
+**Do** -- state testing with lightweight fakes:
 
 ```python
 def test_process_order():
@@ -137,7 +137,7 @@ def test_process_order():
 
 This test survives internal refactoring because it asserts on observable outcomes.
 
-**When interaction testing is justified:** When the side effect *is* the important behavior and there's no observable state to check — e.g., verifying an audit log entry was created, or that a third-party API was called. Even then, prefer a fake that records calls over a mock with rigid expectations.
+**When interaction testing is justified:** When the side effect *is* the important behavior and there's no observable state to check -- e.g., verifying an audit log entry was created, or that a third-party API was called. Even then, prefer a fake that records calls over a mock with rigid expectations.
 
 ---
 
@@ -151,7 +151,7 @@ Structure every test in three distinct phases:
 
 ### Do / Don't
 
-**Don't** — phases are jumbled together:
+**Don't** -- phases are jumbled together:
 
 ```python
 def test_cart_behavior():
@@ -166,7 +166,7 @@ def test_cart_behavior():
 
 This is testing multiple behaviors (adding items, applying coupons) and interleaving actions with assertions, making it hard to know which behavior failed.
 
-**Do** — one clear Act, with Arrange and Assert separated:
+**Do** -- one clear Act, with Arrange and Assert separated:
 
 ```python
 def test_apply_coupon_reduces_total():
@@ -196,13 +196,13 @@ def test_add_items_increases_total():
     assert len(cart.items) == 2
 ```
 
-Two tests, each with one Act step, each verifying one behavior. Note that the second test has two assertions — that's fine because they collectively verify the single behavior of "adding items."
+Two tests, each with one Act step, each verifying one behavior. Note that the second test has two assertions -- that's fine because they collectively verify the single behavior of "adding items."
 
 ---
 
 ## 5. Test Behaviors, Not Methods
 
-Don't write one test per method. Write one test per *behavior* — a specific response to a specific condition.
+Don't write one test per method. Write one test per *behavior* -- a specific response to a specific condition.
 
 A behavior-oriented test name answers three questions:
 1. What is being tested?
@@ -211,7 +211,7 @@ A behavior-oriented test name answers three questions:
 
 ### Do / Don't
 
-**Don't** — one test per method, testing the method signature rather than the behavior:
+**Don't** -- one test per method, testing the method signature rather than the behavior:
 
 ```python
 def test_process_transaction():
@@ -230,7 +230,7 @@ def test_process_transaction():
 
 When this test fails, which behavior is broken? You have to read the whole test to find out.
 
-**Do** — one test per behavior, named descriptively:
+**Do** -- one test per behavior, named descriptively:
 
 ```python
 def test_process_valid_transaction_succeeds():
@@ -257,7 +257,7 @@ When `test_process_zero_amount_is_rejected` fails, you know exactly what's broke
 
 ## 6. Verify One Condition per Test
 
-Each test should verify exactly one logical condition — one behavior, one scenario, one path through the code.
+Each test should verify exactly one logical condition -- one behavior, one scenario, one path through the code.
 
 **This doesn't mean one assertion per test.** Multiple assertions are fine when they collectively verify a single condition.
 
@@ -265,7 +265,7 @@ Each test should verify exactly one logical condition — one behavior, one scen
 
 ### Do / Don't
 
-**Don't** — Meszaros's "Eager Test" smell:
+**Don't** -- Meszaros's "Eager Test" smell:
 
 ```python
 def test_user_registration():
@@ -286,7 +286,7 @@ def test_user_registration():
 
 Three behaviors crammed into one test.
 
-**Do** — three tests, each verifying one behavior:
+**Do** -- three tests, each verifying one behavior:
 
 ```python
 def test_register_creates_user_with_email():
@@ -310,7 +310,7 @@ def test_update_profile_changes_display_name():
     assert updated.display_name == "Alice"
 ```
 
-Yes, the Arrange phase overlaps between tests. That's fine — clarity trumps deduplication in tests.
+Yes, the Arrange phase overlaps between tests. That's fine -- clarity trumps deduplication in tests.
 
 ---
 
@@ -322,7 +322,7 @@ Yes, the Arrange phase overlaps between tests. That's fine — clarity trumps de
 
 ### Do / Don't
 
-**Don't** — the "Mystery Guest" smell (depends on external fixture):
+**Don't** -- the "Mystery Guest" smell (depends on external fixture):
 
 ```python
 # In a fixtures file somewhere:
@@ -336,7 +336,7 @@ def test_gold_discount():
 
 Why does this user get this discount? You have to go find `TEST_USER` in another file. If someone modifies `TEST_USER` for a different test, this test might silently break.
 
-**Do** — complete, with all relevant values visible:
+**Do** -- complete, with all relevant values visible:
 
 ```python
 def test_gold_tier_gets_fifteen_percent_discount():
@@ -347,7 +347,7 @@ def test_gold_tier_gets_fifteen_percent_discount():
 
 The `make_user` helper provides sensible defaults for irrelevant fields so the test only specifies what matters: the tier.
 
-**Don't** — verbose, with irrelevant details (not concise):
+**Don't** -- verbose, with irrelevant details (not concise):
 
 ```python
 def test_gold_tier_gets_fifteen_percent_discount():
@@ -365,7 +365,7 @@ def test_gold_tier_gets_fifteen_percent_discount():
     assert discount == 0.15
 ```
 
-The reader wastes time wondering: does the balance matter? The creation date? None of them do — only the tier matters. But you can't tell without reading the production code.
+The reader wastes time wondering: does the balance matter? The creation date? None of them do -- only the tier matters. But you can't tell without reading the production code.
 
 ---
 
@@ -375,7 +375,7 @@ Test code should be straight-line code. No loops, no conditionals, no computatio
 
 ### Do / Don't
 
-**Don't** — logic in the test mirrors (and could replicate) bugs in production code:
+**Don't** -- logic in the test mirrors (and could replicate) bugs in production code:
 
 ```python
 def test_format_price():
@@ -389,7 +389,7 @@ def test_format_price():
 
 If `format_price` has a bug and this test computes the expected value the same wrong way, the test passes despite the bug.
 
-**Do** — hardcoded expected values, one test per case:
+**Do** -- hardcoded expected values, one test per case:
 
 ```python
 def test_format_price_whole_dollar():
@@ -404,7 +404,7 @@ def test_format_price_under_one_dollar():
 
 The expected values are the specification. The test verifies the code meets them.
 
-**Don't** — conditional logic in a test:
+**Don't** -- conditional logic in a test:
 
 ```python
 def test_user_access():
@@ -420,7 +420,7 @@ def test_user_access():
             assert result.can_edit == False
 ```
 
-**Do** — separate tests with explicit expectations:
+**Do** -- separate tests with explicit expectations:
 
 ```python
 def test_admin_can_delete():
@@ -441,7 +441,7 @@ def test_viewer_can_view_but_not_edit():
     assert result.can_edit == False
 ```
 
-**Exception — parameterized tests:** Frameworks like pytest's `@pytest.mark.parametrize` let you run the same test logic with multiple inputs. This is acceptable when the logic is identical across cases and only inputs/outputs differ:
+**Exception -- parameterized tests:** Frameworks like pytest's `@pytest.mark.parametrize` let you run the same test logic with multiple inputs. This is acceptable when the logic is identical across cases and only inputs/outputs differ:
 
 ```python
 @pytest.mark.parametrize("price, expected", [
@@ -453,7 +453,7 @@ def test_format_price(price, expected):
     assert format_price(price) == expected
 ```
 
-No logic in the test — the framework handles iteration, and each case is reported separately on failure.
+No logic in the test -- the framework handles iteration, and each case is reported separately on failure.
 
 ---
 
@@ -463,7 +463,7 @@ When a test fails, the failure message should tell the engineer what went wrong 
 
 ### Do / Don't
 
-**Don't** — bare assertion with no context:
+**Don't** -- bare assertion with no context:
 
 ```python
 def test_process_order():
@@ -473,7 +473,7 @@ def test_process_order():
 
 What failed? What was `result`? What was expected?
 
-**Do** — assertion with context:
+**Do** -- assertion with context:
 
 ```python
 def test_process_order_with_valid_items_succeeds():
@@ -481,7 +481,7 @@ def test_process_order_with_valid_items_succeeds():
     assert result.success, f"Expected order to succeed but got: {result.error}"
 ```
 
-**Do** — for complex objects, make expected vs. actual clear:
+**Do** -- for complex objects, make expected vs. actual clear:
 
 ```python
 def test_build_report_includes_all_sections():
@@ -502,7 +502,7 @@ In production code, DRY (Don't Repeat Yourself) is essential. In test code, read
 
 ### Do / Don't
 
-**Don't** — aggressively DRY test code that requires tracing through abstractions:
+**Don't** -- aggressively DRY test code that requires tracing through abstractions:
 
 ```python
 class BaseTransactionTest(TestCase):
@@ -527,7 +527,7 @@ class TestTransfer(BaseTransactionTest):
 
 To understand `test_valid_transfer`, you must read `setUp`, `create_account`, and `assert_transfer_result` across two classes.
 
-**Do** — self-contained test with helper for boilerplate only:
+**Do** -- self-contained test with helper for boilerplate only:
 
 ```python
 def test_valid_transfer_moves_funds():
@@ -571,14 +571,14 @@ A **test double** is any object that stands in for a real dependency during test
 
 ### The Preference Order
 
-1. **Real implementation** — always first choice if fast and deterministic.
-2. **Fake** — when the real thing is slow, costly, or has side effects.
-3. **Stub** — when you need controlled responses but don't care about behavioral fidelity.
-4. **Mock** — only when you must verify an interaction and there's no observable state to check.
+1. **Real implementation** -- always first choice if fast and deterministic.
+2. **Fake** -- when the real thing is slow, costly, or has side effects.
+3. **Stub** -- when you need controlled responses but don't care about behavioral fidelity.
+4. **Mock** -- only when you must verify an interaction and there's no observable state to check.
 
 ### Do / Don't
 
-**Don't** — over-mocking everything, testing the wiring:
+**Don't** -- over-mocking everything, testing the wiring:
 
 ```python
 def test_create_order():
@@ -595,9 +595,9 @@ def test_create_order():
     mock_notifier.notify.assert_called_once()
 ```
 
-This verifies that three methods were called — not that an order was actually created correctly. If we refactor internal method names, the test breaks.
+This verifies that three methods were called -- not that an order was actually created correctly. If we refactor internal method names, the test breaks.
 
-**Do** — fakes with state verification:
+**Do** -- fakes with state verification:
 
 ```python
 def test_create_order_saves_and_notifies():
@@ -645,7 +645,7 @@ A smell is a symptom, not a diagnosis. Here are the most common smells with conc
 **Symptom:** Tests break when you make unrelated changes.
 
 ```python
-# FRAGILE — coupled to string representation
+# FRAGILE -- coupled to string representation
 def test_user_display():
     user = User(first="Alice", last="Smith")
     assert str(user) == "User(first='Alice', last='Smith', id=None, active=True)"
@@ -654,7 +654,7 @@ def test_user_display():
 If you add a field to `User`, this test breaks even though display logic is unchanged.
 
 ```python
-# ROBUST — tests the behavior you actually care about
+# ROBUST -- tests the behavior you actually care about
 def test_user_display_name():
     user = User(first="Alice", last="Smith")
     assert user.display_name() == "Alice Smith"
@@ -694,13 +694,13 @@ Common causes and fixes:
 **Symptom:** Test passes and fails without code changes.
 
 ```python
-# FLAKY — depends on current time
+# FLAKY -- depends on current time
 def test_is_business_hours():
     assert is_business_hours() == True  # fails at night and on weekends
 ```
 
 ```python
-# DETERMINISTIC — controls the input
+# DETERMINISTIC -- controls the input
 def test_weekday_afternoon_is_business_hours():
     wednesday_2pm = datetime(2024, 3, 13, 14, 0, 0)
     assert is_business_hours(wednesday_2pm) == True
@@ -715,14 +715,14 @@ def test_sunday_is_not_business_hours():
 **Symptom:** The test restates the implementation rather than specifying behavior.
 
 ```python
-# CHANGE-DETECTOR — mirrors the code
+# CHANGE-DETECTOR -- mirrors the code
 def test_full_name():
     user = User(first="Alice", last="Smith")
     assert user.full_name() == user.first + " " + user.last
 ```
 
 ```python
-# MEANINGFUL — specifies expected behavior
+# MEANINGFUL -- specifies expected behavior
 def test_full_name():
     user = User(first="Alice", last="Smith")
     assert user.full_name() == "Alice Smith"
@@ -734,7 +734,7 @@ def test_full_name():
 
 ### Do / Don't
 
-**Don't** — hardcoded dependency that can't be substituted:
+**Don't** -- hardcoded dependency that can't be substituted:
 
 ```python
 class OrderService:
@@ -745,7 +745,7 @@ class OrderService:
 
 You cannot test this without a real Postgres database and a real SMTP server.
 
-**Do** — dependencies injected, substitutable:
+**Do** -- dependencies injected, substitutable:
 
 ```python
 class OrderService:
@@ -762,7 +762,7 @@ service = OrderService(FakeDatabase(), FakeEmailer())
 
 ### Separate Logic from Side Effects (Humble Object Pattern)
 
-**Don't** — logic tangled with I/O:
+**Don't** -- logic tangled with I/O:
 
 ```python
 def process_file(path):
@@ -781,11 +781,11 @@ def process_file(path):
 
 To test the transformation logic, you need real files on disk.
 
-**Do** — pure logic extracted, thin I/O shell:
+**Do** -- pure logic extracted, thin I/O shell:
 
 ```python
 def transform_records(data):
-    """Pure function — trivially testable with hardcoded inputs."""
+    """Pure function -- trivially testable with hardcoded inputs."""
     result = []
     for record in data:
         if record["type"] == "A":
@@ -795,7 +795,7 @@ def transform_records(data):
     return result
 
 def process_file(path):
-    """Thin shell — does I/O only. Covered by one integration test."""
+    """Thin shell -- does I/O only. Covered by one integration test."""
     with open(path) as f:
         data = json.load(f)
     result = transform_records(data)
@@ -813,18 +813,18 @@ Code coverage measures what percentage of your code is *executed* during testing
 
 ### Do / Don't
 
-**Don't** — write tests that game coverage without verifying behavior:
+**Don't** -- write tests that game coverage without verifying behavior:
 
 ```python
 def test_covers_calculate():
-    calculate(1, 2)   # no assertion — executes the code but verifies nothing
+    calculate(1, 2)   # no assertion -- executes the code but verifies nothing
 ```
 
 This achieves line coverage for `calculate` while providing zero protection against bugs.
 
-**Don't** — set a single project-wide coverage target and enforce it rigidly. This incentivizes engineers to write easy, low-value tests for trivial code while ignoring hard-to-test, high-risk code.
+**Don't** -- set a single project-wide coverage target and enforce it rigidly. This incentivizes engineers to write easy, low-value tests for trivial code while ignoring hard-to-test, high-risk code.
 
-**Do** — use coverage to find gaps:
+**Do** -- use coverage to find gaps:
 
 ```
 $ coverage report
@@ -835,11 +835,11 @@ config_loader.py            30      2    93%
 utils.py                    50     10    80%
 ```
 
-"Payment processor has 62% coverage" is a signal to investigate — are the untested lines high-risk?
+"Payment processor has 62% coverage" is a signal to investigate -- are the untested lines high-risk?
 
-**Do** — watch for coverage *decreasing* between commits. A drop means new code was added without tests.
+**Do** -- watch for coverage *decreasing* between commits. A drop means new code was added without tests.
 
-**Do** — set per-component minimum floors rather than a single project-wide number. High-risk code gets a higher floor.
+**Do** -- set per-component minimum floors rather than a single project-wide number. High-risk code gets a higher floor.
 
 ---
 
@@ -849,7 +849,7 @@ A regression test is any test that prevents a previously-fixed bug from recurrin
 
 ### Do / Don't
 
-**Don't** — fix the bug without adding a test:
+**Don't** -- fix the bug without adding a test:
 
 ```python
 # Bug report: negative transfer amounts bypass validation
@@ -858,20 +858,16 @@ A regression test is any test that prevents a previously-fixed bug from recurrin
 
 The bug will recur when someone refactors the validation logic.
 
-**Don't** — write the regression test only at the E2E level:
+**Don't** -- write the regression test at too high a level when the bug is in isolated logic:
 
 ```python
 def test_bug_1234():
-    browser.login("user@example.com")
-    browser.navigate("/transfer")
-    browser.fill("amount", "-100")
-    browser.click("submit")
-    assert browser.text_content(".error") == "Invalid amount"
+    # Slow, fragile test through the full stack when the bug is in validation logic
+    response = client.post("/transfer", json={"amount": -100})
+    assert response.status_code == 400
 ```
 
-Slow, fragile, and hard to maintain. The bug is in the validation logic, not the UI.
-
-**Do** — replicate the bug at the lowest possible level, then fix it:
+**Do** -- replicate the bug at the lowest possible level, then fix it:
 
 ```python
 def test_transfer_negative_amount_is_rejected():

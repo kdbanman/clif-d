@@ -2,7 +2,7 @@
 
 ## What They Are
 
-A unit test verifies the behavior of a small, isolated piece of code — typically a single function, method, or class. It exercises the code through its public interface, asserts on observable output or state, and runs fast enough that an engineer can execute thousands of them in seconds.
+A unit test verifies the behavior of a small, isolated piece of code -- typically a single function, method, or class. It exercises the code through its public interface, asserts on observable output or state, and runs fast enough that an engineer can execute thousands of them in seconds.
 
 Google defines unit tests as tests of "relatively narrow scope, such as of a single class or method." They are usually (but not always) "small" in Google's size taxonomy: single-process, single-threaded, no I/O.
 
@@ -25,7 +25,7 @@ Use unit tests for:
 - Error handling paths.
 - Any code where inputs and outputs are well-defined and the code can be exercised without expensive setup.
 
-**Don't** use unit tests for verifying that two components work together (use integration tests) or that a full user workflow works (use E2E tests).
+**Don't** use unit tests for verifying that two components work together (use [integration tests](./testing-integration.md)) or that a full user workflow works (broader-scope tests).
 
 ## Scope and Boundaries
 
@@ -34,7 +34,7 @@ Use unit tests for:
 - **Solitary** tests isolate the unit from all collaborators using test doubles.
 - **Sociable** tests allow the unit to interact with real collaborators, as long as the test remains fast and deterministic.
 
-Google's current guidance leans sociable — prefer real implementations when they are fast and deterministic. Use test doubles only for dependencies that are slow, nondeterministic, or have significant side effects.
+Google's current guidance leans sociable -- prefer real implementations when they are fast and deterministic. Use test doubles only for dependencies that are slow, nondeterministic, or have significant side effects.
 
 ## Worked Example: A Good Unit Test
 
@@ -109,9 +109,9 @@ def test_empty_cart_returns_zero():
 **Why this is good:**
 - Each test has one Act step and verifies one behavior.
 - Names describe the scenario and expectation.
-- Expected values are hardcoded — no computation.
+- Expected values are hardcoded -- no computation.
 - All relevant setup is visible in each test.
-- The tests don't reach into internals — they call `calculate_total` like a real caller would.
+- The tests don't reach into internals -- they call `calculate_total` like a real caller would.
 - Adding a new field to `Item` (e.g., `sku`) wouldn't break any test.
 
 ## Type-Specific Pitfalls (with Examples)
@@ -119,7 +119,7 @@ def test_empty_cart_returns_zero():
 ### Pitfall: Testing Implementation Details
 
 ```python
-# BAD — tests a private method directly
+# BAD -- tests a private method directly
 def test_compute_subtotal():
     calc = PriceCalculator(tax_rate=0.10)
     items = [Item(price=20.00, quantity=2)]
@@ -132,7 +132,7 @@ If you rename `_compute_subtotal` or merge it into `calculate_total`, this test 
 ### Pitfall: Over-Mocking
 
 ```python
-# BAD — mocks a trivial collaborator for no reason
+# BAD -- mocks a trivial collaborator for no reason
 def test_calculate_total_with_mock():
     mock_item = Mock()
     mock_item.price = 20.00
@@ -142,12 +142,12 @@ def test_calculate_total_with_mock():
     assert total == 44.00
 ```
 
-`Item` is a simple data object — using a real `Item` is faster to write, easier to read, and higher fidelity. Save mocking for dependencies that are slow or have side effects.
+`Item` is a simple data object -- using a real `Item` is faster to write, easier to read, and higher fidelity. Save mocking for dependencies that are slow or have side effects.
 
 ### Pitfall: Shared Mutable State
 
 ```python
-# BAD — tests share a calculator instance and modify it
+# BAD -- tests share a calculator instance and modify it
 calculator = PriceCalculator(tax_rate=0.10)
 
 def test_set_tax_rate():
@@ -157,12 +157,12 @@ def test_set_tax_rate():
 
 def test_default_tax_rate():
     items = [Item(price=100, quantity=1)]
-    # FAILS — tax_rate is still 0.20 from previous test
+    # FAILS -- tax_rate is still 0.20 from previous test
     assert calculator.calculate_total(items) == 110.00
 ```
 
 ```python
-# GOOD — each test creates its own instance
+# GOOD -- each test creates its own instance
 def test_twenty_percent_tax():
     calc = PriceCalculator(tax_rate=0.20)
     assert calc.calculate_total([Item(price=100, quantity=1)]) == 120.00
@@ -176,14 +176,14 @@ def test_ten_percent_tax():
 
 When writing or reviewing a unit test, verify:
 
-- [ ] **Public API:** The test calls the system through its public interface, not internal/private methods. *(Principles §2)*
-- [ ] **State, not interactions:** Assertions verify observable output, not which methods were called on mocks. *(Principles §3)*
-- [ ] **Arrange-Act-Assert:** Three clear phases, visually separated. *(Principles §4)*
-- [ ] **One behavior:** The test verifies a single scenario. *(Principles §5, §6)*
-- [ ] **Descriptive name:** The name describes the behavior, not the method. *(Principles §5)*
-- [ ] **No logic:** No conditionals, loops, or computed expected values. *(Principles §8)*
-- [ ] **Complete and concise:** All relevant setup is visible; no irrelevant details. *(Principles §7)*
-- [ ] **Hardcoded expectations:** Expected values are literals, not computed from the same logic as production code. *(Principles §8)*
-- [ ] **Fast:** Completes in milliseconds. If it takes seconds, substitute a test double for the slow dependency. *(Principles §12, Slow Tests)*
-- [ ] **Fresh fixture:** Creates its own state; doesn't depend on other tests. *(Principles §12, Erratic Test)*
-- [ ] **Clear failure message:** If the test fails, you can diagnose the problem from the test name and assertion output alone. *(Principles §9)*
+- [ ] **Public API:** The test calls the system through its public interface, not internal/private methods. *([Principles](./testing-principles.md) -- Test via Public APIs)*
+- [ ] **State, not interactions:** Assertions verify observable output, not which methods were called on mocks. *([Principles](./testing-principles.md) -- Test State Not Interactions)*
+- [ ] **Arrange-Act-Assert:** Three clear phases, visually separated. *([Principles](./testing-principles.md) -- Arrange Act Assert)*
+- [ ] **One behavior:** The test verifies a single scenario. *([Principles](./testing-principles.md) -- Test Behaviors Not Methods, Verify One Condition)*
+- [ ] **Descriptive name:** The name describes the behavior, not the method. *([Principles](./testing-principles.md) -- Test Behaviors Not Methods)*
+- [ ] **No logic:** No conditionals, loops, or computed expected values. *([Principles](./testing-principles.md) -- Don't Put Logic in Tests)*
+- [ ] **Complete and concise:** All relevant setup is visible; no irrelevant details. *([Principles](./testing-principles.md) -- Make Tests Complete and Concise)*
+- [ ] **Hardcoded expectations:** Expected values are literals, not computed from the same logic as production code. *([Principles](./testing-principles.md) -- Don't Put Logic in Tests)*
+- [ ] **Fast:** Completes in milliseconds. If it takes seconds, substitute a test double for the slow dependency. *([Principles](./testing-principles.md) -- Test Smells, Slow Tests)*
+- [ ] **Fresh fixture:** Creates its own state; doesn't depend on other tests. *([Principles](./testing-principles.md) -- Test Smells, Erratic Test)*
+- [ ] **Clear failure message:** If the test fails, you can diagnose the problem from the test name and assertion output alone. *([Principles](./testing-principles.md) -- Write Clear Failure Messages)*

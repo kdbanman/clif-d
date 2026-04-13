@@ -56,7 +56,7 @@ When writing or reviewing an acceptance test, verify:
 
 - [ ] **Requirement-driven:** The test traces directly to a specific business requirement, user story, or acceptance criterion. It is not a technical test disguised as an acceptance test.
 - [ ] **Business-readable:** A non-engineer stakeholder could read the test (or its description) and confirm that it describes the desired behavior.
-- [ ] **Narrowest viable scope:** The test exercises the minimum number of components needed to verify the requirement. If the requirement can be verified at the unit or integration level, it should be. *(Overview: prefer lowest-scope test that covers the risk)*
-- [ ] **Behavior-focused name:** The test name describes the requirement in business terms. *(Principles §5)*
-- [ ] **Independent of implementation:** The test does not depend on specific internal method names, database schemas, or UI element IDs that might change without affecting the business behavior. *(Principles §1, §2)*
+- [ ] **Narrowest viable scope:** The test exercises the minimum number of components needed to verify the requirement. If the requirement can be verified at the unit or integration level, it should be. (See [testing-strategy.md](./testing-strategy.md) for the rationale: prefer the lowest-scope test that covers the risk.)
+- [ ] **Behavior-focused name:** The test name describes the requirement in business terms. (See the testing principles in the implement-plan skill's references for naming guidance.)
+- [ ] **Independent of implementation:** The test does not depend on specific internal method names, database schemas, or UI element IDs that might change without affecting the business behavior.
 - [ ] **Stakeholder-validated:** The acceptance criteria were reviewed by or written with a stakeholder before implementation began.

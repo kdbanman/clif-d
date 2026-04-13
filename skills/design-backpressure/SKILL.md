@@ -273,3 +273,15 @@ Once the user confirms the plan:
 6. **Wire up git hooks** — either via the hook framework's installation mechanism or by generating hook scripts directly.
 7. **Test the setup** by running the setup script and verifying each check runs successfully on the current codebase (or reports expected violations if the codebase doesn't yet exist).
 8. **Report** what was generated and how to use it.
+
+---
+
+## Testing References
+
+This skill's references directory contains guidance on the *enforcement infrastructure* around testing — what to run where, how fast, coverage strategy, and deployment verification. Consult them when designing the hook architecture and deciding what test enforcement gates to configure.
+
+- **Enforcement**: [Testing enforcement](references/testing-enforcement.md) — speed guidelines by test type, pre-commit vs. pre-push vs. CI partitioning, flakiness management, test suite performance
+- **Coverage**: [Coverage strategy](references/testing-coverage.md) — what coverage metrics mean, per-component floors, mutation testing, coverage as a gate
+- **Smoke tests**: [Smoke test guide](references/testing-smoke.md) — build/deployment verification gates, scope, and the "is this build dead on arrival?" check
+
+These references focus on *enforcing* test quality as automated gates. This skill does not write tests — it builds the infrastructure that ensures tests are run and pass before code enters the repository. Tests are planned by the plan-requirement skill and written by the implement-plan skill. The backpressure system trusts that those skills produce well-structured tests; its job is to ensure those tests are executed reliably at the right stages.

@@ -3,7 +3,7 @@
 This document covers the structural and operational aspects of a test suite: how to organize test files, name things consistently, think about coverage, maintain tests over time, and deal with flakiness. Consult this document at project setup time and revisit it periodically as the codebase grows.
 
 **Primary sources:**
-- *Software Engineering at Google*, Ch 11–12
+- *Software Engineering at Google*, Ch 11-12
 - *xUnit Test Patterns* (Meszaros), Ch 12: Organizing Our Tests, and Ch 6: Test Automation Strategy
 - Martin Fowler's testing articles
 
@@ -240,11 +240,11 @@ As a codebase grows, test suite execution time naturally increases. If the suite
 - **E2E tests:** Seconds to low minutes per test. The full E2E suite should run in under 30 minutes.
 - **Smoke tests:** The complete smoke suite should run in under 2 minutes.
 
-These are rough guidelines — adjust for your project's size and constraints.
+These are rough guidelines — adjust for your project's size and constraints. See [./testing-types.md](./testing-types.md) for detailed guidance on each type's characteristics and appropriate use.
 
 ### When the Suite Gets Slow
 
 - **Profile the suite.** Find the slowest tests and ask why they're slow. Common culprits: unnecessary I/O, redundant fixture setup, tests at too broad a scope.
-- **Push tests down the pyramid.** If an integration test is slow because it sets up a full database for what is essentially a logic test, rewrite it as a unit test with a fake.
+- **Push tests down the pyramid.** If an integration test is slow because it sets up a full database for what is essentially a logic test, rewrite it as a unit test with a fake. See [./testing-strategy.md](./testing-strategy.md) for guidance on choosing the right test scope.
 - **Parallelize.** Most modern test frameworks support parallel execution. This requires test independence (no shared mutable state) but can dramatically reduce wall-clock time.
 - **Partition by type.** Run unit tests on every commit, integration tests in CI, and E2E tests on deployment. Each category has a different acceptable run time.

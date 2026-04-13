@@ -221,3 +221,17 @@ This happens. When it does:
 Implement the plan as written. Note your disagreement and reasoning in your completion summary. The plan author can decide whether to adjust future plans based on your feedback.
 
 Exception: if the plan asks you to do something that would break existing tests, violate quality guardrails, or introduce a security vulnerability, do not do it. Explain why and wait for guidance.
+
+---
+
+## Testing References
+
+This skill's references directory contains detailed, language-agnostic guidance on writing sound tests. Consult them as needed during implementation — don't try to memorize them upfront.
+
+- **Quick lookup**: [Cheat sheet](references/testing-cheat-sheet.md) — dos, don'ts, smells, naming templates
+- **Principles**: [Testing principles](references/testing-principles.md) — universal test design guidance with Do/Don't examples
+- **Unit tests**: [Unit test guide](references/testing-unit.md) — scope, worked examples, pitfalls, checklist
+- **Integration tests**: [Integration test guide](references/testing-integration.md) — scope, worked examples, pitfalls, checklist
+- **Scenarios**: [Overview](references/testing-overview.md) — "what kind of test do I need?" quick-reference table
+
+These references focus on *writing* tests during Red-Green-Refactor execution. They assume the plan already specifies which types of tests to write and where — that's the plan-requirement skill's job. They also assume quality guardrails (linting, type checking, test enforcement) are already in place — that's the design-backpressure skill's job.

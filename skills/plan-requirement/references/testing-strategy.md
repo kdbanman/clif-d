@@ -1,51 +1,13 @@
-# Software Testing: Overview & Strategy Guide
+# Testing Strategy
 
-## Purpose of This Document Set
+> These references support the plan-requirement skill. They focus on *choosing* test types, proportions, and ordering when planning implementation. For guidance on *writing* tests during implementation, see the implement-plan skill. For guidance on *designing* the testing architecture, see the create-architecture skill.
 
-These documents exist to help you do two things:
-
-1. **Design a testing strategy** for a new or existing project at architecture and requirements time.
-2. **Write sound tests** at execution time, with clear guidance on how to structure, name, and maintain them.
-
-The guidance here is language-agnostic and domain-agnostic. It draws from a small number of deeply respected sources rather than the vast sea of blog posts on the topic. The primary references are:
-
+**Primary sources:**
 - *Software Engineering at Google* (Winters, Manshreck, Wright, 2020) — freely available at [abseil.io/resources/swe-book](https://abseil.io/resources/swe-book)
 - Martin Fowler's testing articles at [martinfowler.com/testing](https://martinfowler.com/testing)
 - *xUnit Test Patterns* (Gerard Meszaros, 2007) — companion site at [xunitpatterns.com](http://xunitpatterns.com)
 - Kent C. Dodds, "The Testing Trophy and Testing Classifications" (2021) — at [kentcdodds.com](https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications)
 - Google Testing Blog, especially "Just Say No to More End-to-End Tests" (2015)
-
----
-
-## How to Use These Documents
-
-### Entry Point A: "I'm designing a test strategy for a project"
-
-Read this document top to bottom. It will help you:
-
-1. Assess where testing investment pays off in your codebase (risk-based prioritization).
-2. Choose which types of tests to invest in and in what proportions.
-3. Navigate to the relevant Test Type subdocs to understand each type's purpose and boundaries.
-4. Review the Organization & Maintenance doc when setting up your test infrastructure.
-
-### Entry Point B: "I need to write or fix a test right now"
-
-Use the **Scenario Quick-Reference** below to find your situation, then jump directly to the linked documents. For routine work, each Test Type subdoc has an inlined checklist of the most relevant principles. For tricky situations, go to the full Principles & Practices doc.
-
----
-
-## Scenario Quick-Reference
-
-| Your situation | Start here | Then consult |
-|---|---|---|
-| "I wrote a function/class and need to verify it works" | [Unit Tests](./02-type-unit.md) | [Principles](./01-principles-and-practices.md) §Arrange-Act-Assert, §Test via Public APIs |
-| "I need to verify two components work together correctly" | [Integration Tests](./03-type-integration.md) | [Principles](./01-principles-and-practices.md) §Test Doubles |
-| "I fixed a bug and want to prevent regression" | [Unit Tests](./02-type-unit.md) (replicate the bug at the lowest possible level) | [Principles](./01-principles-and-practices.md) §Strive for Unchanging Tests |
-| "I need to verify a full user workflow end to end" | [End-to-End Tests](./04-type-end-to-end.md) | [Principles](./01-principles-and-practices.md) §Completeness and Conciseness |
-| "I need to verify the system meets business requirements" | [Acceptance Tests](./05-type-acceptance.md) | [Principles](./01-principles-and-practices.md) §Test Behaviors Not Methods |
-| "I need a quick sanity check that a build/deploy isn't broken" | [Smoke Tests](./06-type-smoke.md) | — |
-| "My tests are flaky, slow, or hard to understand" | [Principles](./01-principles-and-practices.md) §Test Smells | [Organization & Maintenance](./07-organization-and-maintenance.md) |
-| "I'm setting up test infrastructure for a new project" | This document (Strategy section below) → [Organization & Maintenance](./07-organization-and-maintenance.md) | All Test Type subdocs |
 
 ---
 
@@ -104,21 +66,6 @@ Not all code deserves equal testing investment. Before choosing test types and p
 
 - Some components are inherently difficult to test (UI rendering, ML training loops, hardware interactions). For these, move as much logic as possible into testable, isolated modules, and test those. Fowler calls this the "Humble Object" pattern — keep the hard-to-test shell thin and push logic into easily-testable code.
 
-### Applying This to a Concrete Example: An LLM Training Project
-
-An LLM training codebase typically has components with very different risk and testability profiles:
-
-| Component | Cost of failure | Testability | Recommended approach |
-|---|---|---|---|
-| Data pipeline / preprocessing | Very high — corrupted training data produces a worthless model | High — pure data transformations | Heavy unit testing of transformations; integration tests for pipeline stages |
-| Config / hyperparameter management | High — wrong config wastes expensive compute | Very high — pure functions, serialization | Thorough unit tests; validation tests for config schemas |
-| Training loop | Medium-high — bugs waste compute | Low — expensive to run, nondeterministic | Extract testable logic (learning rate schedules, gradient clipping, checkpointing logic) into unit-testable modules; use short "smoke" training runs as integration tests |
-| Evaluation / metrics code | Very high — incorrect evaluation leads to wrong decisions | High | Heavy unit testing; integration tests comparing against known-good baselines |
-| Experiment tracking / logging | Medium | High | Unit tests for formatting/serialization; integration tests for storage |
-| One-off analysis scripts | Low | Varies | Light or no testing |
-
-The strategist's job is to make this kind of table for their specific project, then design the testing strategy to match.
-
 ---
 
 ## Test Size vs. Test Scope
@@ -138,18 +85,3 @@ Google draws a useful distinction that most organizations conflate:
 These axes are independent. A unit test is usually small, but a unit test that reads from a local file is medium-sized. An integration test might be small if all components run in-process with in-memory fakes.
 
 This distinction matters because the advice "write more unit tests" is really two pieces of advice: "test at narrow scope" (for defect localization) and "keep tests small" (for speed and determinism). You want both, but recognizing they are separate concerns helps when you must make tradeoffs.
-
----
-
-## Document Map
-
-| Document | What it covers | When to use it |
-|---|---|---|
-| **[Principles & Practices](./01-principles-and-practices.md)** | Universal dos, don'ts, and test smells that apply to every type of test | During implementation; when diagnosing test quality problems |
-| **[Unit Tests](./02-type-unit.md)** | Purpose, scope, pitfalls, and checklist for unit tests | When writing or reviewing unit tests |
-| **[Integration Tests](./03-type-integration.md)** | Purpose, scope, pitfalls, and checklist for integration tests | When testing cross-component interactions |
-| **[End-to-End Tests](./04-type-end-to-end.md)** | Purpose, scope, pitfalls, and checklist for E2E tests | When testing full user workflows |
-| **[Acceptance Tests](./05-type-acceptance.md)** | Purpose, scope, pitfalls, and checklist for acceptance tests | When verifying business requirements |
-| **[Smoke Tests](./06-type-smoke.md)** | Purpose, scope, pitfalls, and checklist for smoke tests | When building deployment verification |
-| **[Organization & Maintenance](./07-organization-and-maintenance.md)** | File structure, naming, coverage, refactoring tests, flakiness | At project setup; during periodic maintenance |
-| **[Cheat Sheet](./08-cheat-sheet.md)** | One-page quick reference of all dos, don'ts, smells, and naming templates | Pin next to your editor; consult mid-implementation |
