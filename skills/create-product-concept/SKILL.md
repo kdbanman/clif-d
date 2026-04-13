@@ -33,3 +33,14 @@ Some of these questions depend on each other. You may need to ask a first round 
 Do not ask all questions at once. Prioritize. Ask the most load-bearing questions first — the ones whose answers will determine what else you need to ask or research. Each round can have as many questions as necessary, but lean toward fewer, more focused questions over exhaustive lists.
 
 When you believe you have enough understanding to write the document, say so and summarize your understanding. Wait for the user to confirm or offer final thoughts before producing the document.
+
+---
+
+## Output location
+
+The concept document is typically the first artifact in the CLIF-D pipeline and may predate the existence of a product repository. Use this rule:
+
+- **If a product repository already exists** (the user has specified or is working within one): save the concept document as `clif-d/concept.md` in that repository. Create the `clif-d/` directory if it does not yet exist. See the CLIF-D README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
+- **If no product repository exists yet** (this is the very first artifact and the repo will be created later): save the concept document in the user's current working directory as `concept.md`. When the repository is eventually scaffolded by `create-architecture`'s scaffolding requirements, the concept document should be moved into `clif-d/concept.md` at that time.
+
+Ask the user which applies if it is not clear from context.
