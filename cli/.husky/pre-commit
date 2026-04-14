@@ -4,7 +4,7 @@ cd cli
 # The symlink gives ESLint a file within its base path and gives TypeScript a .js extension.
 
 echo "Checking formatting..."
-npx prettier --check clif-d.js
+npx prettier --check ../bin/clif-d
 
 echo "Linting..."
 npx eslint clif-d.js

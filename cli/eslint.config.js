@@ -5,9 +5,23 @@ import security from "eslint-plugin-security";
 
 export default [
   js.configs.recommended,
-  unicorn.configs.recommended,
+  unicorn.configs["flat/recommended"],
   nodePlugin.configs["flat/recommended"],
-  security.configs.recommended,
+  {
+    plugins: { security },
+    rules: {
+      // Selected security rules. The eslint-plugin-security "recommended" flat
+      // config still uses legacy "env" keys (as of v3.0.x), which break ESLint
+      // v9 flat config. We opt into specific rules instead.
+      "security/detect-child-process": "error",
+      "security/detect-non-literal-fs-filename": "error",
+      "security/detect-unsafe-regex": "error",
+      "security/detect-eval-with-expression": "error",
+      "security/detect-non-literal-regexp": "warn",
+      "security/detect-pseudoRandomBytes": "error",
+      "security/detect-new-buffer": "error",
+    },
+  },
   {
     files: ["clif-d.js"],
     languageOptions: {
@@ -40,6 +54,18 @@ export default [
       // JSON.parse returns null for JSON null values. The CLI operates on JSON
       // data where null is a valid value.
       "unicorn/no-null": "off",
+
+      // The shebang in bin/clif-d IS correct -- the file is registered in the
+      // Claude Code plugin manifest as an executable via bin/, not via a
+      // package.json "bin" field. The n/hashbang rule cannot see the plugin
+      // manifest, so it reports a false positive.
+      "n/hashbang": "off",
+
+      // The CLI is intentionally CommonJS (CTX-002 -- single-file distribution,
+      // no transpilation). Node.js loads the shebang-prefixed bin/clif-d as
+      // CommonJS because there is no package.json with "type": "module" at the
+      // repo root. "use strict" is appropriate for CommonJS modules.
+      "unicorn/prefer-module": "off",
 
       // --- Additional strict rules beyond recommended presets ---
 
