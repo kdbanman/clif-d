@@ -129,6 +129,7 @@ The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalo
 
 ## TODO
 
+- [ ] **Initial PRD skill should copy the PRD schema to project directory** - right now the skill seems to result in a prd.json file with a $schema field pointing into the .claude directory, which seems awkward.  It should just be a product artifact, I think?
 - [ ] **Add `references/` to `design-backpressure`** — opinionated reference material on agentic quality backpressure principles
 - [ ] **Implement `clif-d` CLI for PRD CRUD operations** — a command-line tool for reading and mutating PRD JSON files without hand-editing. Key commands:
   - `clif-d req next [prd.json]` — print the highest-priority `not_started` requirement whose dependencies are all `done`
@@ -144,3 +145,12 @@ The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalo
 - [ ] **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.
 - [ ] **Implement `clif-d-help` skill (or reference file)** — a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
 - [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
+- [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
+
+## Possible Issues
+
+- It isn't clear if prd.json, architecture.md, and backpressure.md are sufficiently interlinked by the time the architecture and backpressure skills have been executed.  I'm hoping that the individual requirements refer to those files as necessary.  This might already be the case, but I should verify that it's true.
+- The architecture skill might need to be instructed to bootstrap the environment to make sure all the expected commands are executable.  Maybe that should be encouraged with docker/rancher...  Or ansible?  For example, if the user .zshrc puts `uv` on PATH, it isn't guaranteed that the agent will have `uv` on the PATH.
+- QUALITY.md ended up on the project root, rather than in `clif-d/`?  Seems strange.  Apparently the skill explicitly instructs a separate file - there is a clif-d/backpressure.md as well.  I should instead get the skill to output just the one backpressure.md file - merge everything into backpressure.md and make sure it's appropriately referenced in other skills.
+- The implement-requirement skill doesn't mark the PRD items as finished, nor does it move the plan files from active to somewhere else appropriate.  After prodding to inspect skill files, gemini decided to put the executed plan files into `archive` which might be stomping on the compaction skill.
+
