@@ -242,11 +242,21 @@ After the architecture is settled, the concrete scaffolding work is now fully sp
 
 **Important:** Do not perform the scaffolding yourself. The purpose of this step is to *specify* the scaffolding as requirements, so it flows through the standard backpressure → plan → implement pipeline. This ensures scaffolding code is written to the same quality standards as feature code and is covered by tests from day one.
 
-### Part C: Confirm
+### Part C: Backfill PRD references
+
+Now that the architecture document exists, update `clif-d/prd.json` so that existing requirements reference the architecture they relate to:
+
+1. For each requirement in the PRD, determine which ARCH items are relevant based on the CLI-to-Module Mapping (§5) and the module decomposition (§4).
+2. Populate the `architecture_refs` field of each relevant requirement with the appropriate ARCH item IDs.
+3. Do not remove existing `architecture_refs` — only add new ones.
+4. This step closes the referencing gap: the architecture document traces back to PRD items (§10), and now PRD items trace forward to architecture items.
+
+### Part D: Confirm
 
 Report to the user:
 - That `clif-d/architecture.md` has been written
 - How many scaffolding requirements were appended to the PRD (with their IDs and titles)
+- How many existing requirements had `architecture_refs` backfilled
 - The recommended next step: run `design-backpressure`, then `plan-requirement` on the scaffolding requirements
 
 ---

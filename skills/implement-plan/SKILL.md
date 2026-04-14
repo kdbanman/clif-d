@@ -47,7 +47,7 @@ After completing each step's implementation:
 
 If any check fails, fix the issue before moving to the next step. Do not accumulate debt across steps.
 
-If the project has pre-commit hooks configured (see `QUALITY.md`), these checks will also run at commit time. But don't rely on hooks as your only verification — run checks explicitly after each step so you catch issues immediately, not at commit time when the context has shifted.
+If the project has pre-commit hooks configured (see `clif-d/backpressure.md`), these checks will also run at commit time. But don't rely on hooks as your only verification — run checks explicitly after each step so you catch issues immediately, not at commit time when the context has shifted.
 
 ### Code quality is not negotiable
 
@@ -93,7 +93,7 @@ Read the full plan before starting. Understand the overall arc — what's being 
 
 1. **Read the plan fully.** Understand the objective, context, prerequisites, and the full sequence of steps.
 2. **Verify prerequisites.** Check that required dependencies are installed, required modules exist, required configuration is in place. If a prerequisite is not met, stop and report it.
-3. **Identify the quality check commands.** From the plan's Context Summary or the project's `QUALITY.md`, determine the exact commands for: running tests, running the linter, running the type checker, running the formatter.
+3. **Identify the quality check commands.** From the plan's Context Summary or the project's `clif-d/backpressure.md`, determine the exact commands for: running tests, running the linter, running the type checker, running the formatter.
 4. **Run the existing test suite.** Confirm it passes before you change anything. If it doesn't, stop and report — you need a green baseline to detect regressions.
 
 ### For each step
@@ -148,7 +148,14 @@ State that the step is complete. Summarize what was implemented and what tests v
 
 1. **Run the complete acceptance criteria checklist** from the plan's "Acceptance Criteria Verification" section. Confirm each criterion is verified by passing tests.
 2. **Run the full quality check suite** one final time.
-3. **Summarize** what was implemented: files created/modified, tests written, any deviations from the plan and why.
+3. **Commit the implementation** with a high-quality commit message that summarizes what was built, which requirements were satisfied, and any notable deviations from the plan. The commit message should be useful to someone reading `git log` months later.
+4. **Record the commit SHA** — you will need it for the next steps.
+5. **Update the PRD.** For each requirement targeted by the plan:
+   - Set `status` to `"done"`.
+   - Set `implementation_commit` to the commit SHA from step 4.
+6. **Move the plan to executed.** Move the plan file from `clif-d/plans/active/` to `clif-d/plans/executed/`. Create the `executed/` directory if it does not yet exist. Append the commit SHA to the plan's header metadata (e.g. `**Implementation commit:** <sha>`).
+7. **Commit the lifecycle updates** (PRD status changes and plan move) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct.
+8. **Summarize** what was implemented: files created/modified, tests written, any deviations from the plan and why. Include both commit SHAs (implementation and lifecycle).
 
 ---
 

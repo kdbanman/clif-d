@@ -130,7 +130,7 @@ Wait for user confirmation before generating.
 
 ## Output
 
-This skill produces **two categories of output**: a design document (the durable artifact capturing decisions and rationale) and implementation artifacts (the configuration files that enforce those decisions).
+This skill produces a design document and implementation artifacts (the configuration files that enforce the design decisions).
 
 ---
 
@@ -187,7 +187,19 @@ A narrative description of what happens when:
 
 This section helps the reader understand the guardrails in practice, not just in theory.
 
-**8. PRD and Architecture Traceability**
+**8. Practitioner Quick Reference**
+
+A concise, actionable section for developers and agents. Covers:
+
+1. **What guardrails are in place** — a summary of every check that runs
+2. **When they run** — pre-commit, pre-push, CI
+3. **How to set up** — the setup command
+4. **How to run manually** — commands to run each check individually
+5. **How to handle failures** — what to do when a check blocks your commit
+6. **Suppression policy** — summary of the policy from §5 above
+7. **How to update** — how to add or modify rules, and when the design sections above must be amended
+
+**9. PRD and Architecture Traceability**
 
 How the guardrail decisions trace back to PRD context items and architecture decisions:
 
@@ -198,7 +210,7 @@ How the guardrail decisions trace back to PRD context items and architecture dec
 
 ---
 
-### Output 2: Implementation Artifacts — in the product repository
+### Implementation Artifacts — in the product repository
 
 Once the design document is confirmed, generate the actual configuration files and hooks in the product repo.
 
@@ -229,18 +241,6 @@ make setup   # installs git hooks, cargo-audit, etc.
 
 The setup must be idempotent — safe to run multiple times.
 
-#### `QUALITY.md`
-
-A practitioner-facing document at the product repo root. This is the **developer's view** of the design document — concise and actionable, not exhaustive. It covers:
-
-1. **What guardrails are in place** — a summary of every check that runs
-2. **When they run** — pre-commit, pre-push, CI
-3. **How to set up** — the setup command
-4. **How to run manually** — commands to run each check individually
-5. **How to handle failures** — what to do when a check blocks your commit
-6. **Suppression policy** — summary of the policy from the design document, with a link back to it for the full rationale
-7. **How to update** — how to add or modify rules, and when an update requires amending the design document
-
 #### Pre-commit hook behavior
 
 The pre-commit hook should:
@@ -265,13 +265,16 @@ The pre-commit hook should:
 
 Once the user confirms the plan:
 
-1. **Generate the design document** at `clif-d/backpressure.md` in the product repository, following the structure above. Create the `clif-d/` directory if it does not yet exist.
+1. **Generate the design document** at `clif-d/backpressure.md` in the product repository, following the structure above. Include the practitioner-facing content (setup commands, how to run checks manually, how to handle failures, suppression policy summary) directly in the backpressure document. The backpressure document is both the design record and the developer reference. Create the `clif-d/` directory if it does not yet exist.
 2. **Wait for user confirmation** of the design document before generating implementation artifacts.
 3. **Generate configuration files** for each tool, placed at their conventional locations in the product repository.
 4. **Generate the setup script** or `Makefile` targets.
-5. **Generate `QUALITY.md`** at the product repo root, referencing the design document.
-6. **Wire up git hooks** — either via the hook framework's installation mechanism or by generating hook scripts directly.
-7. **Test the setup** by running the setup script and verifying each check runs successfully on the current codebase (or reports expected violations if the codebase doesn't yet exist).
+5. **Wire up git hooks** — either via the hook framework's installation mechanism or by generating hook scripts directly.
+6. **Test the setup** by running the setup script and verifying each check runs successfully on the current codebase (or reports expected violations if the codebase doesn't yet exist).
+7. **Backfill PRD references.** The backpressure guardrails are shared constraints that affect all implementation. Update `clif-d/prd.json`:
+   - If a context item for the quality backpressure approach does not already exist, add one (type `constraint`) describing the guardrail standards.
+   - Add the backpressure context item's ID to the `context_refs` of every requirement that will be subject to the guardrails (which is typically all of them).
+   - This closes the referencing gap: the backpressure document traces back to PRD items (§8), and now PRD items trace forward to the backpressure constraint.
 8. **Report** what was generated and how to use it.
 
 ---

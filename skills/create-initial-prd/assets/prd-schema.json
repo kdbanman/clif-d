@@ -171,6 +171,10 @@
             "enum": ["not_started", "in_progress", "done", "blocked"],
             "description": "Optional. Implementation lifecycle state of this requirement. Omitting this field is equivalent to 'not_started'. Use 'in_progress' when work has begun but is not complete. Use 'done' when all acceptance criteria are verifiably satisfied. Use 'blocked' when progress is prevented by an unresolved external factor (note the blocker in the description or a comment). This field is the primary mechanism for tracking living-document state — the PRD evolves as implementation progresses."
           },
+          "implementation_commit": {
+            "type": "string",
+            "description": "Optional. The git commit SHA that completed this requirement's implementation. Set by the implement-plan skill when it marks the requirement as 'done'. Provides traceability from specification to code — given a requirement, you can inspect the exact commit that delivered it."
+          },
           "context_refs": {
             "type": "array",
             "items": {

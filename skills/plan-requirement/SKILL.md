@@ -56,7 +56,7 @@ Read all inputs before beginning.
 ### Backpressure gate
 
 Before planning implementation, **verify that quality guardrails are in place**. Check for:
-- A `QUALITY.md` or equivalent quality documentation in the product repo
+- A `clif-d/backpressure.md` or equivalent quality documentation in the product repo
 - Pre-commit hook configuration (`.pre-commit-config.yaml`, `.husky/`, git hooks, etc.)
 - Linter configuration appropriate to the project's language
 - Type-checker configuration in its strictest viable mode
@@ -86,7 +86,7 @@ For each target requirement:
 - **Existing modules**: What's already implemented? What interfaces exist? What can be reused?
 - **Existing tests**: What test patterns are established? What test utilities exist? What's the test file naming convention?
 - **Configuration**: Read linter, type-checker, formatter, and test configuration to understand the quality standards the plan must satisfy.
-- **Documentation**: Read any `QUALITY.md`, `README.md`, `CONTRIBUTING.md`, or similar docs that define development practices.
+- **Documentation**: Read any `clif-d/backpressure.md`, `README.md`, `CONTRIBUTING.md`, or similar docs that define development practices.
 
 ### 3. Identify the implementation gap
 
@@ -111,7 +111,7 @@ Keep interrogation minimal. Prefer making reasonable assumptions (stated explici
 
 The output is a Markdown file saved as `clif-d/plans/active/plan-<requirement-ids>.md` in the product repository (e.g., `clif-d/plans/active/plan-REQ-003.md` or `clif-d/plans/active/plan-REQ-003-REQ-007.md` for multiple requirements). Create the `clif-d/plans/active/` directory if it does not yet exist. See the README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
 
-Active plans live in `clif-d/plans/active/`. Completed plans are moved to `clif-d/plans/archive/` by the future `compact-planning-artifacts` skill — this skill should not move or archive plans itself.
+Active plans live in `clif-d/plans/active/`. After implementation, the `implement-plan` skill moves completed plans to `clif-d/plans/executed/`. The future `compact-planning-artifacts` skill compacts executed plans into `clif-d/plans/archive/`. This skill should not move or archive plans itself.
 
 ### Header
 
@@ -137,7 +137,7 @@ Inline the essential context from the PRD and architecture that the implementer 
 - **CLI specification** (if applicable — the exact command, args, flags, stdin/stdout/stderr, exit codes)
 - **Relevant architecture decisions** (modules involved, interfaces, data structures)
 - **Relevant context items** (constraints, personas, domain definitions that affect implementation)
-- **Quality guardrails** (from `QUALITY.md` or build config — what standards the code must meet)
+- **Quality guardrails** (from `clif-d/backpressure.md` or build config — what standards the code must meet)
 
 ### 3. Prerequisites
 

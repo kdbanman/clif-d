@@ -25,11 +25,13 @@ create-product-concept
                         │
                         └──▶ create-architecture
                                     │
-                                    └──▶ design-backpressure
+                                    └──▶ bootstrap-dev-environment  (planned)
                                                 │
-                                                └──▶ plan-requirement  (repeats per requirement)
+                                                └──▶ design-backpressure
                                                             │
-                                                            └──▶ implement-plan  (repeats per plan)
+                                                            └──▶ plan-requirement  (repeats per requirement)
+                                                                        │
+                                                                        └──▶ implement-plan  (repeats per plan)
 ```
 
 ## The `clif-d/` directory
@@ -46,17 +48,18 @@ All CLIF-D artifacts for a given product live in a single `clif-d/` directory at
     architecture.md         # create-architecture
     architecture/           # create-architecture (diagram files, optional)
       *.mmd
-    backpressure.md         # design-backpressure
+    backpressure.md         # design-backpressure (design record + practitioner reference)
     plans/
       active/               # plan-requirement writes here
         plan-REQ-NNN.md
-      archive/              # compact-planning-artifacts moves completed plans here
+      executed/             # implement-plan moves completed plans here
+        plan-REQ-NNN.md
+      archive/              # compact-planning-artifacts compacts executed plans here
         ...
-  QUALITY.md                # design-backpressure (practitioner-facing, at repo root)
   <source code, tests, configs...>
 ```
 
-The design documents (concept, PRD, architecture, backpressure) live inside `clif-d/`. The backpressure skill also writes a `QUALITY.md` at the repo root because it is practitioner-facing developer documentation, not a design artifact.
+All design documents (concept, PRD, architecture, backpressure) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (setup commands, how to run checks, suppression policy).
 
 ### Artifact precedence and lifecycle
 
@@ -66,8 +69,9 @@ Artifacts are listed here in **order of authority**. When two artifacts disagree
 2. **`prd.json`** — *What the product does.* **Living document.** Grows continuously as implementation progresses and low-level requirements are added (the "bow wave"). Represents the current agreed-upon behavior of the system.
 3. **`architecture.md`** — *How the product is structured.* Updated when structural decisions change. New scaffolding requirements are added to `prd.json` when the architecture document is generated.
 4. **`backpressure.md`** — *What quality standards the product enforces.* Updated when guardrails change. Every change should be a deliberate, documented decision — relaxations especially.
-5. **`plans/active/*.md`** — *How specific requirements will be implemented.* Short-lived. Each plan targets a set of requirements and is consumed by `implement-plan`. After implementation is complete, plans are moved to `plans/archive/` by `compact-planning-artifacts`.
-6. **`plans/archive/*.md`** — *Historical record of what was implemented and how.* Compacted to preserve traceability (requirement IDs, commit SHAs, acceptance criteria verification) without keeping the full step-by-step detail.
+5. **`plans/active/*.md`** — *How specific requirements will be implemented.* Short-lived. Each plan targets a set of requirements and is consumed by `implement-plan`. After implementation is complete, plans are moved to `plans/executed/` by `implement-plan`.
+6. **`plans/executed/*.md`** — *Completed plans with implementation commit SHAs.* Full step-by-step detail is preserved. These accumulate until `compact-planning-artifacts` compacts them into `plans/archive/`.
+7. **`plans/archive/*.md`** — *Historical record of what was implemented and how.* Compacted to preserve traceability (requirement IDs, commit SHAs, acceptance criteria verification) without keeping the full step-by-step detail.
 
 ### The PRD as a living document
 
@@ -139,18 +143,16 @@ The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalo
   - `clif-d req ls [prd.json]` — list requirements with their status; supports `--status=<value>` filter and `--abstraction=high|low` filter
   - `clif-d req dep add <REQ-ID> <DEP-ID> [prd.json]` — add a dependency edge from REQ-ID to DEP-ID
   - `clif-d req dep rm <REQ-ID> <DEP-ID> [prd.json]` — remove a dependency edge
+- [ ] **Implement `bootstrap-dev-environment` skill** — runs after `create-architecture`, before `design-backpressure`. The architecture skill specifies the toolchain (language, package manager, test framework, etc.) but does not verify or install it. This skill bridges the gap between a macOS dev machine and the project's development requirements as executable by an agent. The core problem: the user's shell profile (`.zshrc`) may put tools like `uv`, `cargo`, or `node` on PATH, but the agent's execution environment does not inherit that. The skill should be opinionated about how to make the dev environment reproducible and agent-accessible. Initial thoughts on approach:
+  - Prefer containerized environments (Docker, macOS Containers if available, or devcontainers) for full reproducibility — the agent runs inside the same environment CI will use
+  - Fall back to a setup script (`make bootstrap` or equivalent) that installs language runtimes and package managers via version-pinned installers (e.g. `rustup`, `uv`, `nvm`)
+  - Verify every command from the architecture's Technology Decisions table is executable after setup
+  - Consider Ansible for multi-step provisioning if the project has complex system-level dependencies, but prefer simpler mechanisms first
+  - The skill should produce a `clif-d/dev-environment.md` design document and the actual setup artifacts (Dockerfile, devcontainer.json, Makefile targets, or setup script)
 - [ ] **Implement `extend-low-level-requirements` skill** — keeps the "bow wave" of low-level requirement granularity just ahead of the implementation ship. Called after a round of implementation to add the next slice of clear-first-step low-level requirements to the PRD, informed by what's now known from the code and what's newly unblocked. Must preserve the bow-wave principle from `create-initial-prd`: only specify what's clear *right now*, never more.
-- [ ] **Implement `compact-planning-artifacts` skill** — runs after a round of implementation is complete and the planning artifact directory (`plan-*.md` files) is getting onerous. Compacts completed plans into a concise archive, preserving traceability (requirement IDs, commit SHAs, acceptance criteria verification) while dropping the step-by-step implementation detail. Keeps active plans distinct from archived ones.
+- [ ] **Implement `compact-planning-artifacts` skill** — runs when the `clif-d/plans/executed/` directory is getting onerous. Compacts executed plans into concise archive entries in `clif-d/plans/archive/`, preserving traceability (requirement IDs, commit SHAs, acceptance criteria verification) while dropping the step-by-step implementation detail. Operates on `executed/` plans only — active plans are untouched.
 - [ ] **Implement `check-clif-d-consistency` skill** — aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
 - [ ] **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.
 - [ ] **Implement `clif-d-help` skill (or reference file)** — a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
 - [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
 - [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
-
-## Possible Issues
-
-- It isn't clear if prd.json, architecture.md, and backpressure.md are sufficiently interlinked by the time the architecture and backpressure skills have been executed.  I'm hoping that the individual requirements refer to those files as necessary.  This might already be the case, but I should verify that it's true.
-- The architecture skill might need to be instructed to bootstrap the environment to make sure all the expected commands are executable.  Maybe that should be encouraged with docker/rancher...  Or ansible?  For example, if the user .zshrc puts `uv` on PATH, it isn't guaranteed that the agent will have `uv` on the PATH.
-- QUALITY.md ended up on the project root, rather than in `clif-d/`?  Seems strange.  Apparently the skill explicitly instructs a separate file - there is a clif-d/backpressure.md as well.  I should instead get the skill to output just the one backpressure.md file - merge everything into backpressure.md and make sure it's appropriately referenced in other skills.
-- The implement-requirement skill doesn't mark the PRD items as finished, nor does it move the plan files from active to somewhere else appropriate.  After prodding to inspect skill files, gemini decided to put the executed plan files into `archive` which might be stomping on the compaction skill.
-
