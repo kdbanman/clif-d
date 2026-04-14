@@ -26,7 +26,9 @@ This isn't dogma — it's a practical constraint for agentic implementation. An 
 
 ### Plans are self-contained documents
 
-The plan must be **understandable and actionable without reading the PRD or architecture document during implementation**. It should inline or summarize all necessary context — the requirement's acceptance criteria, relevant architectural decisions, module interfaces, CLI specifications, and data structures. Reference the source documents by path for traceability, but don't force the implementer to tab back and forth.
+The plan must be **understandable and actionable without reading any other document during implementation**. The implementer may be a relatively junior developer or a narrowly-scoped agent — they should not need to search the codebase, read the PRD, or interpret the architecture document to understand what to build. Your job as the planner is to do that interpretive work upfront and deliver a plan that is ready to execute.
+
+This means inlining or summarizing all necessary context: the requirement's acceptance criteria, relevant architectural decisions, module interfaces, CLI specifications, data structures, error handling conventions, and quality check commands. Reference the source documents by path for traceability, but don't force the implementer to consult them. If a piece of information from an upstream document would help the implementer make a better decision, include it in the plan — don't assume they'll go find it.
 
 ### Vertical slices, not horizontal layers
 
@@ -80,7 +82,17 @@ For each target requirement:
 - Recursively read dependencies of dependencies until you have the full subgraph.
 - Identify which dependencies are already implemented (by examining the codebase) and which are not.
 
-### 2. Explore the codebase
+### 2. Read preceding plans
+
+Check `clif-d/plans/executed/` and `clif-d/plans/active/` for plans that implemented dependency requirements or related functionality. These are valuable because they show:
+- What modules and interfaces were created (and where)
+- What test patterns were established
+- What implementation decisions were made that this plan should follow or build on
+- What assumptions were documented that may affect this plan
+
+If a dependency requirement was recently implemented, its executed plan is the fastest way to understand the current state of that area of the codebase. Reference the most relevant preceding plans in the plan header.
+
+### 3. Explore the codebase
 
 - **Project structure**: Understand the directory layout, module organization, and build system.
 - **Existing modules**: What's already implemented? What interfaces exist? What can be reused?
@@ -88,18 +100,32 @@ For each target requirement:
 - **Configuration**: Read linter, type-checker, formatter, and test configuration to understand the quality standards the plan must satisfy.
 - **Documentation**: Read any `clif-d/backpressure.md`, `README.md`, `CONTRIBUTING.md`, or similar docs that define development practices.
 
-### 3. Identify the implementation gap
+### 4. Identify the implementation gap
 
 Compare what the requirement needs (from the PRD + architecture) with what exists (from the codebase). The plan should only cover what's missing. If a dependency is already implemented and tested, the plan should note it as a given, not re-plan it.
 
 ---
 
-## Interrogation
+## Ambiguity Resolution
 
-Most of the information needed for planning comes from the PRD, architecture document, and codebase exploration. Interrogation is for resolving genuine ambiguities that can't be answered by reading.
+Before planning, you must resolve ambiguity — not defer it to the implementer. The implementer should receive a plan where every step is clear enough to execute without interpretation.
 
-Ask questions only when:
-- The requirement's acceptance criteria are ambiguous at a level that affects implementation approach
+### Trace upstream first
+
+When a requirement is ambiguous, trace upstream through the documentation before asking the user:
+
+1. **PRD context items and descriptions** — the requirement's `context_refs` and `description` often contain the clarifying detail.
+2. **Architecture document** — module interfaces, data flow diagrams, and error handling conventions often resolve "how should this work?" questions.
+3. **Concept document** — the product's fundamental purpose and value proposition often resolve "why does this behave this way?" questions.
+4. **Preceding plans and existing code** — patterns established by earlier implementation often resolve "what convention should I follow?" questions.
+5. **Backpressure document** — quality constraints often resolve "how strict should this be?" questions.
+
+Most ambiguity in requirements can be resolved by reading upstream documents carefully. The requirement author couldn't (and shouldn't) inline every detail — that's what the reference graph is for. Your job is to follow the references, synthesize the answer, and bake it into the plan.
+
+### Interrogation
+
+After upstream tracing, interrogation is for genuine ambiguities that can't be answered by reading. Ask the user only when:
+- The requirement's acceptance criteria are ambiguous at a level that affects implementation approach, and no upstream document resolves it
 - There's a design choice not covered by the architecture document
 - There's a conflict between the requirement and existing code
 
@@ -119,11 +145,15 @@ Active plans live in `clif-d/plans/active/`. After implementation, the `implemen
 # Implementation Plan: <Requirement Title(s)>
 
 **Requirements:** REQ-003, REQ-007
-**PRD:** `path/to/prd-product-name.json`
-**Architecture:** `path/to/architecture-product-name.md`
+**PRD:** `clif-d/prd.json`
+**Architecture:** `clif-d/architecture.md` (§4 Module Architecture, §5 CLI-to-Module Mapping — or whichever sections are relevant)
+**Backpressure:** `clif-d/backpressure.md`
+**Preceding plans:** `clif-d/plans/executed/plan-REQ-001.md` (if relevant — list plans that built the code this plan extends)
 **Date:** YYYY-MM-DD
 **Status:** Draft
 ```
+
+Link specific sections of the architecture document, not just the file. The implementer should be able to jump directly to the relevant module decomposition or data flow diagram if they need to verify something.
 
 ### 1. Objective
 
@@ -131,13 +161,17 @@ A concise summary (2-3 sentences) of what this plan delivers. State the user-vis
 
 ### 2. Context Summary
 
-Inline the essential context from the PRD and architecture that the implementer needs. This section makes the plan self-contained. Include:
+This is where you do the heavy lifting that makes the plan self-contained. **Inline everything the implementer needs** so they can work from this document alone. Be generous with context — it's far better to include a paragraph the implementer skims than to omit something they'll need to go hunt for.
 
-- **Requirement description and acceptance criteria** (copied or summarized from PRD)
-- **CLI specification** (if applicable — the exact command, args, flags, stdin/stdout/stderr, exit codes)
-- **Relevant architecture decisions** (modules involved, interfaces, data structures)
-- **Relevant context items** (constraints, personas, domain definitions that affect implementation)
-- **Quality guardrails** (from `clif-d/backpressure.md` or build config — what standards the code must meet)
+Include:
+
+- **Requirement description and acceptance criteria** — copy verbatim from the PRD, not summarized. The implementer needs the exact wording to verify against.
+- **CLI specification** — the exact command, args, flags, stdin/stdout/stderr, exit codes. Copy from PRD.
+- **Relevant architecture decisions** — the specific modules involved, their public interfaces, key data structures, and how data flows between them. Don't just name the modules; describe the interfaces the implementer will call or implement. Pull from the architecture document's Module Architecture (§4) and Data Flow (§6) sections.
+- **Relevant context items** — constraints, personas, domain definitions that affect implementation. Copy from PRD context items.
+- **Quality guardrails** — the exact commands to run for linting, type-checking, formatting, and testing. Copy from `clif-d/backpressure.md` Practitioner Quick Reference. The implementer should not need to look these up.
+- **Error handling conventions** — how errors are represented, propagated, and mapped to exit codes. Pull from the architecture document's Error Handling Strategy (§7).
+- **Relevant preceding implementation** — if this plan extends code built by a preceding plan, summarize what already exists: which modules, which interfaces, which test patterns. The implementer needs to know what they're building on top of.
 
 ### 3. Prerequisites
 
@@ -207,7 +241,12 @@ A summary list of every file the plan touches:
 
 ### 7. Open Questions and Assumptions
 
-Any assumptions made during planning that the implementer should be aware of. Any questions that remain unresolved. Flag anything where the plan made a judgment call that might need revisiting.
+Any assumptions made during planning that the implementer should be aware of. Flag anything where the plan made a judgment call that might need revisiting.
+
+**Open questions should be rare.** If this section has more than one or two items, that's a signal of one of the following:
+
+1. That the planning phase didn't resolve enough ambiguity. Go back to the upstream documents and the user before leaving questions for the implementer. The implementer should be able to execute the plan without needing to make interpretive decisions — those are the planner's job.
+2. That the requirement itself needs work: further decomposition, clearer acceptance criteria, etc. Discuss with the user to plan requirements revision.
 
 ---
 
