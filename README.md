@@ -156,3 +156,10 @@ The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalo
 - [ ] **Implement `clif-d-help` skill (or reference file)** — a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
 - [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
 - [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
+
+## Potential Issues
+
+- the plan-requirement skill and the implement-plan skill has a hard time figuring out what has already been implemented.  Solution ideas: Once the PRD CLI is implemented, both skills should use it to investigate what is already done.  Use the CLI to find prerequisite requirement IDs and context from the PRDs.  (Prerequisite as in requirement dependencies.)  Use the git detailed log and other git CLI commands to look at most recent work to see if anything relevant is in there.  (In general, this plugin project needs more explicit guidance on how to use git, because it's a beautiful log of changes, and can even be used to investigate changes at arbitrary detail and depth.)
+- Never use \u2014 in any skill.  Only hyphens
+- Never use any complex UTF or emojis.  ASCII only.
+
