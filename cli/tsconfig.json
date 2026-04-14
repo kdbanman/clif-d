@@ -12,6 +12,6 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["../bin/clif-d"],
+  "include": ["clif-d.js"],
   "exclude": ["node_modules"]
 }

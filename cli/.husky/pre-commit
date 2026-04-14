@@ -1,10 +1,13 @@
 cd cli
 
+# All checks target clif-d.js (a symlink to ../bin/clif-d).
+# The symlink gives ESLint a file within its base path and gives TypeScript a .js extension.
+
 echo "Checking formatting..."
-npx prettier --check ../bin/clif-d
+npx prettier --check clif-d.js
 
 echo "Linting..."
-npx eslint ../bin/clif-d
+npx eslint clif-d.js
 
 echo "Type checking..."
 npx tsc --noEmit

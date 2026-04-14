@@ -5,9 +5,9 @@
   "description": "Development tooling for the clif-d CLI. Not published. The CLI itself is bin/clif-d (zero dependencies).",
   "scripts": {
     "prepare": "cd .. && husky cli/.husky",
-    "lint": "eslint ../bin/clif-d",
-    "format": "prettier --write ../bin/clif-d",
-    "format:check": "prettier --check ../bin/clif-d",
+    "lint": "eslint clif-d.js",
+    "format": "prettier --write clif-d.js",
+    "format:check": "prettier --check clif-d.js",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/**/*.test.js",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test"

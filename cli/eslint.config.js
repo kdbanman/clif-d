@@ -9,7 +9,7 @@ export default [
   nodePlugin.configs["flat/recommended"],
   security.configs.recommended,
   {
-    files: ["../bin/clif-d"],
+    files: ["clif-d.js"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "commonjs",
