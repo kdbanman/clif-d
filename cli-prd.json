@@ -1,0 +1,721 @@
+{
+  "$schema": "skills/create-initial-prd/assets/prd-schema.json",
+  "product_name": "clif-d",
+  "concept_summary": {
+    "description": "A zero-dependency Node.js CLI tool shipped inside the CLIF-D Claude Code plugin (via the bin/ directory) for deterministic, token-efficient CRUD operations on PRD JSON files. Every CLIF-D skill that touches prd.json currently asks Claude to parse and rewrite JSON directly -- expensive in tokens, fragile against malformed edits, and nondeterministic. The clif-d CLI replaces those freehand JSON manipulations with validated, atomic, scriptable commands. The tool is newly practical because Claude Code plugins officially support shipping executables in bin/ (added to the Bash tool's PATH), and Node.js 18+ is guaranteed in every Claude Code environment.",
+    "reference_link": "README.md"
+  },
+  "context": [
+    {
+      "id": "CTX-000",
+      "title": "Other top level references",
+      "description": "Other artifacts generated alongside this PRD: ./cli-integration-plan.md and ./cli-design-notes.md",
+      "type": "product_goal"
+    },
+    {
+      "id": "CTX-001",
+      "title": "Zero-dependency Node.js constraint",
+      "description": "The CLI must use only Node.js built-in modules (fs, path, process, child_process). No package.json, no node_modules, no npm install step. The tool must work the moment the plugin is installed. This constraint exists because Claude Code plugins have no install hook -- the bin/ directory is simply added to PATH. Any runtime dependency that isn't guaranteed by the Node.js 18+ baseline is a deployment failure.",
+      "type": "constraint"
+    },
+    {
+      "id": "CTX-002",
+      "title": "Single-file distribution",
+      "description": "The entire CLI is one executable file at bin/clif-d with a #!/usr/bin/env node shebang. No multi-file architecture, no transpilation, no build step. This constraint follows from the plugin distribution model -- the file must be self-contained and executable as-is. It also simplifies debugging: the source is the artifact.",
+      "type": "constraint"
+    },
+    {
+      "id": "CTX-003",
+      "title": "PRD schema as contract",
+      "description": "The CLI operates on JSON files conforming to the PRD schema defined at skills/create-initial-prd/assets/prd-schema.json. This schema defines the structure of requirements (REQ-NNN), context items (CTX-NNN), and architecture items (ARCH-NNN), along with their fields, types, and ID patterns. The CLI must validate reads and writes against this schema. The schema is the single source of truth for what constitutes a valid PRD.",
+      "type": "constraint",
+      "reference_link": "skills/create-initial-prd/assets/prd-schema.json"
+    },
+    {
+      "id": "CTX-004",
+      "title": "Claude Code agent persona",
+      "description": "The primary user is a Claude Code agent executing CLIF-D skills in a product repository. The agent invokes the CLI via the Bash tool, reads structured JSON from stdout, and makes decisions based on the output. The agent does not need colors, progress bars, or interactive prompts. It needs predictable exit codes, valid JSON on stdout, and actionable error messages on stderr. Human developers are a secondary audience who may invoke the CLI directly for PRD inspection.",
+      "type": "persona"
+    },
+    {
+      "id": "CTX-005",
+      "title": "CLI design conventions",
+      "description": "The CLI follows the conventions documented in the CLIF-D CLI design guide (references/cli-design-guide.md in the create-initial-prd skill). Key conventions: stdout for data, stderr for errors and diagnostics; exit 0 for success, 1 for logic/validation errors, 2 for usage errors; --json for structured output (default for this tool since agents are the primary consumer), --plain for tabular text; long flags always available, short flags only for frequently used options.",
+      "type": "constraint",
+      "reference_link": "skills/create-initial-prd/references/cli-design-guide.md"
+    },
+    {
+      "id": "CTX-006",
+      "title": "PRD as living document",
+      "description": "The PRD (clif-d/prd.json in the user's product repo) is a living document that grows throughout the project lifecycle. Multiple skills modify it at different stages: create-initial-prd creates it, create-architecture appends scaffolding requirements and backfills architecture_refs, design-backpressure adds context items, implement-plan sets requirement status and commit SHAs. The CLI must handle concurrent-style access gracefully (atomic writes, no corruption on interruption) even though true concurrent modification is out of scope (README explicitly states the PRD is not for cross-machine coordination).",
+      "type": "domain"
+    },
+    {
+      "id": "CTX-007",
+      "title": "Requirement lifecycle states",
+      "description": "A requirement's status field tracks its implementation lifecycle: absent or not_started (default), in_progress (work has begun), done (all acceptance criteria satisfied, implementation_commit set), blocked (progress prevented by external factor). Transitions are: not_started -> in_progress -> done, or not_started -> blocked -> not_started. A done requirement cannot be un-done or blocked. These transitions are enforced by the CLI to prevent accidental state corruption.",
+      "type": "domain"
+    },
+    {
+      "id": "CTX-008",
+      "title": "Dependency graph semantics",
+      "description": "The dependencies field on a requirement defines hard blocking relationships: if REQ-003 depends on REQ-001, then REQ-001 must be done before REQ-003 can be started. The dependency graph must be a DAG (directed acyclic graph) -- circular dependencies are invalid. Non-blocking relationships (see also, related context) are expressed as inline ID references in description text, not in the dependencies array. The CLI enforces acyclicity on every mutation that touches dependencies.",
+      "type": "domain"
+    },
+    {
+      "id": "CTX-009",
+      "title": "Default PRD path convention",
+      "description": "All commands accept an optional [prd-path] as the last positional argument. When omitted, the CLI defaults to clif-d/prd.json relative to the current working directory. This matches the CLIF-D artifact layout convention where all design artifacts live in a clif-d/ directory at the product repo root.",
+      "type": "constraint"
+    }
+  ],
+  "architecture": [
+    {
+      "id": "ARCH-001",
+      "title": "Plugin bin/ distribution",
+      "description": "The CLI lives at bin/clif-d in the CLIF-D plugin repository. When the plugin is installed in Claude Code, files in bin/ are added to the Bash tool's PATH, making 'clif-d' available as a bare command in any Bash invocation. The plugin repository also contains the PRD schema (skills/create-initial-prd/assets/prd-schema.json) which the CLI reads for validation. The CLI must resolve the schema path relative to its own location (using __dirname or equivalent), not relative to cwd.",
+      "level": "context"
+    },
+    {
+      "id": "ARCH-002",
+      "title": "Command routing architecture",
+      "description": "The CLI uses a two-level noun-verb command structure: clif-d <domain> <command> [args] [flags] [prd-path]. Domains are: req (requirements), ctx (context items), arch (architecture items), validate (structural checks), id (ID utilities), schema (schema operations). Each domain groups related operations. The router parses argv, identifies the domain and command, validates flags, and dispatches to the handler. All handlers share a common PRD read/validate/write cycle for mutation commands.",
+      "level": "container"
+    },
+    {
+      "id": "ARCH-003",
+      "title": "Read-validate-write cycle",
+      "description": "Every mutation command follows the same cycle: (1) read the PRD file into memory, (2) parse JSON, (3) apply the mutation, (4) validate the result against the PRD schema and domain rules (referential integrity, acyclicity, status transitions), (5) write to a temp file, (6) atomic rename to the target path. If validation fails at step 4, the original file is untouched and the tool exits 1 with diagnostics on stderr. This pattern ensures no partial writes and no invalid PRD states on disk.",
+      "level": "component"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "title": "Requirement status query",
+      "description": "The most pressing pain point across CLIF-D skills is answering 'what is the state of the PRD?' The plan-requirement skill needs to find implementable requirements. The implement-plan skill needs to know what is done. A future consistency-check skill needs to audit the whole graph. All of these currently require Claude to parse raw JSON and manually filter -- expensive and error-prone. The CLI must provide filtered, structured views of requirement state.",
+      "acceptance_criteria": "An agent or developer can list requirements filtered by status and abstraction level, retrieve any single requirement by ID, and identify the next implementable requirement -- all via CLI commands that output valid, parseable JSON to stdout.",
+      "priority": 1,
+      "abstraction_level": "high",
+      "context_refs": ["CTX-004", "CTX-007"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req ls",
+        "stdout": "JSON array of requirement objects with requested fields. Default fields: id, title, status, abstraction_level, priority.",
+        "stderr": "Error messages if PRD file cannot be read or parsed.",
+        "exit_codes": {
+          "0": "Success, results printed to stdout (empty array if no matches).",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-002",
+      "title": "Requirement status mutation",
+      "description": "The implement-plan skill currently sets requirement status by hand-editing prd.json -- finding the requirement object, adding or changing the status field, adding implementation_commit, then writing the file back. This is the single most error-prone JSON edit in the pipeline because it touches the living document's state tracking. A wrong edit can corrupt the status of unrelated requirements, break JSON syntax, or silently drop fields. The CLI must provide atomic, validated status transitions.",
+      "acceptance_criteria": "An agent can transition a requirement through its lifecycle (start, done, block) via CLI commands. Each transition validates preconditions (e.g., cannot block a done requirement, done requires a commit SHA). Invalid transitions exit nonzero with a clear error. Valid transitions write the updated PRD atomically.",
+      "priority": 1,
+      "abstraction_level": "high",
+      "context_refs": ["CTX-007", "CTX-006"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req done",
+        "stdout": "The updated requirement object as JSON.",
+        "stderr": "Validation errors if the transition is invalid.",
+        "exit_codes": {
+          "0": "Status updated and PRD written successfully.",
+          "1": "Validation error (requirement not found, invalid transition, bad SHA format).",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-003",
+      "title": "Dependency graph operations",
+      "description": "The plan-requirement skill must resolve the full dependency subgraph for a target requirement to understand what must be done first and what is already complete. It currently does this by recursively reading the PRD JSON and manually tracing dependency chains -- a process the README explicitly calls out as a pain point. The CLI must provide dependency graph traversal, edge management, and cycle detection as first-class operations.",
+      "acceptance_criteria": "An agent can add and remove dependency edges between requirements, query the full dependency graph or a subgraph rooted at a specific requirement, and receive clear errors if a proposed edge would create a cycle. The graph output is structured enough to determine implementation order.",
+      "priority": 2,
+      "abstraction_level": "high",
+      "context_refs": ["CTX-008"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req dep graph",
+        "stdout": "JSON adjacency list by default. Graphviz DOT format via --format=dot.",
+        "stderr": "Error messages for invalid IDs or cycle detection.",
+        "exit_codes": {
+          "0": "Graph printed successfully.",
+          "1": "Referenced requirement ID does not exist.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-004",
+      "title": "PRD content mutation",
+      "description": "The create-architecture skill appends scaffolding requirements to the PRD and backfills architecture_refs on existing requirements. The design-backpressure skill adds context items and backfills context_refs. Both currently do this by having Claude directly edit JSON -- inserting objects into arrays, managing ID sequences, and hoping the result is valid. The CLI must provide add and edit operations for requirements, context items, and architecture items with schema validation and auto-ID assignment.",
+      "acceptance_criteria": "An agent can add new requirements, context items, and architecture items by piping JSON to stdin. The CLI auto-assigns the next available ID when id is omitted. An agent can update fields on existing items via merge-edit from stdin. All mutations are validated against the PRD schema before writing.",
+      "priority": 2,
+      "abstraction_level": "high",
+      "context_refs": ["CTX-003", "CTX-006"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req add",
+        "stdin": "JSON requirement object. The id field is optional -- if omitted, the next available REQ-NNN is assigned.",
+        "stdout": "The added requirement object with assigned ID.",
+        "stderr": "Validation errors if the object is malformed or references nonexistent IDs.",
+        "exit_codes": {
+          "0": "Requirement added and PRD written successfully.",
+          "1": "Validation error (schema violation, bad references).",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-005",
+      "title": "PRD structural validation",
+      "description": "No skill currently validates the PRD as a whole after modifying it. Each skill trusts that its own edits are correct, but cross-cutting issues (dangling references, circular dependencies, status/commit inconsistencies, duplicate IDs) can accumulate silently. The CLI must provide a comprehensive validation command that checks structural integrity beyond what JSON Schema alone can express.",
+      "acceptance_criteria": "An agent or developer can run a single command that checks JSON validity, schema conformance, referential integrity of all ID references, dependency graph acyclicity, ID uniqueness, and status/implementation_commit consistency. The output is a structured list of issues with severity levels.",
+      "priority": 1,
+      "abstraction_level": "high",
+      "context_refs": ["CTX-003", "CTX-008"],
+      "architecture_refs": ["ARCH-002"]
+    },
+    {
+      "id": "REQ-006",
+      "title": "Schema distribution",
+      "description": "The create-initial-prd skill currently generates a prd.json with a $schema field pointing into the .claude/ directory where the plugin is installed. This is awkward because the schema path is machine-specific and breaks if the plugin is updated or reinstalled. The README TODO explicitly calls this out. The CLI should provide a way to copy the canonical schema into the product's clif-d/ directory so the $schema field can use a stable, repo-relative path.",
+      "acceptance_criteria": "An agent can copy the PRD schema from the plugin into the product repository's clif-d/ directory via a CLI command. After copying, the $schema field in prd.json can reference the local copy with a relative path that works on any machine.",
+      "priority": 3,
+      "abstraction_level": "high",
+      "context_refs": ["CTX-009"],
+      "architecture_refs": ["ARCH-001"]
+    },
+    {
+      "id": "REQ-007",
+      "title": "ID sequence management",
+      "description": "Skills that add items to the PRD need to know the next available ID in a namespace (REQ, CTX, ARCH) before constructing the object. Currently Claude scans the JSON to find the highest existing ID and increments -- a manual process that is easy to get wrong, especially when multiple items are added in one session. The CLI should expose the next-ID calculation as a utility command.",
+      "acceptance_criteria": "An agent can query the next available ID for any prefix (REQ, CTX, ARCH) and receive it on stdout. The ID follows the NNN zero-padded pattern and is guaranteed not to collide with any existing ID in the PRD.",
+      "priority": 3,
+      "abstraction_level": "high",
+      "context_refs": ["CTX-003"],
+      "architecture_refs": ["ARCH-002"]
+    },
+    {
+      "id": "REQ-008",
+      "title": "List requirements with filters",
+      "description": "First concrete command. Enables the plan-requirement skill to quickly assess PRD state without parsing JSON. Supports filtering by status and abstraction level, which are the two most common query axes. Also supports field selection to keep output concise -- an agent listing requirements to find the next one to plan does not need full cli_spec objects in the output. Related to REQ-001.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json exists at the default or specified path",
+        "when": "The agent runs clif-d req ls --status=not_started --abstraction=low",
+        "then": "stdout contains a JSON array of requirement objects matching both filters, each containing only the default fields (id, title, status, abstraction_level, priority). Exit code is 0. If no requirements match, stdout contains an empty JSON array."
+      },
+      "priority": 1,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-004", "CTX-007"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req ls",
+        "flags": [
+          {
+            "name": "--status",
+            "description": "Filter by status value. Comma-separated for multiple: --status=not_started,blocked. Values: not_started, in_progress, done, blocked. Requirements with no status field are treated as not_started.",
+            "short": "-s"
+          },
+          {
+            "name": "--abstraction",
+            "description": "Filter by abstraction_level: high or low.",
+            "short": "-a"
+          },
+          {
+            "name": "--priority",
+            "description": "Sort output by priority ascending (lowest number = highest priority). Unranked requirements appear last."
+          },
+          {
+            "name": "--fields",
+            "description": "Comma-separated list of fields to include in each requirement object. Default: id,title,status,abstraction_level,priority.",
+            "short": "-f",
+            "default": "id,title,status,abstraction_level,priority"
+          },
+          {
+            "name": "--deps",
+            "description": "Include the dependencies field in output. Shorthand for adding dependencies to --fields."
+          },
+          {
+            "name": "--json",
+            "description": "JSON output (default)."
+          },
+          {
+            "name": "--plain",
+            "description": "Plain tabular text output, one requirement per line."
+          }
+        ],
+        "stdout": "JSON array of filtered requirement objects with selected fields.",
+        "stderr": "Error messages if PRD file cannot be read or parsed.",
+        "exit_codes": {
+          "0": "Success. Empty array if no matches.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-009",
+      "title": "Show a single requirement",
+      "description": "Retrieve the complete object for one requirement by ID. Used by plan-requirement to read the full detail (description, acceptance_criteria, cli_spec, all refs) of a target requirement, and by implement-plan to inspect a requirement before marking it done. Related to REQ-001.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json containing REQ-007",
+        "when": "The agent runs clif-d req show REQ-007",
+        "then": "stdout contains the full JSON object for REQ-007 with all fields present in the PRD (no field filtering). Exit code is 0."
+      },
+      "priority": 1,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-004"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req show",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement ID to display (e.g. REQ-007).",
+            "required": true
+          }
+        ],
+        "stdout": "The complete requirement JSON object.",
+        "stderr": "Error message if the ID does not exist.",
+        "exit_codes": {
+          "0": "Requirement found and printed.",
+          "1": "Requirement ID does not exist in the PRD.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-010",
+      "title": "Find next implementable requirement",
+      "description": "The single highest-value command for the plan-requirement skill. Answers 'what should I work on next?' by combining status filtering with dependency resolution. Replaces the multi-step process of: read all requirements, filter to not_started, check each one's dependencies recursively, determine if all dependencies are done. This is the command the README TODO describes as 'clif-d req next'. Related to REQ-001 and REQ-003.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json where REQ-001 is done, REQ-002 depends on REQ-001 and is not_started with priority 1, and REQ-003 is not_started with priority 2 and no dependencies",
+        "when": "The agent runs clif-d req next",
+        "then": "stdout contains the full JSON object for REQ-002 (highest priority among eligible). Exit code is 0."
+      },
+      "priority": 1,
+      "dependencies": ["REQ-008"],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-007", "CTX-008"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req next",
+        "stdout": "The full JSON requirement object of the highest-priority eligible requirement.",
+        "stderr": "Diagnostic message if no requirements are eligible.",
+        "exit_codes": {
+          "0": "An eligible requirement was found and printed.",
+          "1": "No eligible requirement exists (all done, all blocked, or all have unmet dependencies).",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-011",
+      "title": "Mark requirement done with commit SHA",
+      "description": "Used by the implement-plan skill at the end of every implementation cycle. Currently the skill hand-edits prd.json to set status and implementation_commit -- the most dangerous manual JSON edit in the pipeline. This command makes the operation atomic and validated. The --commit flag is required to enforce traceability (every done requirement has a commit SHA). Related to REQ-002.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json containing REQ-007 with status absent or in_progress",
+        "when": "The agent runs clif-d req done REQ-007 --commit=abc1234def",
+        "then": "The PRD file is updated atomically: REQ-007 now has status 'done' and implementation_commit 'abc1234def'. stdout contains the updated requirement object. Exit code is 0."
+      },
+      "priority": 1,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-007", "CTX-006"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req done",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement ID to mark done.",
+            "required": true
+          }
+        ],
+        "flags": [
+          {
+            "name": "--commit",
+            "short": "-c",
+            "description": "The git commit SHA that completed this requirement. Required. Must be a valid hex string (7-40 characters)."
+          }
+        ],
+        "stdout": "The updated requirement object as JSON.",
+        "stderr": "Validation errors: requirement not found, already done, invalid SHA format, missing --commit flag.",
+        "exit_codes": {
+          "0": "Status set to done, PRD written.",
+          "1": "Validation error.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-012",
+      "title": "Mark requirement in-progress",
+      "description": "Used by the plan-requirement skill when planning begins on a requirement. Signals to other agents or future skill invocations that work is underway. Related to REQ-002.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json containing REQ-007 with status absent or not_started",
+        "when": "The agent runs clif-d req start REQ-007",
+        "then": "The PRD file is updated: REQ-007 now has status 'in_progress'. stdout contains the updated requirement object. Exit code is 0."
+      },
+      "priority": 1,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-007"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req start",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement ID to mark in-progress.",
+            "required": true
+          }
+        ],
+        "stdout": "The updated requirement object as JSON.",
+        "stderr": "Validation errors: requirement not found, already done (cannot re-start a completed requirement).",
+        "exit_codes": {
+          "0": "Status set to in_progress, PRD written.",
+          "1": "Validation error.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-013",
+      "title": "Mark requirement blocked",
+      "description": "Provides a way to signal that a requirement cannot proceed due to an external factor. The blocker should be noted in the requirement's description (via a separate req edit call). Related to REQ-002.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json containing REQ-007 with status absent, not_started, or in_progress",
+        "when": "The agent runs clif-d req block REQ-007",
+        "then": "The PRD file is updated: REQ-007 now has status 'blocked'. stdout contains the updated requirement object. Exit code is 0."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-007"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req block",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement ID to mark blocked.",
+            "required": true
+          }
+        ],
+        "stdout": "The updated requirement object as JSON.",
+        "stderr": "Validation errors: requirement not found, already done (cannot block a completed requirement).",
+        "exit_codes": {
+          "0": "Status set to blocked, PRD written.",
+          "1": "Validation error.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-014",
+      "title": "Validate PRD structural integrity",
+      "description": "A comprehensive validation command that checks everything beyond what JSON Schema alone can express. Intended as a final step in any skill that modifies the PRD, and as the foundation of the planned check-clif-d-consistency skill. Related to REQ-005.",
+      "acceptance_criteria": {
+        "given": "A prd.json where REQ-003 has a dependency on nonexistent REQ-999 and REQ-005 has status 'done' but no implementation_commit",
+        "when": "The agent runs clif-d validate",
+        "then": "stdout contains a JSON array with at least two issue objects: one error for the dangling dependency reference and one error for the done-without-commit inconsistency. Exit code is 1."
+      },
+      "priority": 1,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-003", "CTX-008"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "validate",
+        "stdout": "JSON array of issue objects: { \"level\": \"error\" | \"warning\", \"id\": \"<entity-id or null>\", \"message\": \"...\" }. Empty array if valid.",
+        "stderr": "Fatal errors only (file not found, unparseable JSON).",
+        "exit_codes": {
+          "0": "PRD is valid. No errors (warnings are allowed).",
+          "1": "PRD has validation errors.",
+          "2": "PRD file not found or not parseable as JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-015",
+      "title": "Add a requirement via stdin",
+      "description": "Enables the create-architecture skill (and future extend-low-level-requirements skill) to append requirements programmatically instead of hand-editing the JSON array. Auto-assigns the next REQ-NNN ID when id is omitted, which eliminates the manual ID calculation that skills currently perform. Related to REQ-004.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json with requirements up to REQ-012",
+        "when": "The agent pipes a JSON object with title, description, acceptance_criteria, and abstraction_level (no id field) to clif-d req add",
+        "then": "The PRD is updated with a new requirement assigned REQ-013. stdout contains the complete requirement object with the assigned ID. All referenced dependency, context_ref, and architecture_ref IDs are validated to exist. Exit code is 0."
+      },
+      "priority": 2,
+      "dependencies": ["REQ-014"],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-003"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req add",
+        "stdin": "JSON requirement object. All required fields per schema must be present except id (auto-assigned if omitted).",
+        "stdout": "The added requirement object with assigned ID.",
+        "stderr": "Validation errors: schema violations, dangling references.",
+        "exit_codes": {
+          "0": "Requirement added, PRD written.",
+          "1": "Validation error.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-016",
+      "title": "Edit requirement fields via stdin",
+      "description": "Enables skills to update individual fields on a requirement without rewriting the entire object. Used by create-architecture to backfill architecture_refs and by design-backpressure to backfill context_refs. Uses replace semantics for all fields (including arrays) -- the caller provides the complete new value for any field being changed. Related to REQ-004.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json where REQ-003 has architecture_refs [\"ARCH-001\"]",
+        "when": "The agent pipes {\"architecture_refs\": [\"ARCH-001\", \"ARCH-002\"]} to clif-d req edit REQ-003",
+        "then": "REQ-003's architecture_refs is now [\"ARCH-001\", \"ARCH-002\"]. All other fields are unchanged. stdout contains the full updated requirement. Exit code is 0."
+      },
+      "priority": 2,
+      "dependencies": ["REQ-014"],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-003"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req edit",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement ID to edit.",
+            "required": true
+          }
+        ],
+        "stdin": "Partial JSON object. Only fields present are updated (replace semantics). Cannot change id.",
+        "stdout": "The full updated requirement object.",
+        "stderr": "Validation errors: requirement not found, schema violation, dangling references, attempt to change id.",
+        "exit_codes": {
+          "0": "Requirement updated, PRD written.",
+          "1": "Validation error.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-017",
+      "title": "Add and remove dependency edges",
+      "description": "Provides dedicated commands for the most common dependency mutation: adding or removing a single edge. More ergonomic than piping a full dependencies array through req edit. Enforces acyclicity on every add. Related to REQ-003.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json where REQ-005 has no dependencies and REQ-003 exists and is not a descendant of REQ-005",
+        "when": "The agent runs clif-d req dep add REQ-005 REQ-003",
+        "then": "REQ-005's dependencies array now includes REQ-003. The full dependency graph remains acyclic. stdout contains the updated REQ-005 object. Exit code is 0."
+      },
+      "priority": 2,
+      "dependencies": ["REQ-014"],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-008"],
+      "architecture_refs": ["ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req dep add",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement that gains the dependency.",
+            "required": true
+          },
+          {
+            "name": "DEP-ID",
+            "description": "The requirement being depended on.",
+            "required": true
+          }
+        ],
+        "stdout": "The updated requirement object for REQ-ID.",
+        "stderr": "Errors: ID not found, duplicate edge, cycle detected.",
+        "exit_codes": {
+          "0": "Dependency added, PRD written.",
+          "1": "Validation error (missing ID, cycle, duplicate).",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-018",
+      "title": "Dependency graph query",
+      "description": "Print the dependency graph for visualization and analysis. Supports full graph or a subgraph rooted at a specific requirement (ancestors only -- what must be done before this requirement). The plan-requirement skill uses the rooted subgraph to understand the full chain of prerequisites. Related to REQ-003.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json where REQ-005 depends on REQ-003, REQ-003 depends on REQ-001",
+        "when": "The agent runs clif-d req dep graph --root=REQ-005",
+        "then": "stdout contains a JSON adjacency list showing REQ-005 -> [REQ-003] and REQ-003 -> [REQ-001]. Requirements outside this subgraph are excluded. Exit code is 0."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-008"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req dep graph",
+        "flags": [
+          {
+            "name": "--root",
+            "description": "Print only the subgraph of ancestors reachable from this requirement ID."
+          },
+          {
+            "name": "--json",
+            "description": "JSON adjacency list output (default)."
+          },
+          {
+            "name": "--dot",
+            "description": "Graphviz DOT format for visualization."
+          },
+          {
+            "name": "--plain",
+            "description": "Plain text, one edge per line: REQ-005 -> REQ-003."
+          }
+        ],
+        "stdout": "Dependency graph in requested format.",
+        "stderr": "Error if --root ID does not exist.",
+        "exit_codes": {
+          "0": "Graph printed.",
+          "1": "Referenced requirement ID does not exist.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-019",
+      "title": "Context item CRUD",
+      "description": "The design-backpressure skill adds context items to the PRD (e.g., a backpressure constraint). The create-architecture skill may also add context items. These operations need the same add/edit/show/ls pattern as requirements. Related to REQ-004.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json with context items up to CTX-003",
+        "when": "The agent pipes a JSON context item (no id) to clif-d ctx add",
+        "then": "A new context item is appended with ID CTX-004. stdout contains the added object. The agent can also run clif-d ctx ls --type=constraint to filter by type, and clif-d ctx show CTX-004 to retrieve the full object."
+      },
+      "priority": 2,
+      "dependencies": ["REQ-014"],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-003"],
+      "architecture_refs": ["ARCH-002", "ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "ctx add",
+        "stdin": "JSON context item object. id is optional (auto-assigned if omitted).",
+        "stdout": "The added context item with assigned ID.",
+        "stderr": "Validation errors.",
+        "exit_codes": {
+          "0": "Context item added, PRD written.",
+          "1": "Validation error.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-020",
+      "title": "Architecture item CRUD",
+      "description": "The create-architecture skill adds architecture items to the PRD. Needs the same add/edit/show/ls pattern as requirements and context items. Related to REQ-004.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json with architecture items up to ARCH-002",
+        "when": "The agent pipes a JSON architecture item (no id) to clif-d arch add",
+        "then": "A new architecture item is appended with ID ARCH-003. stdout contains the added object. The agent can also run clif-d arch ls --level=component to filter by C4 level."
+      },
+      "priority": 2,
+      "dependencies": ["REQ-014"],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-003"],
+      "architecture_refs": ["ARCH-002", "ARCH-003"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "arch add",
+        "stdin": "JSON architecture item object. id is optional (auto-assigned if omitted).",
+        "stdout": "The added architecture item with assigned ID.",
+        "stderr": "Validation errors.",
+        "exit_codes": {
+          "0": "Architecture item added, PRD written.",
+          "1": "Validation error.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-021",
+      "title": "Next available ID query",
+      "description": "Skills that construct objects before piping them to the add commands sometimes need to know the ID in advance (e.g., to include it in description text that references it, or to set up cross-references between multiple items being added). Related to REQ-007.",
+      "acceptance_criteria": {
+        "given": "A valid prd.json with requirements up to REQ-012",
+        "when": "The agent runs clif-d id next REQ",
+        "then": "stdout contains REQ-013. Exit code is 0."
+      },
+      "priority": 3,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-003"],
+      "architecture_refs": ["ARCH-002"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "id next",
+        "arguments": [
+          {
+            "name": "prefix",
+            "description": "The ID prefix: REQ, CTX, or ARCH.",
+            "required": true
+          }
+        ],
+        "stdout": "The next available ID (e.g. REQ-013).",
+        "stderr": "Error if prefix is not recognized.",
+        "exit_codes": {
+          "0": "ID printed.",
+          "1": "Invalid prefix.",
+          "2": "PRD file not found or not valid JSON."
+        }
+      }
+    },
+    {
+      "id": "REQ-022",
+      "title": "Copy PRD schema to product repo",
+      "description": "Addresses the README TODO about the $schema field pointing into .claude/. After running this command, the skill can set $schema to a repo-relative path. Related to REQ-006.",
+      "acceptance_criteria": {
+        "given": "A product repository with a clif-d/ directory",
+        "when": "The agent runs clif-d schema copy clif-d/",
+        "then": "The file clif-d/prd-schema.json is created, identical to the plugin's canonical schema. stdout contains the absolute path of the copied file. Exit code is 0."
+      },
+      "priority": 3,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": ["CTX-009"],
+      "architecture_refs": ["ARCH-001"],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "schema copy",
+        "arguments": [
+          {
+            "name": "dest-dir",
+            "description": "The directory to copy prd-schema.json into.",
+            "required": true
+          }
+        ],
+        "stdout": "Absolute path of the copied schema file.",
+        "stderr": "Error if destination directory does not exist.",
+        "exit_codes": {
+          "0": "Schema copied.",
+          "1": "Destination directory does not exist.",
+          "2": "Plugin schema file not found (broken installation)."
+        }
+      }
+    }
+  ]
+}
