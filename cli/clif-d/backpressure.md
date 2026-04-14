@@ -43,6 +43,13 @@ Every relaxation is listed here with explicit justification. If a rule is not li
 | `n/no-process-exit` | eslint-plugin-n | Disabled | Same rationale as `unicorn/no-process-exit`. Both plugins flag the same pattern. |
 | `security/detect-object-injection` | eslint-plugin-security | Disabled | The CLI reads and writes JSON objects by user-supplied keys (requirement IDs, field names). Every access is against parsed PRD data, not user-controlled code paths. This rule produces false positives on every bracket notation access. |
 | `unicorn/no-null` | eslint-plugin-unicorn | Disabled | JSON.parse returns null for JSON null values. The CLI operates on JSON data where null is a valid value. Forcing undefined-only is incompatible with JSON semantics. |
+| `n/hashbang` | eslint-plugin-n | Disabled | `bin/clif-d` IS correctly registered as an executable -- but via the Claude Code plugin manifest (bin/ directory on PATH), not via a package.json "bin" field. The n/hashbang rule cannot see the plugin manifest, so it reports a false positive. |
+| `unicorn/prefer-module` | eslint-plugin-unicorn | Disabled | The CLI is intentionally CommonJS (CTX-002 -- single file, no transpilation). Node loads `bin/clif-d` as CommonJS because there is no `"type": "module"` at the repo root. `"use strict"` is appropriate for CommonJS modules. |
+
+**Configuration notes from bootstrap:**
+- `eslint-plugin-security`'s `configs.recommended` still uses the legacy `env` key, which is incompatible with ESLint v9 flat config. Instead of extending the preset, we opt into specific rules (`detect-child-process`, `detect-non-literal-fs-filename`, `detect-unsafe-regex`, `detect-eval-with-expression`, `detect-non-literal-regexp`, `detect-pseudoRandomBytes`, `detect-new-buffer`).
+- `eslint-plugin-unicorn` v56 exports both legacy (`configs.recommended`) and flat (`configs["flat/recommended"]`) configs. We use the flat variant.
+- `bin/clif-d` has no file extension (plugin convention). ESLint refuses to lint files outside its base path, and TypeScript ignores files without a recognized extension. A symlink `cli/clif-d.js -> ../bin/clif-d` resolves both issues. Prettier does not support symlinks as explicit targets, so Prettier runs against `../bin/clif-d` directly.
 
 ## 5. Suppression Policy
 
