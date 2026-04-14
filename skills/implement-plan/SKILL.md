@@ -154,8 +154,15 @@ State that the step is complete. Summarize what was implemented and what tests v
    - Set `status` to `"done"`.
    - Set `implementation_commit` to the commit SHA from step 4.
 6. **Move the plan to executed.** Move the plan file from `clif-d/plans/active/` to `clif-d/plans/executed/`. Create the `executed/` directory if it does not yet exist. Append the commit SHA to the plan's header metadata (e.g. `**Implementation commit:** <sha>`).
-7. **Commit the lifecycle updates** (PRD status changes and plan move) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct.
-8. **Summarize** what was implemented: files created/modified, tests written, any deviations from the plan and why. Include both commit SHAs (implementation and lifecycle).
+7. **Write a lessons-learned file.** Create `clif-d/plans/lessons_learned/` if it does not yet exist. Write a Markdown file named to match the plan (e.g. `lessons-REQ-NNN.md`) that records any significant problems encountered during implementation and how they were resolved. Include:
+   - **User corrections** -- places where the user redirected your approach or pointed out a misunderstanding.
+   - **Surprise failures** -- commands that failed unexpectedly, especially repeated failures of the same kind.
+   - **Regressions** -- tests or behaviors that broke during implementation and what caused them.
+   - **Plan deviations** -- steps where the plan was wrong or insufficient, what the actual solution was, and why.
+   - **Environment or tooling issues** -- dependency problems, version mismatches, configuration surprises.
+   If nothing significant happened -- the implementation went smoothly with no surprises -- write a short file noting that and skip the categories above. Do not fabricate lessons for the sake of filling the file.
+8. **Commit the lifecycle updates** (PRD status changes, plan move, and lessons-learned file) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct.
+9. **Summarize** what was implemented: files created/modified, tests written, any deviations from the plan and why. Include both commit SHAs (implementation and lifecycle).
 
 ---
 
