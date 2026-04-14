@@ -5,7 +5,8 @@
 **Backpressure:** `cli/clif-d/backpressure.md`
 **Preceding plans:** None (first implementation plan)
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** eae67755fe92851a19cf3d8586ba4a4155d7ae33
 
 ## 1. Objective
 

@@ -276,6 +276,8 @@
       "priority": 1,
       "dependencies": [],
       "abstraction_level": "low",
+      "status": "done",
+      "implementation_commit": "eae67755fe92851a19cf3d8586ba4a4155d7ae33",
       "context_refs": [
         "CTX-004",
         "CTX-007",
@@ -342,6 +344,8 @@
       "priority": 1,
       "dependencies": [],
       "abstraction_level": "low",
+      "status": "done",
+      "implementation_commit": "eae67755fe92851a19cf3d8586ba4a4155d7ae33",
       "context_refs": [
         "CTX-004",
         "CTX-010",
