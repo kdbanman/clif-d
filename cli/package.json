@@ -1,0 +1,26 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "clif-d-cli-dev",
+  "description": "Development tooling for the clif-d CLI. Not published. The CLI itself is bin/clif-d (zero dependencies).",
+  "scripts": {
+    "prepare": "cd .. && husky cli/.husky",
+    "lint": "eslint ../bin/clif-d",
+    "format": "prettier --write ../bin/clif-d",
+    "format:check": "prettier --check ../bin/clif-d",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/**/*.test.js",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^18.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-n": "^17.0.0",
+    "eslint-plugin-security": "^3.0.0",
+    "eslint-plugin-unicorn": "^56.0.0",
+    "husky": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.4.0"
+  }
+}

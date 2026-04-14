@@ -1,0 +1,18 @@
+cd cli
+
+echo "Checking formatting..."
+npx prettier --check ../bin/clif-d
+
+echo "Linting..."
+npx eslint ../bin/clif-d
+
+echo "Type checking..."
+npx tsc --noEmit
+
+echo "Running tests..."
+test_files=$(find test -name '*.test.js' 2>/dev/null)
+if [ -n "$test_files" ]; then
+  node --test $test_files
+else
+  echo "No test files found -- skipping."
+fi
