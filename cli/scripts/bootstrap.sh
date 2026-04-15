@@ -50,9 +50,28 @@ log "npm $(npm --version) -- ok"
 
 # --- 3. Install dev dependencies from lockfile --------------------------
 
-log "running npm ci in ${CLI_DIR}"
+# In a linked worktree, .git is a file rather than a directory. node_modules is
+# git-ignored, so it is absent in fresh worktrees. Copy from the primary worktree
+# when available to avoid a slow npm ci re-run.
 cd "${CLI_DIR}"
-npm ci
+if [[ -f "${REPO_ROOT}/.git" ]] && [[ ! -d "${CLI_DIR}/node_modules" ]]; then
+    COMMON_GIT="$(git -C "${REPO_ROOT}" rev-parse --git-common-dir)"
+    # --git-common-dir may return a relative path; make it absolute.
+    if [[ "${COMMON_GIT}" != /* ]]; then
+        COMMON_GIT="$(cd "${REPO_ROOT}/${COMMON_GIT}" && pwd)"
+    fi
+    PRIMARY_NM="$(cd "${COMMON_GIT}/.." && pwd)/cli/node_modules"
+    if [[ -d "${PRIMARY_NM}" ]]; then
+        log "linked worktree -- copying node_modules from primary worktree"
+        cp -r "${PRIMARY_NM}" "${CLI_DIR}/node_modules"
+    else
+        log "linked worktree -- primary node_modules absent, running npm ci"
+        npm ci
+    fi
+else
+    log "running npm ci in ${CLI_DIR}"
+    npm ci
+fi
 
 # --- 4. Confirm husky hooks registered ----------------------------------
 
