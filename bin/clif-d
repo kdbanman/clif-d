@@ -533,6 +533,394 @@ function reqBlock(prdPath, prd, flags) {
   exit(0);
 }
 
+// -- Validate ---------------------------------------------------------------
+
+/**
+ * @typedef {Object} ValidationIssue
+ * @property {"error" | "warning"} level
+ * @property {string | null} id
+ * @property {string} message
+ */
+
+/**
+ * Run all structural validation checks on the PRD. Returns all issues.
+ * @param {object} prd
+ * @returns {ValidationIssue[]}
+ */
+function validate(prd) {
+  /** @type {ValidationIssue[]} */
+  const issues = [];
+  const prdObj = /** @type {Record<string, unknown>} */ (prd);
+
+  const requirements = /** @type {Array<Record<string, unknown>>} */ (
+    Array.isArray(prdObj.requirements) ? prdObj.requirements : []
+  );
+  const contextItems = /** @type {Array<Record<string, unknown>>} */ (
+    Array.isArray(prdObj.context) ? prdObj.context : []
+  );
+  const archItems = /** @type {Array<Record<string, unknown>>} */ (
+    Array.isArray(prdObj.architecture) ? prdObj.architecture : []
+  );
+
+  checkIdUniqueness(requirements, "REQ", issues);
+  checkIdUniqueness(contextItems, "CTX", issues);
+  checkIdUniqueness(archItems, "ARCH", issues);
+
+  const reqIds = collectIds(requirements);
+  const ctxIds = collectIds(contextItems);
+  const archIds = collectIds(archItems);
+  checkReferentialIntegrity(requirements, reqIds, ctxIds, archIds, issues);
+  checkDependencyCycles(requirements, reqIds, issues);
+  checkStatusCommitConsistency(requirements, issues);
+  checkEnums(requirements, contextItems, archItems, issues);
+  checkRequiredFields(
+    requirements,
+    ["id", "title", "description", "acceptance_criteria", "abstraction_level"],
+    "requirement",
+    issues,
+  );
+  checkRequiredFields(
+    contextItems,
+    ["id", "title", "description", "type"],
+    "context item",
+    issues,
+  );
+  checkRequiredFields(
+    archItems,
+    ["id", "title", "description", "level"],
+    "architecture item",
+    issues,
+  );
+
+  return issues;
+}
+
+/**
+ * Flag items missing any required field. Empty strings count as missing.
+ * @param {Array<Record<string, unknown>>} items
+ * @param {string[]} required
+ * @param {string} kind
+ * @param {ValidationIssue[]} issues
+ */
+function checkRequiredFields(items, required, kind, issues) {
+  for (const item of items) {
+    const id = /** @type {string | undefined} */ (item.id) ?? null;
+    for (const field of required) {
+      const value = item[field];
+      if (value === undefined || value === null || value === "") {
+        issues.push({
+          level: "error",
+          id,
+          message: `Missing required ${kind} field: ${field}`,
+        });
+      }
+    }
+  }
+}
+
+const VALID_STATUSES = new Set([
+  "not_started",
+  "in_progress",
+  "done",
+  "blocked",
+]);
+const VALID_ABSTRACTION_LEVELS = new Set(["high", "low"]);
+const VALID_CONTEXT_TYPES = new Set([
+  "non_functional",
+  "constraint",
+  "persona",
+  "domain",
+  "product_goal",
+]);
+const VALID_ARCH_LEVELS = new Set(["context", "container", "component"]);
+
+/**
+ * @param {Array<Record<string, unknown>>} requirements
+ * @param {Array<Record<string, unknown>>} contextItems
+ * @param {Array<Record<string, unknown>>} archItems
+ * @param {ValidationIssue[]} issues
+ */
+function checkEnums(requirements, contextItems, archItems, issues) {
+  for (const req of requirements) {
+    const id = /** @type {string | undefined} */ (req.id) ?? null;
+    const status = /** @type {unknown} */ (req.status);
+    if (
+      status !== undefined &&
+      !VALID_STATUSES.has(/** @type {string} */ (status))
+    ) {
+      issues.push({
+        level: "error",
+        id,
+        message: `Invalid status '${String(status)}'. Must be one of: not_started, in_progress, done, blocked`,
+      });
+    }
+    const level = /** @type {unknown} */ (req.abstraction_level);
+    if (
+      level !== undefined &&
+      !VALID_ABSTRACTION_LEVELS.has(/** @type {string} */ (level))
+    ) {
+      issues.push({
+        level: "error",
+        id,
+        message: `Invalid abstraction_level '${String(level)}'. Must be 'high' or 'low'`,
+      });
+    }
+  }
+  for (const item of contextItems) {
+    const id = /** @type {string | undefined} */ (item.id) ?? null;
+    const type = /** @type {unknown} */ (item.type);
+    if (
+      type !== undefined &&
+      !VALID_CONTEXT_TYPES.has(/** @type {string} */ (type))
+    ) {
+      issues.push({
+        level: "error",
+        id,
+        message: `Invalid context type '${String(type)}'. Must be one of: non_functional, constraint, persona, domain, product_goal`,
+      });
+    }
+  }
+  for (const item of archItems) {
+    const id = /** @type {string | undefined} */ (item.id) ?? null;
+    const level = /** @type {unknown} */ (item.level);
+    if (
+      level !== undefined &&
+      !VALID_ARCH_LEVELS.has(/** @type {string} */ (level))
+    ) {
+      issues.push({
+        level: "error",
+        id,
+        message: `Invalid architecture level '${String(level)}'. Must be one of: context, container, component`,
+      });
+    }
+  }
+}
+
+/**
+ * Enforce done <-> implementation_commit coupling. done without a commit is
+ * an error; a commit without done status is a warning (the commit was likely
+ * staged before the status update).
+ * @param {Array<Record<string, unknown>>} requirements
+ * @param {ValidationIssue[]} issues
+ */
+function checkStatusCommitConsistency(requirements, issues) {
+  for (const req of requirements) {
+    const id = /** @type {string | undefined} */ (req.id) ?? null;
+    const status = /** @type {string | undefined} */ (req.status);
+    const commit = /** @type {string | undefined} */ (
+      req.implementation_commit
+    );
+    if (status === "done" && !commit) {
+      issues.push({
+        level: "error",
+        id,
+        message: "Status is 'done' but implementation_commit is missing",
+      });
+    }
+    if (commit && status !== "done") {
+      issues.push({
+        level: "warning",
+        id,
+        message: `implementation_commit is set but status is '${status ?? "not_started"}', not 'done'`,
+      });
+    }
+  }
+}
+
+/**
+ * Detect cycles in the dependency graph using DFS with three-color marking.
+ * Only edges pointing to known IDs are traversed; dangling refs are reported
+ * separately by checkReferentialIntegrity.
+ * @param {Array<Record<string, unknown>>} requirements
+ * @param {Set<string>} reqIds
+ * @param {ValidationIssue[]} issues
+ */
+function checkDependencyCycles(requirements, reqIds, issues) {
+  /** @type {Map<string, string[]>} */
+  const graph = new Map();
+  for (const req of requirements) {
+    const id = /** @type {string | undefined} */ (req.id);
+    if (typeof id !== "string") {
+      continue;
+    }
+    const deps = /** @type {unknown} */ (req.dependencies);
+    const edges = Array.isArray(deps)
+      ? deps.filter(
+          /** @returns {d is string} */ (d) =>
+            typeof d === "string" && reqIds.has(d),
+        )
+      : [];
+    graph.set(id, edges);
+  }
+
+  const WHITE = 0;
+  const GRAY = 1;
+  const BLACK = 2;
+  /** @type {Map<string, number>} */
+  const color = new Map();
+  for (const id of graph.keys()) {
+    color.set(id, WHITE);
+  }
+
+  /** @type {Set<string>} */
+  const reportedCycles = new Set();
+
+  /**
+   * @param {string} node
+   * @param {string[]} stack
+   */
+  function dfs(node, stack) {
+    color.set(node, GRAY);
+    stack.push(node);
+    const edges = graph.get(node) ?? [];
+    for (const next of edges) {
+      const c = color.get(next);
+      if (c === GRAY) {
+        const cycleStart = stack.indexOf(next);
+        const cyclePath = [...stack.slice(cycleStart), next];
+        const key = [...cyclePath].sort().join("|");
+        if (!reportedCycles.has(key)) {
+          reportedCycles.add(key);
+          issues.push({
+            level: "error",
+            id: next,
+            message: `Dependency cycle detected: ${cyclePath.join(" -> ")}`,
+          });
+        }
+      } else if (c === WHITE) {
+        dfs(next, stack);
+      }
+    }
+    stack.pop();
+    color.set(node, BLACK);
+  }
+
+  for (const id of graph.keys()) {
+    if (color.get(id) === WHITE) {
+      dfs(id, []);
+    }
+  }
+}
+
+/**
+ * @param {Array<Record<string, unknown>>} items
+ * @returns {Set<string>}
+ */
+function collectIds(items) {
+  /** @type {Set<string>} */
+  const ids = new Set();
+  for (const item of items) {
+    const id = /** @type {string | undefined} */ (item.id);
+    if (typeof id === "string") {
+      ids.add(id);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Flag any dependency, context_ref, or architecture_ref pointing at a
+ * nonexistent ID.
+ * @param {Array<Record<string, unknown>>} requirements
+ * @param {Set<string>} reqIds
+ * @param {Set<string>} ctxIds
+ * @param {Set<string>} archIds
+ * @param {ValidationIssue[]} issues
+ */
+function checkReferentialIntegrity(
+  requirements,
+  reqIds,
+  ctxIds,
+  archIds,
+  issues,
+) {
+  for (const req of requirements) {
+    const id = /** @type {string | undefined} */ (req.id) ?? null;
+    checkRefs(
+      /** @type {string[] | undefined} */ (req.dependencies),
+      reqIds,
+      id,
+      "dependency",
+      issues,
+    );
+    checkRefs(
+      /** @type {string[] | undefined} */ (req.context_refs),
+      ctxIds,
+      id,
+      "context_ref",
+      issues,
+    );
+    checkRefs(
+      /** @type {string[] | undefined} */ (req.architecture_refs),
+      archIds,
+      id,
+      "architecture_ref",
+      issues,
+    );
+  }
+}
+
+/**
+ * @param {string[] | undefined} refs
+ * @param {Set<string>} validIds
+ * @param {string | null} ownerId
+ * @param {string} refKind
+ * @param {ValidationIssue[]} issues
+ */
+function checkRefs(refs, validIds, ownerId, refKind, issues) {
+  if (!Array.isArray(refs)) {
+    return;
+  }
+  for (const ref of refs) {
+    if (typeof ref !== "string") {
+      continue;
+    }
+    if (!validIds.has(ref)) {
+      issues.push({
+        level: "error",
+        id: ownerId,
+        message: `Dangling ${refKind}: ${ref} is not a known ID`,
+      });
+    }
+  }
+}
+
+/**
+ * Flag duplicate IDs within a namespace.
+ * @param {Array<Record<string, unknown>>} items
+ * @param {string} namespace
+ * @param {ValidationIssue[]} issues
+ */
+function checkIdUniqueness(items, namespace, issues) {
+  /** @type {Set<string>} */
+  const seen = new Set();
+  for (const item of items) {
+    const id = /** @type {string | undefined} */ (item.id);
+    if (typeof id !== "string") {
+      continue;
+    }
+    if (seen.has(id)) {
+      issues.push({
+        level: "error",
+        id,
+        message: `Duplicate ${namespace} id: ${id}`,
+      });
+    } else {
+      seen.add(id);
+    }
+  }
+}
+
+/**
+ * @param {object} prd
+ */
+function runValidate(prd) {
+  const issues = validate(prd);
+  stdout.write(`${JSON.stringify(issues, null, 2)}\n`);
+  const hasError = issues.some((i) => i.level === "error");
+  exit(hasError ? 1 : 0);
+}
+
 // -- Help text --------------------------------------------------------------
 
 function printMainHelp() {
@@ -628,6 +1016,26 @@ function printReqStartHelp() {
   stderr.write("  0  Status set to in_progress and PRD written.\n");
   stderr.write("  1  Validation error (not found, already done).\n");
   stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
+}
+
+function printValidateHelp() {
+  stderr.write("Usage: clif-d validate [prd-path]\n");
+  stderr.write("\n");
+  stderr.write("Validate PRD structural integrity.\n");
+  stderr.write("\n");
+  stderr.write("Checks ID uniqueness and format, referential integrity of\n");
+  stderr.write(
+    "dependencies, context_refs, and architecture_refs, dependency\n",
+  );
+  stderr.write(
+    "graph acyclicity, status/implementation_commit consistency, required\n",
+  );
+  stderr.write("fields, and enum values.\n");
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  PRD is valid (no errors; warnings allowed).\n");
+  stderr.write("  1  PRD has one or more validation errors.\n");
+  stderr.write("  2  PRD file is missing or unparseable.\n");
 }
 
 function printReqNextHelp() {
@@ -729,6 +1137,15 @@ if (domain === "req") {
       exit(2);
     }
   }
+} else if (domain === "validate") {
+  const flags = parseFlags(args.slice(1));
+  if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+    printValidateHelp();
+    exit(0);
+  }
+  const prdPath = resolvePrdPath(flags, 0);
+  const prd = loadPrd(prdPath);
+  runValidate(prd);
 } else {
   stderr.write(`Unknown command: ${args.join(" ")}\n`);
   exit(2);

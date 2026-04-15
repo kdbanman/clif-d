@@ -572,7 +572,8 @@
           "1": "PRD has validation errors.",
           "2": "PRD file not found or not parseable as JSON."
         }
-      }
+      },
+      "status": "in_progress"
     },
     {
       "id": "REQ-015",
