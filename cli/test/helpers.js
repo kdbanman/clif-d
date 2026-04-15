@@ -63,6 +63,7 @@ export const MINIMAL_PRD = {
       abstraction_level: "low",
       priority: 2,
       status: "done",
+      implementation_commit: "abc1234",
       dependencies: ["REQ-001"],
     },
   ],
