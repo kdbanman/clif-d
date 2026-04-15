@@ -31,6 +31,10 @@ The zero-dependency constraint (CTX-001) and single-file distribution (CTX-002) 
 | Type checking | TypeScript `checkJs` | `strict: true`, `noUncheckedIndexedAccess`, JSDoc annotations | Maximum for plain JS | Type safety without a build step -- `tsc --noEmit` checks, never compiles |
 | Test enforcement | `node --test` (built-in) | All tests must pass | Zero tolerance | Zero additional dependencies, matches the project's minimalism |
 | Coverage | `node --test --experimental-test-coverage` | Tracked, not gated pre-commit | Informational locally, gated in CI | Coverage analysis belongs in CI per testing-coverage reference |
+| Duplication detection | jscpd (devDep) | Default minLines threshold (tuned per baseline); runs against `bin/clif-d` | Fail-on-duplication | Prettier and ESLint do not detect copy-paste across functions. Duplication was observed in early command handlers (REQ-024); a dedicated detector is the only gate that catches it. Zero runtime impact -- devDep only (CTX-001 unaffected). |
+| Function size | ESLint `max-lines-per-function` | Threshold set to current ceiling of the post-REQ-026 refactor | Hard-cap | God-functions mix concerns, resist isolated testing, and hide bugs. A hard cap forces decomposition at review/commit time rather than relying on taste. |
+| Cyclomatic complexity | ESLint `complexity` | Threshold tuned to post-refactor baseline | Hard-cap | Prevents regrowth of tangled conditional logic (the `req next` tiebreaker and `req ls` filter/sort/project/format mixture were symptoms). |
+| Nesting depth | ESLint `max-depth` | 3 | Hard-cap | Deep nesting is almost always a sign that a sub-procedure wants to be extracted. The cap nudges decomposition. |
 
 ## 4. Relaxations from Maximum Strictness
 
@@ -66,9 +70,10 @@ Every relaxation is listed here with explicit justification. If a rule is not li
 Runs on every `git commit`. Order matters -- fast checks first, expensive checks last:
 
 1. **Prettier** -- check formatting of `bin/clif-d`. Does not auto-fix in the hook; run `npm run format` to fix before committing.
-2. **ESLint** -- lint `bin/clif-d`. No auto-fix. Fail and report violations. The developer/agent must understand and address the issue.
-3. **tsc --noEmit** -- full project type check. Type errors can emerge from context changes anywhere in the file, so this checks the whole file, not just staged hunks.
-4. **node --test** -- full test suite. The CLI operates on small JSON fixtures, so tests should complete in under 5 seconds.
+2. **ESLint** -- lint `bin/clif-d`. No auto-fix. Fail and report violations. Includes function-size, complexity, and nesting-depth caps (see section 3).
+3. **jscpd** -- duplication detector. Runs against `bin/clif-d` and fails on any duplicated block above threshold. See section 3.
+4. **tsc --noEmit** -- full project type check. Type errors can emerge from context changes anywhere in the file, so this checks the whole file, not just staged hunks.
+5. **node --test** -- full test suite. The CLI operates on small JSON fixtures, so tests should complete in under 5 seconds.
 
 Since `bin/clif-d` is a single file, lint-staged's incremental staging is unnecessary. Checks run directly against the file.
 
@@ -167,3 +172,5 @@ npm run check
 | Exit code correctness in tests | CTX-005 (CLI design conventions) -- every command's exit codes are tested |
 | Atomic write correctness in tests | ARCH-003 (read-validate-write cycle) -- tests verify no partial writes |
 | process.exit() permitted | CTX-005 -- exit codes are part of the CLI contract, not a code smell |
+| Duplication detection, size/complexity caps | CTX-012 (internal modularity discipline), REQ-024, REQ-027 -- the single-file constraint is not a license for a single flat script; gates enforce decomposition at commit time |
+| Error-path coverage expectations | REQ-028 -- every documented nonzero exit code is reached by at least one test |

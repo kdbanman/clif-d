@@ -76,6 +76,12 @@
       "reference_link": "cli/clif-d/backpressure.md"
     },
     {
+      "id": "CTX-012",
+      "title": "Internal modularity discipline",
+      "description": "The single-file distribution constraint (CTX-002) restricts the physical layout of the CLI, not its logical organization. Within that one file, the code must still be decomposed: logic shared by multiple command handlers lives in named, reusable helpers rather than being duplicated across handlers; large procedures are broken into focused units with clear inputs and outputs; pure logic is separated from I/O so it can be exercised in isolation. Duplication is a bug multiplier -- it hides divergence, multiplies the surface area of every change, and makes behavior harder to reason about. The single-file constraint is not a license to write a single flat script.",
+      "type": "constraint"
+    },
+    {
       "id": "CTX-011",
       "title": "Development environment bootstrap",
       "type": "constraint",
@@ -100,6 +106,18 @@
       "id": "ARCH-003",
       "title": "Read-validate-write cycle",
       "description": "Every mutation command follows the same cycle: (1) read the PRD file into memory, (2) parse JSON, (3) apply the mutation, (4) validate the result against the PRD schema and domain rules (referential integrity, acyclicity, status transitions), (5) write to a temp file, (6) atomic rename to the target path. If validation fails at step 4, the original file is untouched and the tool exits 1 with diagnostics on stderr. This pattern ensures no partial writes and no invalid PRD states on disk.",
+      "level": "component"
+    },
+    {
+      "id": "ARCH-004",
+      "title": "Module-object internal structure",
+      "description": "Within the single-file CLI, related pure helpers are grouped into named, frozen namespace objects (conceptually: a small collection of cohesive function groups such as a filtering namespace, a validation namespace, a formatting namespace, a lifecycle-transition namespace). Each namespace is exposed as a frozen object -- giving the benefits of a module (discoverability, grouping, clear boundaries, resistance to accidental mutation) without introducing additional files or violating the single-file distribution constraint (CTX-002). Command handlers become thin orchestrators that compose helpers from these namespaces, rather than containing inline logic that is duplicated or tangled with I/O.",
+      "level": "component"
+    },
+    {
+      "id": "ARCH-005",
+      "title": "Pure-helper testability seam",
+      "description": "Pure internal helpers (those without I/O side effects) must be directly unit-testable. To preserve the single-file distribution while enabling direct tests, the CLI exposes its internal namespaces under a test-mode guard -- an environment-variable-gated export at the bottom of the file. In production the guard is off and the file behaves as a pure executable; under tests the guard is on and the test runner can import the helpers and exercise them directly. This seam lets fast, focused tests cover filtering, selection, validation, and transition logic without routing every assertion through a subprocess invocation.",
       "level": "component"
     }
   ],
@@ -929,6 +947,123 @@
       ],
       "architecture_refs": [
         "ARCH-001"
+      ]
+    },
+    {
+      "id": "REQ-024",
+      "title": "Internal modularity and code-reuse quality",
+      "description": "The single-file distribution constraint (CTX-002) applies to how the CLI is shipped, not to how it is structured internally. As the CLI has grown, handlers for related commands have begun to duplicate the same lookup, validation, filtering, and formatting patterns, and individual procedures have grown long enough to mix several concerns. This is a quality debt that compounds: every duplicated block is a place where a bugfix can be applied inconsistently, every tangled procedure is harder to test in isolation, and every new command multiplies the drift. The CLI must be organized so that shared logic lives in named, reusable, independently testable helpers and handlers are thin compositions over those helpers.",
+      "acceptance_criteria": "Across the CLI, no two command handlers contain the same multi-step logic inline; shared operations (lookup by ID, status-transition validation, field projection, filtering, output formatting) are implemented once and invoked by all callers. Long procedures that mix filtering, sorting, projection, and output have been decomposed into focused units. Pure logic is separated from I/O so that it can be exercised without invoking the CLI as a subprocess. Adding a new command of the same shape as existing commands requires composing existing helpers rather than copying an existing handler.",
+      "priority": 2,
+      "abstraction_level": "high",
+      "context_refs": [
+        "CTX-002",
+        "CTX-010",
+        "CTX-012"
+      ],
+      "architecture_refs": [
+        "ARCH-004",
+        "ARCH-005"
+      ]
+    },
+    {
+      "id": "REQ-025",
+      "title": "Defense-in-depth PRD structural validation on access",
+      "description": "The CLI currently trusts that any file it reads as a PRD is structurally valid: only JSON syntax is checked on load, and structural invariants (schema conformance, dependency acyclicity, referential integrity, ID uniqueness) are enforced only when an agent explicitly runs the validate command. This leaves the door open for silently-corrupt PRDs to propagate through read commands, and for mutations to be applied on top of an already-inconsistent file. Every operation that reads or writes the PRD must first confirm that the file on disk represents a structurally valid PRD. Errors must be reported with enough detail for an agent to take corrective action -- which specific invariant was violated, where, and what it means.",
+      "acceptance_criteria": "Every command that loads a PRD verifies structural invariants before operating on it. If the file is malformed, fails schema conformance, contains a dependency cycle, has dangling cross-references, or has duplicate IDs, the command exits nonzero with a diagnostic identifying the specific invariant that failed. Read commands fail cleanly rather than returning partial or inconsistent data from a corrupt PRD. Mutation commands refuse to operate on a PRD that is already structurally invalid, so an agent cannot compound an existing inconsistency.",
+      "priority": 2,
+      "abstraction_level": "high",
+      "context_refs": [
+        "CTX-003",
+        "CTX-008",
+        "CTX-010"
+      ],
+      "architecture_refs": [
+        "ARCH-003"
+      ]
+    },
+    {
+      "id": "REQ-026",
+      "title": "Reorganize CLI around module-object helpers with test-export seam",
+      "description": "Concrete realization of REQ-024 and ARCH-004/ARCH-005. Identify the recurring patterns across existing handlers (lookup-or-exit, filter, sort, select fields, format output, validate status transition, etc.), factor them into named, frozen namespace objects inside the single file, rewrite handlers as thin compositions over those helpers, and expose the namespaces under a test-mode environment-variable guard so unit tests can exercise the pure helpers directly. Not about adding features -- about restructuring what already exists and opening a direct-test seam.",
+      "acceptance_criteria": {
+        "given": "The CLI currently contains multiple command handlers that duplicate lookup, validation, filtering, and formatting logic, and exposes nothing for direct unit testing",
+        "when": "The refactor is complete",
+        "then": "Shared helpers are grouped into frozen namespace objects inside bin/clif-d; no multi-step logic appears inline in more than one handler; handlers are short compositions over helpers; under a documented test-mode environment variable the file exports its namespaces so a test in cli/test/ can import and call helpers directly; every existing subprocess-level test still passes without modification."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-002",
+        "CTX-010",
+        "CTX-012"
+      ],
+      "architecture_refs": [
+        "ARCH-004",
+        "ARCH-005"
+      ]
+    },
+    {
+      "id": "REQ-027",
+      "title": "Backpressure gates for duplication, function size, and complexity",
+      "description": "The review that motivated REQ-024 found duplication and god-functions that the existing backpressure setup did not catch -- Prettier and the current ESLint rule set have nothing to say about repeated blocks of code or procedures that mix too many concerns. Add concrete, automated gates that would have caught those issues at commit time: a duplication detector run as part of the pre-commit check, ESLint rules that cap function length, cyclomatic complexity, and nesting depth, and a documented suppression policy for the rare legitimate exception. The backpressure design document must be updated to record the new guardrails, their thresholds, any relaxations, and the rationale.",
+      "acceptance_criteria": {
+        "given": "A commit that introduces a duplicated multi-line block, a function exceeding the size threshold, or a procedure exceeding the complexity threshold",
+        "when": "The agent attempts git commit",
+        "then": "The pre-commit hook fails with a message identifying the specific violation (duplication location, function size, complexity score). cli/clif-d/backpressure.md documents every new guardrail, its threshold, its justification, and any relaxations made to pass the existing codebase at baseline."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-010",
+        "CTX-012"
+      ],
+      "architecture_refs": []
+    },
+    {
+      "id": "REQ-028",
+      "title": "Error-path and boundary-case test coverage",
+      "description": "The existing test suite covers happy paths and exit-code contracts well, but leaves specific failure modes unverified: malformed PRD JSON, missing or unreadable PRD file, flag-parsing edge cases (empty values, duplicate flags, unknown flags), and the structural invariants promised by REQ-025 (dependency cycles, dangling references, duplicate IDs). These are the paths an agent will hit first in a degraded environment, and they are exactly the paths where bad error messages cost the most. Extend the suite so every documented error exit code is reached by at least one test, and every structural invariant has an explicit negative test.",
+      "acceptance_criteria": {
+        "given": "The current test suite covers happy paths and basic exit codes but not all error paths",
+        "when": "The coverage extension is complete",
+        "then": "For every command, each documented nonzero exit code has at least one test that triggers it with a clear fixture. Tests exist for: malformed JSON input, missing PRD file, unreadable PRD file, empty flag values, duplicate flags, unknown flags, dependency cycles, dangling cross-references, and duplicate IDs. Each test asserts both the exit code and a stable, informative stderr substring."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-004",
+        "CTX-005",
+        "CTX-010"
+      ],
+      "architecture_refs": [
+        "ARCH-003"
+      ]
+    },
+    {
+      "id": "REQ-029",
+      "title": "Structural validation on every PRD load",
+      "description": "Concrete realization of REQ-025. Every code path that reads a PRD -- whether for a query command or as the first step of a mutation -- must run the same structural validation that the explicit validate command runs, before any command-specific logic executes. If validation fails, the command exits nonzero with a diagnostic identifying the specific invariant that was violated. An agent running a read command against a corrupt PRD gets a clear error rather than partial or misleading output; an agent running a mutation against a corrupt PRD is refused rather than silently compounding the problem.",
+      "acceptance_criteria": {
+        "given": "A PRD file containing a dependency cycle, a dangling dependency reference, or a duplicate ID",
+        "when": "The agent runs any command that loads that PRD (ls, show, next, start, done, block, or any future command)",
+        "then": "The command exits with code 1 and stderr identifies the specific invariant that failed. The command does not produce partial stdout output and does not modify the PRD. A test fixture exists for each invariant, exercised against at least one read command and one mutation command."
+      },
+      "priority": 2,
+      "dependencies": [
+        "REQ-014"
+      ],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-003",
+        "CTX-008",
+        "CTX-010"
+      ],
+      "architecture_refs": [
+        "ARCH-003"
       ]
     }
   ]
