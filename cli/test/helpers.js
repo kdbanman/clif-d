@@ -11,7 +11,7 @@ const BIN = path.resolve(__dirname, "../../bin/clif-d");
 /**
  * Run clif-d with args, return { stdout, stderr, exitCode }.
  * @param {string[]} args
- * @param {{ cwd?: string }} [options]
+ * @param {{ cwd?: string, input?: string }} [options]
  * @returns {{ stdout: string, stderr: string, exitCode: number }}
  */
 export function run(args, options) {
@@ -19,6 +19,7 @@ export function run(args, options) {
     cwd: options?.cwd ?? process.cwd(),
     encoding: "utf8",
     timeout: 5000,
+    input: options?.input,
   });
   return {
     stdout: result.stdout ?? "",
