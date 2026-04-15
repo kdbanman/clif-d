@@ -120,7 +120,33 @@ If the refactor plan is not done first, this plan is still executable, but the "
 
 **Verify:** doc reads consistently with the actual config. A fresh reader can set up the gates locally from section 8 alone.
 
-### Step 5: Final pre-commit dry run
+### Step 5: Surface the quality-relevant PRD items to coding agents via rules files
+
+Backpressure only bites after code is written. Agents will do a better job if they know which CTX and ARCH items govern implementation style *before* they type anything. This step makes those items discoverable to any coding agent operating in the repo (Claude Code, Cursor, Aider, Codex, etc.) via the agent rules files the repo already ships (`CLAUDE.md`, `AGENTS.md`, and any equivalents the dev-environment document tracks).
+
+**Implement:**
+- Files: `CLAUDE.md`, `AGENTS.md` (and any other agent rules files declared in `cli/clif-d/dev-environment.md` -- check that document for the canonical list). If a `.claude/rules/` directory convention is preferred over appending to `CLAUDE.md`, follow whatever convention the dev-environment document already establishes; do not invent a new one.
+- Add a short "Implementation style and quality" section (or equivalent) pointing at the PRD items that govern how code should be written in `bin/clif-d`. The section must be short enough that agents read it by default. Specifically name:
+  - **CTX-001** -- zero runtime dependencies (never `require`/`import` a non-built-in in `bin/clif-d`).
+  - **CTX-002** -- single-file distribution (no splitting `bin/clif-d`, no transpilation).
+  - **CTX-010** -- quality backpressure (all four gates run pre-commit).
+  - **CTX-012** -- internal modularity discipline (single-file is not a license for a flat script).
+  - **ARCH-003** -- read-validate-write cycle for all mutations.
+  - **ARCH-004** -- module-object internal structure (frozen namespace objects).
+  - **ARCH-005** -- pure-helper testability seam (env-gated export).
+- For each listed item, include one sentence naming the item and one sentence stating the behavioral rule it implies, followed by a pointer to `cli-prd.json` as the authoritative source. Do NOT copy the PRD prose into the rules file -- the PRD stays authoritative; the rules file is a signpost.
+- Instruct the agent to read the named items from `cli-prd.json` before writing or modifying code in `bin/clif-d`. Use `clif-d ctx show <id>` / `clif-d arch show <id>` if those commands exist; fall back to grep or manual inspection otherwise (check current CLI capabilities).
+- Include a one-line pointer to `cli/clif-d/backpressure.md` for the full guardrail list and the practitioner quick reference.
+
+**Rationale:**
+The rules file is preventative; the backpressure gates are corrective. Together they close the loop: agents know the rules before writing, and the gates catch lapses before commit. This also improves the feedback quality when a gate fires -- an agent that has already read CTX-012 understands *why* `max-lines-per-function` failed, rather than just grinding against the threshold.
+
+**Verify:**
+- A fresh read of `CLAUDE.md` (or equivalent) from the top makes clear which CTX/ARCH items to consult and where they live.
+- Pointers resolve: `cli-prd.json` contains every listed ID; `cli/clif-d/backpressure.md` is reachable from the repo root.
+- No duplication of PRD prose into the rules file (authority stays with the PRD).
+
+### Step 6: Final pre-commit dry run
 
 **Implement:**
 - Make a no-op change in a scratch branch; run `git commit` to confirm the full hook (including the two new gates) fires and passes on clean code.
@@ -147,6 +173,9 @@ If the refactor plan is not done first, this plan is still executable, but the "
 | `cli/test/backpressure-dup.test.js` | Create | 1, 3 |
 | `cli/test/backpressure-lint.test.js` | Create | 2, 3 |
 | `cli/clif-d/backpressure.md` | Modify (thresholds, relaxations, practitioner reference) | 4 |
+| `CLAUDE.md` | Modify (add implementation-style signpost) | 5 |
+| `AGENTS.md` | Modify (same signpost content) | 5 |
+| Other agent rules files per `cli/clif-d/dev-environment.md` | Modify (same signpost content) | 5 |
 
 No changes to `bin/clif-d`. No new runtime dependencies (CTX-001 preserved).
 
