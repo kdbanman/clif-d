@@ -6,7 +6,8 @@
 **Preceding plans:** none -- this plan adds tooling; the code-side refactor in `plan-REQ-024-REQ-026-REQ-028-REQ-029.md` is an independent parallel track. Sequencing note: run the refactor plan *first* so the new gates are introduced against already-clean code and thresholds can be set at the post-refactor baseline.
 
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** da2b030c912b4f2e756c40fab0e0bb28788ae03b
 
 ## 1. Objective
 

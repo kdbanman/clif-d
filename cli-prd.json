@@ -1030,7 +1030,9 @@
         "CTX-010",
         "CTX-012"
       ],
-      "architecture_refs": []
+      "architecture_refs": [],
+      "status": "done",
+      "implementation_commit": "da2b030c912b4f2e756c40fab0e0bb28788ae03b"
     },
     {
       "id": "REQ-028",

@@ -1,0 +1,13 @@
+{
+  "minLines": 5,
+  "minTokens": 50,
+  "maxLines": 5000,
+  "reporters": ["console"],
+  "threshold": 0,
+  "exitCode": 1,
+  "absolute": true,
+  "ignore": ["**/node_modules/**"],
+  "formatsExts": {
+    "javascript": ["js", "clif-d"]
+  }
+}

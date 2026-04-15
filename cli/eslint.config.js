@@ -23,7 +23,12 @@ export default [
     },
   },
   {
-    files: ["clif-d.js"],
+    // Match the literal `cli/clif-d.js` symlink as well as any file named
+    // `clif-d.js` anywhere on disk. The latter is a hook for the
+    // backpressure tests, which write fixture files named `clif-d.js` into
+    // tempdirs to verify that the function-size, complexity, and max-depth
+    // gates fire on violating fixtures.
+    files: ["clif-d.js", "**/clif-d.js"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "commonjs",
@@ -83,6 +88,18 @@ export default [
       "no-unneeded-ternary": "error",
       "prefer-object-spread": "error",
       "object-shorthand": "error",
+
+      // --- Backpressure: function-size, complexity, nesting (REQ-027) ---
+      // Thresholds tuned to the current ceiling of bin/clif-d plus a small
+      // margin (see backpressure.md sections 3 and 4 for rationale and the
+      // specific functions sitting near each cap). Tighten when those
+      // functions are decomposed.
+      "max-lines-per-function": [
+        "error",
+        { max: 115, skipBlankLines: true, skipComments: true },
+      ],
+      complexity: ["error", 30],
+      "max-depth": ["error", 3],
     },
   },
   {

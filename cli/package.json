@@ -10,7 +10,8 @@
     "format:check": "prettier --check ../bin/clif-d",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/**/*.test.js",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+    "dup": "jscpd clif-d.js",
+    "check": "npm run format:check && npm run lint && npm run dup && npm run typecheck && npm run test"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -20,6 +21,7 @@
     "eslint-plugin-security": "^3.0.0",
     "eslint-plugin-unicorn": "^56.0.0",
     "husky": "^9.0.0",
+    "jscpd": "^4.0.9",
     "prettier": "^3.0.0",
     "typescript": "^5.4.0"
   }
