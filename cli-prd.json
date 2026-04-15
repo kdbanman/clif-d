@@ -1071,6 +1071,26 @@
       "architecture_refs": [
         "ARCH-003"
       ]
+    },
+    {
+      "id": "REQ-030",
+      "title": "Copy node_modules to new worktrees",
+      "description": "When a new git worktree is created for CLI development, node_modules is absent because it is git-ignored and not tracked. Running npm ci from scratch in every worktree is slow and unnecessary when an identical lockfile-based install already exists in the primary worktree. The bootstrap script (cli/scripts/bootstrap.sh) must detect when it is running inside a worktree and, if node_modules is absent, copy it from the primary worktree rather than re-running npm ci.",
+      "acceptance_criteria": {
+        "given": "A git worktree has been created from the primary clif-d repo and bootstrap.sh is run inside it",
+        "when": "node_modules is absent in the worktree but present in the primary worktree",
+        "then": "bootstrap.sh copies node_modules from the primary worktree into the worktree's cli/ directory instead of running npm ci, and verify-env.sh passes in the worktree."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-010",
+        "CTX-011"
+      ],
+      "architecture_refs": [],
+      "status": "done",
+      "implementation_commit": "1c84a55"
     }
   ]
 }
