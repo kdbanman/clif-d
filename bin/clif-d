@@ -268,7 +268,19 @@ function reqShow(prd, flags) {
     return; // unreachable; satisfies TypeScript control flow
   }
 
-  const result = /** @type {Record<string, unknown>} */ ({});
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Build a full requirement object in canonical schema order, filling
+ * defaults for status and dependencies.
+ * @param {Record<string, unknown>} req
+ * @returns {Record<string, unknown>}
+ */
+function fullRequirementObject(req) {
+  /** @type {Record<string, unknown>} */
+  const result = {};
   for (const key of SCHEMA_FIELD_ORDER) {
     if (key === "status") {
       result[key] = req[key] ?? "not_started";
@@ -278,8 +290,63 @@ function reqShow(prd, flags) {
       result[key] = req[key];
     }
   }
+  return result;
+}
 
-  stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+/**
+ * @param {object} prd
+ */
+function reqNext(prd) {
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+  const reqs = prdObj.requirements;
+
+  /** @type {Set<string>} */
+  const doneIds = new Set();
+  for (const r of reqs) {
+    if (r.status === "done") {
+      doneIds.add(/** @type {string} */ (r.id));
+    }
+  }
+
+  /** @type {Record<string, unknown> | null} */
+  let best = null;
+  /** @type {number | undefined} */
+  let bestPriority;
+
+  for (const r of reqs) {
+    const status = r.status ?? "not_started";
+    if (status !== "not_started") {
+      continue;
+    }
+    const deps = /** @type {string[] | undefined} */ (r.dependencies) ?? [];
+    if (!deps.every((d) => doneIds.has(d))) {
+      continue;
+    }
+    const pri = /** @type {number | undefined} */ (r.priority);
+    if (best === null) {
+      best = r;
+      bestPriority = pri;
+      continue;
+    }
+    if (pri === undefined) {
+      continue;
+    }
+    if (bestPriority === undefined || pri < bestPriority) {
+      best = r;
+      bestPriority = pri;
+    }
+  }
+
+  if (best === null) {
+    stderr.write(
+      "Error: No eligible requirement: all requirements are done, in_progress, blocked, or have unmet dependencies.\n",
+    );
+    exit(1);
+    return;
+  }
+
+  stdout.write(`${JSON.stringify(fullRequirementObject(best), null, 2)}\n`);
   exit(0);
 }
 
@@ -337,6 +404,18 @@ function printReqShowHelp() {
   stderr.write("Show the full JSON object for a single requirement.\n");
 }
 
+function printReqNextHelp() {
+  stderr.write("Usage: clif-d req next [prd-path]\n");
+  stderr.write("\n");
+  stderr.write("Print the highest-priority not_started requirement whose\n");
+  stderr.write("dependencies are all done.\n");
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  An eligible requirement was found and printed.\n");
+  stderr.write("  1  No eligible requirement exists.\n");
+  stderr.write("  2  PRD file is missing or unparseable.\n");
+}
+
 // -- Router -----------------------------------------------------------------
 
 const args = argv.slice(2);
@@ -358,25 +437,41 @@ const commandArgs = args.slice(2);
 if (domain === "req") {
   const flags = parseFlags(commandArgs);
 
-  if (command === "ls") {
-    if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-      printReqLsHelp();
-      exit(0);
+  switch (command) {
+    case "ls": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqLsHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 0);
+      const prd = loadPrd(prdPath);
+      reqLs(prd, flags);
+      break;
     }
-    const prdPath = resolvePrdPath(flags, 0);
-    const prd = loadPrd(prdPath);
-    reqLs(prd, flags);
-  } else if (command === "show") {
-    if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-      printReqShowHelp();
-      exit(0);
+    case "show": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqShowHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqShow(prd, flags);
+      break;
     }
-    const prdPath = resolvePrdPath(flags, 1);
-    const prd = loadPrd(prdPath);
-    reqShow(prd, flags);
-  } else {
-    stderr.write(`Unknown req command: ${command}\n`);
-    exit(2);
+    case "next": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqNextHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 0);
+      const prd = loadPrd(prdPath);
+      reqNext(prd);
+      break;
+    }
+    default: {
+      stderr.write(`Unknown req command: ${command}\n`);
+      exit(2);
+    }
   }
 } else {
   stderr.write(`Unknown command: ${args.join(" ")}\n`);
