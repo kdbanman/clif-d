@@ -1088,7 +1088,9 @@
         "CTX-010",
         "CTX-011"
       ],
-      "architecture_refs": []
+      "architecture_refs": [],
+      "status": "done",
+      "implementation_commit": "1c84a55"
     }
   ]
 }
