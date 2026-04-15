@@ -9,7 +9,8 @@
 - `cli/clif-d/plans/executed/plan-REQ-011-REQ-012-REQ-013.md` -- status mutation commands and the read-validate-write cycle.
 
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** c7b115dd7ee73be2a191db54dd9e5c60fa438f7e
 
 ## 1. Objective
 

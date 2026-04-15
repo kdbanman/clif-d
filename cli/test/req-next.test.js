@@ -100,14 +100,13 @@ describe("req next", () => {
     assert.equal(req.id, "REQ-003");
   });
 
-  it("treats dangling dependency ID as unmet", () => {
+  it("refuses to run against a PRD with a dangling dependency (REQ-029)", () => {
     const prd = structuredClone(NEXT_PRD);
     prd.requirements[1].dependencies = ["REQ-999"];
     const dir = withFixture(prd);
     const result = run(["req", "next"], { cwd: dir });
-    assert.equal(result.exitCode, 0);
-    const req = JSON.parse(result.stdout);
-    assert.equal(req.id, "REQ-003");
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stderr, /Dangling dependency/);
   });
 
   it("handles multi-dep requirements (all must be done)", () => {
