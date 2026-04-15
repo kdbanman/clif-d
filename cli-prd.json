@@ -387,6 +387,8 @@
         "REQ-008"
       ],
       "abstraction_level": "low",
+      "status": "done",
+      "implementation_commit": "bd465f0817f2d4c0add53337e69ab3d37849521b",
       "context_refs": [
         "CTX-007",
         "CTX-008",

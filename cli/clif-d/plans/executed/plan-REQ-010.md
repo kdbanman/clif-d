@@ -5,7 +5,8 @@
 **Backpressure:** `cli/clif-d/backpressure.md`
 **Preceding plans:** `cli/clif-d/plans/executed/plan-REQ-008-REQ-009.md` (core infrastructure: arg parsing, PRD loading, command routing, JSON output, selectFields/SCHEMA_FIELD_ORDER)
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** bd465f0817f2d4c0add53337e69ab3d37849521b
 
 ## 1. Objective
 
