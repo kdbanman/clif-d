@@ -455,7 +455,9 @@
           "1": "Validation error.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "4475eee335f7232d1bf7097f45d40af76b7fbeb5"
     },
     {
       "id": "REQ-012",
@@ -494,7 +496,9 @@
           "1": "Validation error.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "4475eee335f7232d1bf7097f45d40af76b7fbeb5"
     },
     {
       "id": "REQ-013",
@@ -533,7 +537,9 @@
           "1": "Validation error.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "4475eee335f7232d1bf7097f45d40af76b7fbeb5"
     },
     {
       "id": "REQ-014",
