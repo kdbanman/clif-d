@@ -68,6 +68,8 @@ function parseFlags(args) {
     "-a",
     "--fields",
     "-f",
+    "--commit",
+    "-c",
   ]);
 
   for (let i = 0; i < args.length; i++) {
@@ -166,6 +168,42 @@ function selectFields(req, fields) {
     }
   }
   return result;
+}
+
+// -- Atomic write -----------------------------------------------------------
+
+/**
+ * Write the PRD atomically: serialize, write to a temp file in the same
+ * directory as the target, then rename. Ensures the target is never in a
+ * half-written state.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @returns {void}
+ */
+function writePrd(prdPath, prd) {
+  const json = `${JSON.stringify(prd, null, 2)}\n`;
+  const tmpPath = `${prdPath}.tmp.${process.pid}`;
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- prd-path is user-supplied by design
+  fs.writeFileSync(tmpPath, json, "utf8");
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- prd-path is user-supplied by design
+  fs.renameSync(tmpPath, prdPath);
+}
+
+// -- Status transitions -----------------------------------------------------
+
+/**
+ * Validate a status transition. Only `done` is terminal; every other
+ * transition is allowed (including idempotent self-transitions and
+ * unblocking via start).
+ * @param {string} currentStatus
+ * @param {string} targetStatus
+ * @returns {string | null} Error message, or null if valid.
+ */
+function validateTransition(currentStatus, targetStatus) {
+  if (currentStatus === "done" && targetStatus !== "done") {
+    return "Cannot transition out of 'done': done is terminal.";
+  }
+  return null;
 }
 
 // -- Command handlers -------------------------------------------------------
@@ -350,6 +388,151 @@ function reqNext(prd) {
   exit(0);
 }
 
+/**
+ * Mark a requirement in_progress. Idempotent: starting an already in_progress
+ * requirement succeeds. Starting a blocked requirement unblocks it.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqStart(prdPath, prd, flags) {
+  const positionals = flags.positional;
+  if (positionals.length === 0) {
+    stderr.write("Error: REQ-ID argument is required.\n");
+    stderr.write("Usage: clif-d req start <REQ-ID> [prd-path]\n");
+    exit(2);
+    return;
+  }
+
+  const reqId = /** @type {string} */ (positionals[0]);
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+  const req = prdObj.requirements.find((r) => r.id === reqId);
+
+  if (!req) {
+    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
+    exit(1);
+    return;
+  }
+
+  const current = /** @type {string} */ (req.status ?? "not_started");
+  const transitionError = validateTransition(current, "in_progress");
+  if (transitionError) {
+    stderr.write(
+      `Error: Cannot start ${reqId}: requirement is already done.\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  req.status = "in_progress";
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Mark a requirement done with an implementation commit SHA. The commit SHA
+ * is required and must be 7-40 hex characters. done is terminal: a done
+ * requirement cannot be re-marked done.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqDone(prdPath, prd, flags) {
+  const positionals = flags.positional;
+  if (positionals.length === 0) {
+    stderr.write("Error: REQ-ID argument is required.\n");
+    stderr.write("Usage: clif-d req done <REQ-ID> --commit=<sha> [prd-path]\n");
+    exit(2);
+    return;
+  }
+
+  const reqId = /** @type {string} */ (positionals[0]);
+  const commit = flags.named.get("--commit") ?? flags.named.get("-c");
+  if (!commit) {
+    stderr.write(
+      `Error: --commit flag is required for req done (the git commit SHA that completed ${reqId}).\n`,
+    );
+    exit(1);
+    return;
+  }
+  if (!/^[0-9a-f]{7,40}$/i.test(commit)) {
+    stderr.write(
+      `Error: --commit must be a 7-40 character hex SHA. Got: ${commit}\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+  const req = prdObj.requirements.find((r) => r.id === reqId);
+  if (!req) {
+    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
+    exit(1);
+    return;
+  }
+
+  const current = /** @type {string} */ (req.status ?? "not_started");
+  if (current === "done") {
+    stderr.write(
+      `Error: Requirement ${reqId} is already done. done is terminal.\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  req.status = "done";
+  req.implementation_commit = commit;
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Mark a requirement blocked. Idempotent: blocking a blocked requirement
+ * succeeds. done is terminal, so a done requirement cannot be blocked.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqBlock(prdPath, prd, flags) {
+  const positionals = flags.positional;
+  if (positionals.length === 0) {
+    stderr.write("Error: REQ-ID argument is required.\n");
+    stderr.write("Usage: clif-d req block <REQ-ID> [prd-path]\n");
+    exit(2);
+    return;
+  }
+
+  const reqId = /** @type {string} */ (positionals[0]);
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+  const req = prdObj.requirements.find((r) => r.id === reqId);
+
+  if (!req) {
+    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
+    exit(1);
+    return;
+  }
+
+  const current = /** @type {string} */ (req.status ?? "not_started");
+  const transitionError = validateTransition(current, "blocked");
+  if (transitionError) {
+    stderr.write(
+      `Error: Cannot block ${reqId}: requirement is already done.\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  req.status = "blocked";
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
 // -- Help text --------------------------------------------------------------
 
 function printMainHelp() {
@@ -404,6 +587,49 @@ function printReqShowHelp() {
   stderr.write("Show the full JSON object for a single requirement.\n");
 }
 
+function printReqBlockHelp() {
+  stderr.write("Usage: clif-d req block <REQ-ID> [prd-path]\n");
+  stderr.write("\n");
+  stderr.write("Mark a requirement blocked.\n");
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  Status set to blocked and PRD written.\n");
+  stderr.write("  1  Validation error (not found, already done).\n");
+  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
+}
+
+function printReqDoneHelp() {
+  stderr.write("Usage: clif-d req done <REQ-ID> --commit=<sha> [prd-path]\n");
+  stderr.write("\n");
+  stderr.write("Mark a requirement done with an implementation commit SHA.\n");
+  stderr.write("\n");
+  stderr.write("Flags:\n");
+  stderr.write(
+    "  --commit, -c <sha>  Git commit SHA that completed this requirement.\n",
+  );
+  stderr.write(
+    "                      Required. Must be 7-40 hex characters.\n",
+  );
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  Status set to done and PRD written.\n");
+  stderr.write(
+    "  1  Validation error (not found, already done, missing/bad SHA).\n",
+  );
+  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
+}
+
+function printReqStartHelp() {
+  stderr.write("Usage: clif-d req start <REQ-ID> [prd-path]\n");
+  stderr.write("\n");
+  stderr.write("Mark a requirement in_progress.\n");
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  Status set to in_progress and PRD written.\n");
+  stderr.write("  1  Validation error (not found, already done).\n");
+  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
+}
+
 function printReqNextHelp() {
   stderr.write("Usage: clif-d req next [prd-path]\n");
   stderr.write("\n");
@@ -456,6 +682,36 @@ if (domain === "req") {
       const prdPath = resolvePrdPath(flags, 1);
       const prd = loadPrd(prdPath);
       reqShow(prd, flags);
+      break;
+    }
+    case "block": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqBlockHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqBlock(prdPath, prd, flags);
+      break;
+    }
+    case "done": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqDoneHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqDone(prdPath, prd, flags);
+      break;
+    }
+    case "start": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqStartHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqStart(prdPath, prd, flags);
       break;
     }
     case "next": {
