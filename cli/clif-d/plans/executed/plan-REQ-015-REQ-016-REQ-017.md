@@ -9,7 +9,8 @@
 - `cli/clif-d/plans/active/plan-REQ-014.md` (reusable validation helpers: ID uniqueness, referential integrity, cycle detection, enum checks)
 
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** 08e665e
 
 ## 1. Objective
 
