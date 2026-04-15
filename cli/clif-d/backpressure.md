@@ -31,10 +31,10 @@ The zero-dependency constraint (CTX-001) and single-file distribution (CTX-002) 
 | Type checking | TypeScript `checkJs` | `strict: true`, `noUncheckedIndexedAccess`, JSDoc annotations | Maximum for plain JS | Type safety without a build step -- `tsc --noEmit` checks, never compiles |
 | Test enforcement | `node --test` (built-in) | All tests must pass | Zero tolerance | Zero additional dependencies, matches the project's minimalism |
 | Coverage | `node --test --experimental-test-coverage` | Tracked, not gated pre-commit | Informational locally, gated in CI | Coverage analysis belongs in CI per testing-coverage reference |
-| Duplication detection | jscpd (devDep) | Default minLines threshold (tuned per baseline); runs against `bin/clif-d` | Fail-on-duplication | Prettier and ESLint do not detect copy-paste across functions. Duplication was observed in early command handlers (REQ-024); a dedicated detector is the only gate that catches it. Zero runtime impact -- devDep only (CTX-001 unaffected). |
-| Function size | ESLint `max-lines-per-function` | Threshold set to current ceiling of the post-REQ-026 refactor | Hard-cap | God-functions mix concerns, resist isolated testing, and hide bugs. A hard cap forces decomposition at review/commit time rather than relying on taste. |
-| Cyclomatic complexity | ESLint `complexity` | Threshold tuned to post-refactor baseline | Hard-cap | Prevents regrowth of tangled conditional logic (the `req next` tiebreaker and `req ls` filter/sort/project/format mixture were symptoms). |
-| Nesting depth | ESLint `max-depth` | 3 | Hard-cap | Deep nesting is almost always a sign that a sub-procedure wants to be extracted. The cap nudges decomposition. |
+| Duplication detection | jscpd (devDep) | `minLines: 5`, `minTokens: 50`, `threshold: 0`, `exitCode: 1`; runs against `bin/clif-d` (via `cli/clif-d.js` symlink). The `formatsExts` map adds the extensionless `clif-d` filename to the JavaScript format. | Fail-on-duplication | Prettier and ESLint do not detect copy-paste across functions. Duplication was observed in early command handlers (REQ-024); a dedicated detector is the only gate that catches it. Zero runtime impact -- devDep only (CTX-001 unaffected). `threshold: 0` is required because `exitCode: 1` alone is inert -- jscpd only treats the run as failing once detected duplication exceeds `threshold` (a percentage). Setting threshold to 0 means any clone fails the gate. |
+| Function size | ESLint `max-lines-per-function` | `max: 115, skipBlankLines: true, skipComments: true` -- the current ceiling is the main dispatcher in `bin/clif-d` at ~111 lines (post-REQ-024-026-028-029 refactor). 115 is "ceiling + small margin"; tighten when the dispatcher is decomposed. | Hard-cap | God-functions mix concerns, resist isolated testing, and hide bugs. A hard cap forces decomposition at review/commit time rather than relying on taste. |
+| Cyclomatic complexity | ESLint `complexity` | `30`. The current ceiling is the `validate` command at ~25 (post-refactor); 30 is "ceiling + small margin". Tighten when `validate` is further decomposed. | Hard-cap | Prevents regrowth of tangled conditional logic (the `req next` tiebreaker and `req ls` filter/sort/project/format mixture were symptoms). |
+| Nesting depth | ESLint `max-depth` | `3` | Hard-cap | Deep nesting is almost always a sign that a sub-procedure wants to be extracted. The cap nudges decomposition. The post-REQ-027 baseline has zero functions deeper than 3 (one site at depth 4 was extracted into `validateAcceptanceCriteria`). |
 
 ## 4. Relaxations from Maximum Strictness
 
@@ -54,6 +54,9 @@ Every relaxation is listed here with explicit justification. If a rule is not li
 - `eslint-plugin-security`'s `configs.recommended` still uses the legacy `env` key, which is incompatible with ESLint v9 flat config. Instead of extending the preset, we opt into specific rules (`detect-child-process`, `detect-non-literal-fs-filename`, `detect-unsafe-regex`, `detect-eval-with-expression`, `detect-non-literal-regexp`, `detect-pseudoRandomBytes`, `detect-new-buffer`).
 - `eslint-plugin-unicorn` v56 exports both legacy (`configs.recommended`) and flat (`configs["flat/recommended"]`) configs. We use the flat variant.
 - `bin/clif-d` has no file extension (plugin convention). ESLint refuses to lint files outside its base path, and TypeScript ignores files without a recognized extension. A symlink `cli/clif-d.js -> ../bin/clif-d` resolves both issues. Prettier does not support symlinks as explicit targets, so Prettier runs against `../bin/clif-d` directly.
+- The `files` matcher for the function-size/complexity/depth ESLint override is `["clif-d.js", "**/clif-d.js"]` -- the second glob lets the backpressure tests assert these rules by writing fixture files named `clif-d.js` into per-test directories under `cli/test/.fixtures-backpressure-lint/`. The fixtures must live inside ESLint's base path (`cli/`); flat-config base-path semantics ignore files outside the config directory regardless of `--config` overrides.
+
+**Plan deviation note (REQ-027):** The plan section "What is intentionally out of scope" said "no changes to `bin/clif-d`." When jscpd was wired up at `threshold: 0`, it detected three pre-existing clones in `bin/clif-d` (two cycle-detection routines, two commit-with-cycle-check command handlers, two field-projection helpers), plus one function at depth 4 that violated the new `max-depth: 3` cap. The plan also required the real CLI to pass at the configured thresholds and required loose thresholds to be avoided. These constraints were resolved by extracting `initThreeColorState`, `buildDependencyGraph`, `commitWithCycleCheck`, `Projection.selectFields`, and `validateAcceptanceCriteria` -- minimal, documented refactors that left command-level behavior intact. CTX-012 (internal modularity) supports this direction.
 
 ## 5. Suppression Policy
 
@@ -105,6 +108,8 @@ Not configured. The test suite is fast enough to run at pre-commit. If integrati
 
 - Prettier (formatting)
 - ESLint with unicorn, n, and security plugins (linting)
+- ESLint `max-lines-per-function` (115), `complexity` (30), `max-depth` (3) -- function-shape caps scoped to `clif-d.js`
+- jscpd duplication detector (`minLines: 5`, `minTokens: 50`, `threshold: 0`)
 - TypeScript checkJs with strict mode (type checking)
 - Node.js built-in test runner (test enforcement)
 
@@ -132,6 +137,9 @@ npx prettier --write ../bin/clif-d
 # Lint
 npx eslint ../bin/clif-d
 
+# Duplication
+npm run dup
+
 # Type check
 npx tsc --noEmit
 
@@ -154,6 +162,7 @@ npm run check
 - Security rule suppressions require updating this document.
 - `// @ts-ignore` is prohibited; use `// @ts-expect-error` with explanation.
 - File-level suppressions require amending this document.
+- jscpd inline suppression: wrap an intentionally-duplicated block with `// jscpd:ignore-start` and `// jscpd:ignore-end` comments. Use this only when the duplication is genuinely intentional (e.g. mirrored shape across distinct domains) and refactoring would harm clarity. The accompanying comment must explain why -- "annoying" is not a reason. Prefer extraction to suppression in nearly all cases.
 
 ### How to update guardrails
 

@@ -51,7 +51,13 @@ describe("Error paths: malformed JSON", () => {
 });
 
 describe("Error paths: unreadable PRD file", () => {
-  it("req ls exits 2 when PRD file has mode 000", () => {
+  // chmod 000 cannot make a file unreadable for root. CI and most user
+  // shells run as a non-root user, so this test verifies the unreadable-PRD
+  // code path on those. When running as root (e.g. some container runtimes),
+  // the test is skipped because the precondition cannot be set up.
+  const isRoot =
+    typeof process.getuid === "function" && process.getuid() === 0;
+  it("req ls exits 2 when PRD file has mode 000", { skip: isRoot }, () => {
     const dir = withFixture(MINIMAL_PRD);
     const prdPath = path.join(dir, "clif-d", "prd.json");
     fs.chmodSync(prdPath, 0o000);

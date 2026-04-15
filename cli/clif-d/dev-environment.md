@@ -137,6 +137,22 @@ Content, shared across all three files:
 
 `CLAUDE.md` retains its existing plugin-repo content and gains a "CLI subproject" section appended to the end.
 
+### Scoped rules: nested per-directory files
+
+The top-level rules files describe the whole repo and are always in the agent's context window. They must stay terse so unrelated work (skills, plugin manifest, marketplace) is not weighed down by CLI-specific implementation rules.
+
+For rules that only apply when an agent is editing `bin/clif-d`, this repo uses the **closest-file-wins** nested convention that all three supported harnesses respect:
+
+| File | Loaded when... |
+|------|----------------|
+| `bin/CLAUDE.md` | Claude Code reads or edits files under `bin/`. Claude Code walks up from the edited file and loads each `CLAUDE.md` it finds. |
+| `bin/AGENTS.md` | Generic AGENTS.md-aware agents read or edit files under `bin/`. The published `agents.md` convention is monorepo-friendly: the closest file wins. |
+| `bin/GEMINI.md` | Gemini CLI reads or edits files under `bin/`. Gemini CLI uses the same closest-file walk-up. |
+
+The nested files are signposts -- they name the governing PRD context/architecture items (CTX-001 zero deps, CTX-002 single file, CTX-010 backpressure, CTX-012 internal modularity, ARCH-003 read-validate-write, ARCH-004 module-object structure, ARCH-005 testability seam) and point at `cli-prd.json` and `cli/clif-d/backpressure.md` for the authoritative prose. They do NOT copy PRD prose. Rationale: backpressure (the pre-commit gates) is corrective; scoped rules are preventative. Together they let an agent know *why* a gate exists before they hit it.
+
+Glob-frontmatter rule files (Cursor's `.cursor/rules/*.mdc`, Claude Code's emerging `.claude/rules/*.md` patterns) are not used here because (a) the supported harnesses already implement the nested-file scoping natively and (b) adding parallel files for unsupported harnesses spreads maintenance without coverage benefit. If a fourth harness is adopted that requires explicit globs, add the rule file alongside its peers and document it in this section.
+
 ## 9. Relaxations and Deferred Items
 
 - **Node not installed by bootstrap.** The script detects and demands 18+ but never installs it. Justification: Claude Code guarantees 18+ in plugin environments, macOS users already have a Node via one of many managers, and cloud runtimes typically ship a Node base image. Installing Node inside the script would require choosing a manager (bad for reproducibility) or shipping a tarball-download path (brittle). Detection + actionable error is the cleaner contract.

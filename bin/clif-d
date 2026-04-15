@@ -409,25 +409,7 @@ function validateRequirementShape(req, options) {
     );
   }
 
-  const ac = req.acceptance_criteria;
-  if (ac !== undefined && ac !== null && ac !== "") {
-    if (typeof ac === "string") {
-      // ok
-    } else if (typeof ac === "object" && !Array.isArray(ac)) {
-      const gwt = /** @type {Record<string, unknown>} */ (ac);
-      for (const key of ["given", "when", "then"]) {
-        if (typeof gwt[key] !== "string" || gwt[key] === "") {
-          errors.push(
-            `Invalid acceptance_criteria: object form requires string '${key}'`,
-          );
-        }
-      }
-    } else {
-      errors.push(
-        "Invalid acceptance_criteria: must be a string or {given, when, then} object",
-      );
-    }
-  }
+  validateAcceptanceCriteria(req.acceptance_criteria, errors);
 
   const status = /** @type {string | undefined} */ (req.status);
   const commit = req.implementation_commit;
@@ -443,6 +425,36 @@ function validateRequirementShape(req, options) {
   }
 
   return errors;
+}
+
+/**
+ * Validate the shape of a requirement's acceptance_criteria field. Accepts
+ * a non-empty string OR a {given, when, then} object whose three fields are
+ * all non-empty strings. Pushes any failures onto `errors`.
+ * @param {unknown} ac
+ * @param {string[]} errors
+ */
+function validateAcceptanceCriteria(ac, errors) {
+  if (ac === undefined || ac === null || ac === "") {
+    return;
+  }
+  if (typeof ac === "string") {
+    return;
+  }
+  if (typeof ac !== "object" || Array.isArray(ac)) {
+    errors.push(
+      "Invalid acceptance_criteria: must be a string or {given, when, then} object",
+    );
+    return;
+  }
+  const gwt = /** @type {Record<string, unknown>} */ (ac);
+  for (const key of ["given", "when", "then"]) {
+    if (typeof gwt[key] !== "string" || gwt[key] === "") {
+      errors.push(
+        `Invalid acceptance_criteria: object form requires string '${key}'`,
+      );
+    }
+  }
 }
 
 /**
@@ -504,31 +516,8 @@ function checkRequirementRefs(req, reqIds, ctxIds, archIds) {
  */
 function hasDependencyCycle(requirements) {
   const reqIds = collectIds(requirements);
-  /** @type {Map<string, string[]>} */
-  const graph = new Map();
-  for (const req of requirements) {
-    const id = /** @type {string | undefined} */ (req.id);
-    if (typeof id !== "string") {
-      continue;
-    }
-    const deps = /** @type {unknown} */ (req.dependencies);
-    const edges = Array.isArray(deps)
-      ? deps.filter(
-          /** @returns {d is string} */ (d) =>
-            typeof d === "string" && reqIds.has(d),
-        )
-      : [];
-    graph.set(id, edges);
-  }
-
-  const WHITE = 0;
-  const GRAY = 1;
-  const BLACK = 2;
-  /** @type {Map<string, number>} */
-  const color = new Map();
-  for (const id of graph.keys()) {
-    color.set(id, WHITE);
-  }
+  const graph = buildDependencyGraph(requirements, reqIds);
+  const { color, WHITE, GRAY, BLACK } = initThreeColorState(graph);
 
   /**
    * @param {string} node
@@ -621,7 +610,7 @@ const Sort = Object.freeze({
 const Projection = Object.freeze({
   /**
    * @param {Record<string, unknown>} req
-   * @param {string[]} fields
+   * @param {readonly string[]} fields
    * @returns {Record<string, unknown>}
    */
   selectFields(req, fields) {
@@ -745,18 +734,29 @@ function reqShow(prd, flags) {
  * @returns {Record<string, unknown>}
  */
 function fullRequirementObject(req) {
-  /** @type {Record<string, unknown>} */
-  const result = {};
-  for (const key of SCHEMA_FIELD_ORDER) {
-    if (key === "status") {
-      result[key] = req[key] ?? "not_started";
-    } else if (key === "dependencies") {
-      result[key] = req[key] ?? [];
-    } else if (key in req) {
-      result[key] = req[key];
-    }
+  return Projection.selectFields(req, SCHEMA_FIELD_ORDER);
+}
+
+/**
+ * Common tail for mutation handlers (reqEdit, reqDepAdd) that may introduce
+ * a dependency cycle. If the post-mutation graph has a cycle, write the
+ * caller-supplied error message and exit 1 without touching disk; otherwise
+ * persist the PRD and print the updated requirement on stdout, exit 0.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {{ requirements: Array<Record<string, unknown>> }} prdObj
+ * @param {Record<string, unknown>} req
+ * @param {string} cycleMessage
+ */
+function commitWithCycleCheck(prdPath, prd, prdObj, req, cycleMessage) {
+  if (hasDependencyCycle(prdObj.requirements)) {
+    stderr.write(`${cycleMessage}\n`);
+    exit(1);
+    return;
   }
-  return result;
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
 }
 
 /**
@@ -1078,17 +1078,13 @@ function reqEdit(prdPath, prd, flags) {
     req[key] = patch[key];
   }
 
-  if (hasDependencyCycle(prdObj.requirements)) {
-    stderr.write(
-      `Error: Editing ${reqId} would introduce a dependency cycle.\n`,
-    );
-    exit(1);
-    return;
-  }
-
-  writePrd(prdPath, prd);
-  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
-  exit(0);
+  commitWithCycleCheck(
+    prdPath,
+    prd,
+    prdObj,
+    req,
+    `Error: Editing ${reqId} would introduce a dependency cycle.`,
+  );
 }
 
 /**
@@ -1141,17 +1137,13 @@ function reqDepAdd(prdPath, prd, flags) {
   }
 
   req.dependencies = [...deps, depId];
-  if (hasDependencyCycle(prdObj.requirements)) {
-    stderr.write(
-      `Error: Adding ${reqId} -> ${depId} would introduce a dependency cycle.\n`,
-    );
-    exit(1);
-    return;
-  }
-
-  writePrd(prdPath, prd);
-  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
-  exit(0);
+  commitWithCycleCheck(
+    prdPath,
+    prd,
+    prdObj,
+    req,
+    `Error: Adding ${reqId} -> ${depId} would introduce a dependency cycle.`,
+  );
 }
 
 /**
@@ -1396,31 +1388,8 @@ function checkStatusCommitConsistency(requirements, issues) {
  * @param {ValidationIssue[]} issues
  */
 function checkDependencyCycles(requirements, reqIds, issues) {
-  /** @type {Map<string, string[]>} */
-  const graph = new Map();
-  for (const req of requirements) {
-    const id = /** @type {string | undefined} */ (req.id);
-    if (typeof id !== "string") {
-      continue;
-    }
-    const deps = /** @type {unknown} */ (req.dependencies);
-    const edges = Array.isArray(deps)
-      ? deps.filter(
-          /** @returns {d is string} */ (d) =>
-            typeof d === "string" && reqIds.has(d),
-        )
-      : [];
-    graph.set(id, edges);
-  }
-
-  const WHITE = 0;
-  const GRAY = 1;
-  const BLACK = 2;
-  /** @type {Map<string, number>} */
-  const color = new Map();
-  for (const id of graph.keys()) {
-    color.set(id, WHITE);
-  }
+  const graph = buildDependencyGraph(requirements, reqIds);
+  const { color, WHITE, GRAY, BLACK } = initThreeColorState(graph);
 
   /** @type {Set<string>} */
   const reportedCycles = new Set();
@@ -1476,6 +1445,52 @@ function collectIds(items) {
     }
   }
   return ids;
+}
+
+/**
+ * Build the requirement-to-dependency adjacency map used by both cycle
+ * detectors. Skips requirements with non-string ids and edges pointing at
+ * unknown ids; the validator reports those separately.
+ * @param {Array<Record<string, unknown>>} requirements
+ * @param {Set<string>} reqIds
+ * @returns {Map<string, string[]>}
+ */
+function buildDependencyGraph(requirements, reqIds) {
+  /** @type {Map<string, string[]>} */
+  const graph = new Map();
+  for (const req of requirements) {
+    const id = /** @type {string | undefined} */ (req.id);
+    if (typeof id !== "string") {
+      continue;
+    }
+    const deps = /** @type {unknown} */ (req.dependencies);
+    const edges = Array.isArray(deps)
+      ? deps.filter(
+          /** @returns {d is string} */ (d) =>
+            typeof d === "string" && reqIds.has(d),
+        )
+      : [];
+    graph.set(id, edges);
+  }
+  return graph;
+}
+
+/**
+ * Initialize three-color (WHITE/GRAY/BLACK) DFS state for the graph's nodes.
+ * Used by both the boolean cycle detector and the validator's reporting one.
+ * @param {Map<string, string[]>} graph
+ * @returns {{ color: Map<string, number>, WHITE: 0, GRAY: 1, BLACK: 2 }}
+ */
+function initThreeColorState(graph) {
+  const WHITE = /** @type {const} */ (0);
+  const GRAY = /** @type {const} */ (1);
+  const BLACK = /** @type {const} */ (2);
+  /** @type {Map<string, number>} */
+  const color = new Map();
+  for (const id of graph.keys()) {
+    color.set(id, WHITE);
+  }
+  return { color, WHITE, GRAY, BLACK };
 }
 
 /**

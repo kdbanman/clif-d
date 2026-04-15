@@ -9,6 +9,9 @@ npx prettier --check ../bin/clif-d
 echo "Linting..."
 npx eslint clif-d.js
 
+echo "Checking duplication..."
+npx jscpd clif-d.js
+
 echo "Type checking..."
 npx tsc --noEmit
 
