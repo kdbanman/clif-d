@@ -38,6 +38,58 @@ const DEFAULT_FIELDS = [
   "priority",
 ];
 
+// -- Lookup namespace -------------------------------------------------------
+
+/**
+ * Pure helpers for locating items by ID in a PRD. `findRequirementOrExit`
+ * accepts an `io` object so tests can supply their own exit/stderr without
+ * touching process state.
+ */
+const Lookup = Object.freeze({
+  /**
+   * @param {object} prd
+   * @param {string} reqId
+   * @returns {Record<string, unknown> | undefined}
+   */
+  findRequirement(prd, reqId) {
+    const reqs =
+      /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd)
+        .requirements;
+    return reqs.find((r) => r.id === reqId);
+  },
+
+  /**
+   * @param {object} prd
+   * @param {string} reqId
+   * @param {{ exit: (code: number) => void, stderr: { write: (s: string) => void } }} io
+   * @returns {Record<string, unknown> | undefined}
+   */
+  findRequirementOrExit(prd, reqId, io) {
+    const req = Lookup.findRequirement(prd, reqId);
+    if (!req) {
+      io.stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
+      io.exit(1);
+    }
+    return req;
+  },
+});
+
+/**
+ * Require the first positional argument (a REQ-ID) or exit 2 with a usage
+ * diagnostic. Returns the REQ-ID string.
+ * @param {ParsedFlags} flags
+ * @param {string} usage - Command usage line (no trailing newline).
+ * @returns {string}
+ */
+function requireReqIdPositional(flags, usage) {
+  if (flags.positional.length === 0) {
+    stderr.write("Error: REQ-ID argument is required.\n");
+    stderr.write(`Usage: ${usage}\n`);
+    exit(2);
+  }
+  return /** @type {string} */ (flags.positional[0]);
+}
+
 // -- Flag parsing -----------------------------------------------------------
 
 /**
@@ -76,7 +128,13 @@ function parseFlags(args) {
     const arg = /** @type {string} */ (args[i]);
     if (arg.includes("=") && arg.startsWith("--")) {
       const eqIndex = arg.indexOf("=");
-      named.set(arg.slice(0, eqIndex), arg.slice(eqIndex + 1));
+      const key = arg.slice(0, eqIndex);
+      const value = arg.slice(eqIndex + 1);
+      if (value === "") {
+        stderr.write(`Error: Flag ${key} requires a non-empty value.\n`);
+        return exit(2);
+      }
+      named.set(key, value);
     } else if (flagsWithValues.has(arg) && i + 1 < args.length) {
       named.set(arg, /** @type {string} */ (args[i + 1]));
       i++;
@@ -91,6 +149,53 @@ function parseFlags(args) {
   }
 
   return { named, boolean: booleanFlags, positional };
+}
+
+/**
+ * Allowed flag tokens (long and short forms) per command. `--help` and `-h`
+ * are always allowed and are added by `enforceKnownFlags`. Duplicate-flag
+ * policy: last wins (Map.set semantics in parseFlags).
+ * @type {Readonly<Record<string, readonly string[]>>}
+ */
+const COMMAND_FLAG_SPECS = Object.freeze({
+  "req ls": [
+    "--status",
+    "-s",
+    "--abstraction",
+    "-a",
+    "--fields",
+    "-f",
+    "--priority",
+    "--deps",
+    "--plain",
+  ],
+  "req show": [],
+  "req start": [],
+  "req done": ["--commit", "-c"],
+  "req block": [],
+  "req next": [],
+  "req add": [],
+  "req edit": [],
+  "req dep": [],
+  validate: [],
+});
+
+/**
+ * Exit with code 2 if any parsed flag is not in `allowed`. `--help` and `-h`
+ * are always permitted.
+ * @param {ParsedFlags} flags
+ * @param {readonly string[]} allowed
+ * @param {string} commandLabel
+ */
+function enforceKnownFlags(flags, allowed, commandLabel) {
+  const allowedSet = new Set([...allowed, "--help", "-h"]);
+  const seen = new Set([...flags.named.keys(), ...flags.boolean]);
+  for (const key of seen) {
+    if (!allowedSet.has(key)) {
+      stderr.write(`Error: Unknown flag for ${commandLabel}: ${key}\n`);
+      return exit(2);
+    }
+  }
 }
 
 // -- PRD loading ------------------------------------------------------------
@@ -119,11 +224,16 @@ function resolvePrdPath(flags, expectedPositional) {
 }
 
 /**
- * Read and parse a PRD file. Calls process.exit(2) on error.
+ * Read and parse a PRD file. On I/O or parse failure, exits 2. When
+ * `options.validate` is true (the default), runs `Validation.all` on the
+ * parsed PRD and exits 1 with one diagnostic per `error`-level issue if any
+ * are found. The `validate` command passes `{ validate: false }` so it can
+ * surface issues via its own output path rather than hard-exiting.
  * @param {string} prdPath
+ * @param {{ validate?: boolean }} [options]
  * @returns {object}
  */
-function loadPrd(prdPath) {
+function loadPrd(prdPath, options) {
   /** @type {string} */
   let raw = "";
   try {
@@ -133,41 +243,28 @@ function loadPrd(prdPath) {
     stderr.write(`Error: PRD file not found: ${prdPath}\n`);
     return exit(2);
   }
+  /** @type {object} */
+  let parsed;
   try {
-    return JSON.parse(raw);
+    parsed = JSON.parse(raw);
   } catch {
     stderr.write(`Error: Failed to parse PRD as JSON: ${prdPath}\n`);
     return exit(2);
   }
-}
 
-// -- Field selection --------------------------------------------------------
-
-/**
- * Build a result object with only the selected fields in schema order.
- * @param {object} req - The full requirement object
- * @param {string[]} fields - Fields to include
- * @returns {object}
- */
-function selectFields(req, fields) {
-  const fieldSet = new Set(fields);
-  /** @type {Record<string, unknown>} */
-  const result = {};
-  const source = /** @type {Record<string, unknown>} */ (req);
-
-  for (const key of SCHEMA_FIELD_ORDER) {
-    if (!fieldSet.has(key)) {
-      continue;
-    }
-    if (key === "status") {
-      result[key] = source[key] ?? "not_started";
-    } else if (key === "dependencies") {
-      result[key] = source[key] ?? [];
-    } else if (key in source) {
-      result[key] = source[key];
+  const shouldValidate = options?.validate !== false;
+  if (shouldValidate) {
+    const issues = Validation.all(parsed);
+    const errors = issues.filter((i) => i.level === "error");
+    if (errors.length > 0) {
+      for (const err of errors) {
+        const who = err.id ? `${err.id}: ` : "";
+        stderr.write(`Error: ${who}${err.message}\n`);
+      }
+      return exit(1);
     }
   }
-  return result;
+  return parsed;
 }
 
 // -- Atomic write -----------------------------------------------------------
@@ -189,22 +286,48 @@ function writePrd(prdPath, prd) {
   fs.renameSync(tmpPath, prdPath);
 }
 
-// -- Status transitions -----------------------------------------------------
+// -- Lifecycle namespace ----------------------------------------------------
 
 /**
- * Validate a status transition. Only `done` is terminal; every other
+ * @typedef {{ ok: true } | { ok: false, reason: string }} TransitionResult
+ */
+
+/**
+ * Status-transition predicates. Only `done` is terminal; every other
  * transition is allowed (including idempotent self-transitions and
  * unblocking via start).
- * @param {string} currentStatus
- * @param {string} targetStatus
- * @returns {string | null} Error message, or null if valid.
  */
-function validateTransition(currentStatus, targetStatus) {
-  if (currentStatus === "done" && targetStatus !== "done") {
-    return "Cannot transition out of 'done': done is terminal.";
-  }
-  return null;
-}
+const Lifecycle = Object.freeze({
+  /**
+   * @param {string | undefined} currentStatus
+   * @returns {TransitionResult}
+   */
+  canStart(currentStatus) {
+    return currentStatus === "done"
+      ? { ok: false, reason: "requirement is already done" }
+      : { ok: true };
+  },
+
+  /**
+   * @param {string | undefined} currentStatus
+   * @returns {TransitionResult}
+   */
+  canComplete(currentStatus) {
+    return currentStatus === "done"
+      ? { ok: false, reason: "already done; done is terminal" }
+      : { ok: true };
+  },
+
+  /**
+   * @param {string | undefined} currentStatus
+   * @returns {TransitionResult}
+   */
+  canBlock(currentStatus) {
+    return currentStatus === "done"
+      ? { ok: false, reason: "requirement is already done" }
+      : { ok: true };
+  },
+});
 
 // -- Stdin --------------------------------------------------------------
 
@@ -435,34 +558,46 @@ function hasDependencyCycle(requirements) {
   return false;
 }
 
-// -- Command handlers -------------------------------------------------------
+// -- Filters / Sort / Projection / Format namespaces ------------------------
 
 /**
- * @param {object} prd
- * @param {ParsedFlags} flags
+ * Pure helpers for filtering a list of requirements.
  */
-function reqLs(prd, flags) {
-  const prdObj =
-    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
-  let reqs = prdObj.requirements;
-
-  const statusFilter = flags.named.get("--status") ?? flags.named.get("-s");
-  if (statusFilter) {
-    const statuses = new Set(statusFilter.split(","));
-    reqs = reqs.filter((r) => {
+const Filters = Object.freeze({
+  /**
+   * @param {Array<Record<string, unknown>>} reqs
+   * @param {Set<string>} statuses
+   * @returns {Array<Record<string, unknown>>}
+   */
+  byStatus(reqs, statuses) {
+    return reqs.filter((r) => {
       const status = /** @type {string} */ (r.status ?? "not_started");
       return statuses.has(status);
     });
-  }
+  },
 
-  const abstractionFilter =
-    flags.named.get("--abstraction") ?? flags.named.get("-a");
-  if (abstractionFilter) {
-    reqs = reqs.filter((r) => r.abstraction_level === abstractionFilter);
-  }
+  /**
+   * @param {Array<Record<string, unknown>>} reqs
+   * @param {string} level
+   * @returns {Array<Record<string, unknown>>}
+   */
+  byAbstraction(reqs, level) {
+    return reqs.filter((r) => r.abstraction_level === level);
+  },
+});
 
-  if (flags.boolean.has("--priority")) {
-    reqs = [...reqs].sort((a, b) => {
+/**
+ * Pure helpers for sorting a list of requirements.
+ */
+const Sort = Object.freeze({
+  /**
+   * Sort ascending by numeric `priority`. Undefined priority is placed last.
+   * Returns a new array; does not mutate the input.
+   * @param {Array<Record<string, unknown>>} reqs
+   * @returns {Array<Record<string, unknown>>}
+   */
+  byPriority(reqs) {
+    return [...reqs].sort((a, b) => {
       const ap = /** @type {number | undefined} */ (a.priority);
       const bp = /** @type {number | undefined} */ (b.priority);
       if (ap === undefined && bp === undefined) {
@@ -476,6 +611,94 @@ function reqLs(prd, flags) {
       }
       return ap - bp;
     });
+  },
+});
+
+/**
+ * Field-selection helpers. Projection preserves SCHEMA_FIELD_ORDER and fills
+ * defaults for status/dependencies when absent.
+ */
+const Projection = Object.freeze({
+  /**
+   * @param {Record<string, unknown>} req
+   * @param {string[]} fields
+   * @returns {Record<string, unknown>}
+   */
+  selectFields(req, fields) {
+    const fieldSet = new Set(fields);
+    /** @type {Record<string, unknown>} */
+    const result = {};
+    for (const key of SCHEMA_FIELD_ORDER) {
+      if (!fieldSet.has(key)) {
+        continue;
+      }
+      if (key === "status") {
+        result[key] = req[key] ?? "not_started";
+      } else if (key === "dependencies") {
+        result[key] = req[key] ?? [];
+      } else if (key in req) {
+        result[key] = req[key];
+      }
+    }
+    return result;
+  },
+});
+
+/**
+ * Output-formatting helpers.
+ */
+const Format = Object.freeze({
+  /**
+   * Render a list of requirements as tab-separated text with a header row.
+   * Object-valued fields are JSON-stringified; null/undefined become empty.
+   * @param {Array<Record<string, unknown>>} reqs
+   * @param {string[]} fields
+   * @returns {string}
+   */
+  toPlain(reqs, fields) {
+    const lines = [fields.join("\t")];
+    for (const req of reqs) {
+      const selected = Projection.selectFields(req, fields);
+      const values = fields.map((f) => {
+        const v = selected[f];
+        if (v === undefined || v === null) {
+          return "";
+        }
+        if (typeof v === "object") {
+          return JSON.stringify(v);
+        }
+        return String(v);
+      });
+      lines.push(values.join("\t"));
+    }
+    return `${lines.join("\n")}\n`;
+  },
+});
+
+// -- Command handlers -------------------------------------------------------
+
+/**
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqLs(prd, flags) {
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+  let reqs = prdObj.requirements;
+
+  const statusFilter = flags.named.get("--status") ?? flags.named.get("-s");
+  if (statusFilter) {
+    reqs = Filters.byStatus(reqs, new Set(statusFilter.split(",")));
+  }
+
+  const abstractionFilter =
+    flags.named.get("--abstraction") ?? flags.named.get("-a");
+  if (abstractionFilter) {
+    reqs = Filters.byAbstraction(reqs, abstractionFilter);
+  }
+
+  if (flags.boolean.has("--priority")) {
+    reqs = Sort.byPriority(reqs);
   }
 
   let fields = DEFAULT_FIELDS;
@@ -488,25 +711,11 @@ function reqLs(prd, flags) {
   }
 
   if (flags.boolean.has("--plain")) {
-    stdout.write(`${fields.join("\t")}\n`);
-    for (const req of reqs) {
-      const selected = selectFields(req, fields);
-      const values = fields.map((f) => {
-        const v = /** @type {Record<string, unknown>} */ (selected)[f];
-        if (v === undefined || v === null) {
-          return "";
-        }
-        if (typeof v === "object") {
-          return JSON.stringify(v);
-        }
-        return String(v);
-      });
-      stdout.write(`${values.join("\t")}\n`);
-    }
+    stdout.write(Format.toPlain(reqs, fields));
     exit(0);
   }
 
-  const output = reqs.map((r) => selectFields(r, fields));
+  const output = reqs.map((r) => Projection.selectFields(r, fields));
   stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   exit(0);
 }
@@ -516,22 +725,12 @@ function reqLs(prd, flags) {
  * @param {ParsedFlags} flags
  */
 function reqShow(prd, flags) {
-  const positionals = flags.positional;
-  if (positionals.length === 0) {
-    stderr.write("Error: REQ-ID argument is required.\n");
-    stderr.write("Usage: clif-d req show <REQ-ID> [prd-path]\n");
-    exit(2);
-    return; // unreachable; satisfies TypeScript control flow
-  }
-
-  const reqId = /** @type {string} */ (positionals[0]);
-  const prdObj =
-    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
-  const req = prdObj.requirements.find((r) => r.id === reqId);
-
+  const reqId = requireReqIdPositional(
+    flags,
+    "clif-d req show <REQ-ID> [prd-path]",
+  );
+  const req = Lookup.findRequirementOrExit(prd, reqId, { exit, stderr });
   if (!req) {
-    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
-    exit(1);
     return; // unreachable; satisfies TypeScript control flow
   }
 
@@ -563,33 +762,22 @@ function fullRequirementObject(req) {
 /**
  * @param {object} prd
  */
-function reqNext(prd) {
-  const prdObj =
-    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
-  const reqs = prdObj.requirements;
-
-  /** @type {Set<string>} */
-  const doneIds = new Set();
-  for (const r of reqs) {
-    if (r.status === "done") {
-      doneIds.add(/** @type {string} */ (r.id));
-    }
-  }
-
+/**
+ * Select the highest-priority requirement from a list of eligible candidates.
+ * Tiebreaker rule: lower numeric `priority` wins; undefined priority is
+ * treated as the worst (candidates with a defined priority beat candidates
+ * without one); among equally-undefined priorities, the first in input order
+ * wins. Returns null on empty input.
+ * @param {Array<Record<string, unknown>>} eligibleReqs
+ * @returns {Record<string, unknown> | null}
+ */
+function selectBestCandidate(eligibleReqs) {
   /** @type {Record<string, unknown> | null} */
   let best = null;
   /** @type {number | undefined} */
   let bestPriority;
 
-  for (const r of reqs) {
-    const status = r.status ?? "not_started";
-    if (status !== "not_started") {
-      continue;
-    }
-    const deps = /** @type {string[] | undefined} */ (r.dependencies) ?? [];
-    if (!deps.every((d) => doneIds.has(d))) {
-      continue;
-    }
+  for (const r of eligibleReqs) {
     const pri = /** @type {number | undefined} */ (r.priority);
     if (best === null) {
       best = r;
@@ -604,7 +792,35 @@ function reqNext(prd) {
       bestPriority = pri;
     }
   }
+  return best;
+}
 
+/**
+ * @param {object} prd
+ */
+function reqNext(prd) {
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+  const reqs = prdObj.requirements;
+
+  /** @type {Set<string>} */
+  const doneIds = new Set();
+  for (const r of reqs) {
+    if (r.status === "done") {
+      doneIds.add(/** @type {string} */ (r.id));
+    }
+  }
+
+  const eligible = reqs.filter((r) => {
+    const status = r.status ?? "not_started";
+    if (status !== "not_started") {
+      return false;
+    }
+    const deps = /** @type {string[] | undefined} */ (r.dependencies) ?? [];
+    return deps.every((d) => doneIds.has(d));
+  });
+
+  const best = selectBestCandidate(eligible);
   if (best === null) {
     stderr.write(
       "Error: No eligible requirement: all requirements are done, in_progress, blocked, or have unmet dependencies.\n",
@@ -625,31 +841,19 @@ function reqNext(prd) {
  * @param {ParsedFlags} flags
  */
 function reqStart(prdPath, prd, flags) {
-  const positionals = flags.positional;
-  if (positionals.length === 0) {
-    stderr.write("Error: REQ-ID argument is required.\n");
-    stderr.write("Usage: clif-d req start <REQ-ID> [prd-path]\n");
-    exit(2);
-    return;
-  }
-
-  const reqId = /** @type {string} */ (positionals[0]);
-  const prdObj =
-    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
-  const req = prdObj.requirements.find((r) => r.id === reqId);
-
+  const reqId = requireReqIdPositional(
+    flags,
+    "clif-d req start <REQ-ID> [prd-path]",
+  );
+  const req = Lookup.findRequirementOrExit(prd, reqId, { exit, stderr });
   if (!req) {
-    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
-    exit(1);
     return;
   }
 
   const current = /** @type {string} */ (req.status ?? "not_started");
-  const transitionError = validateTransition(current, "in_progress");
-  if (transitionError) {
-    stderr.write(
-      `Error: Cannot start ${reqId}: requirement is already done.\n`,
-    );
+  const check = Lifecycle.canStart(current);
+  if (!check.ok) {
+    stderr.write(`Error: Cannot start ${reqId}: ${check.reason}.\n`);
     exit(1);
     return;
   }
@@ -669,15 +873,10 @@ function reqStart(prdPath, prd, flags) {
  * @param {ParsedFlags} flags
  */
 function reqDone(prdPath, prd, flags) {
-  const positionals = flags.positional;
-  if (positionals.length === 0) {
-    stderr.write("Error: REQ-ID argument is required.\n");
-    stderr.write("Usage: clif-d req done <REQ-ID> --commit=<sha> [prd-path]\n");
-    exit(2);
-    return;
-  }
-
-  const reqId = /** @type {string} */ (positionals[0]);
+  const reqId = requireReqIdPositional(
+    flags,
+    "clif-d req done <REQ-ID> --commit=<sha> [prd-path]",
+  );
   const commit = flags.named.get("--commit") ?? flags.named.get("-c");
   if (!commit) {
     stderr.write(
@@ -694,20 +893,15 @@ function reqDone(prdPath, prd, flags) {
     return;
   }
 
-  const prdObj =
-    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
-  const req = prdObj.requirements.find((r) => r.id === reqId);
+  const req = Lookup.findRequirementOrExit(prd, reqId, { exit, stderr });
   if (!req) {
-    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
-    exit(1);
     return;
   }
 
   const current = /** @type {string} */ (req.status ?? "not_started");
-  if (current === "done") {
-    stderr.write(
-      `Error: Requirement ${reqId} is already done. done is terminal.\n`,
-    );
+  const check = Lifecycle.canComplete(current);
+  if (!check.ok) {
+    stderr.write(`Error: Requirement ${reqId} is ${check.reason}.\n`);
     exit(1);
     return;
   }
@@ -727,31 +921,19 @@ function reqDone(prdPath, prd, flags) {
  * @param {ParsedFlags} flags
  */
 function reqBlock(prdPath, prd, flags) {
-  const positionals = flags.positional;
-  if (positionals.length === 0) {
-    stderr.write("Error: REQ-ID argument is required.\n");
-    stderr.write("Usage: clif-d req block <REQ-ID> [prd-path]\n");
-    exit(2);
-    return;
-  }
-
-  const reqId = /** @type {string} */ (positionals[0]);
-  const prdObj =
-    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
-  const req = prdObj.requirements.find((r) => r.id === reqId);
-
+  const reqId = requireReqIdPositional(
+    flags,
+    "clif-d req block <REQ-ID> [prd-path]",
+  );
+  const req = Lookup.findRequirementOrExit(prd, reqId, { exit, stderr });
   if (!req) {
-    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
-    exit(1);
     return;
   }
 
   const current = /** @type {string} */ (req.status ?? "not_started");
-  const transitionError = validateTransition(current, "blocked");
-  if (transitionError) {
-    stderr.write(
-      `Error: Cannot block ${reqId}: requirement is already done.\n`,
-    );
+  const check = Lifecycle.canBlock(current);
+  if (!check.ok) {
+    stderr.write(`Error: Cannot block ${reqId}: ${check.reason}.\n`);
     exit(1);
     return;
   }
@@ -841,23 +1023,16 @@ function reqAdd(prdPath, prd) {
  * @param {ParsedFlags} flags
  */
 function reqEdit(prdPath, prd, flags) {
-  const positionals = flags.positional;
-  if (positionals.length === 0) {
-    stderr.write("Error: REQ-ID argument is required.\n");
-    stderr.write("Usage: clif-d req edit <REQ-ID> [prd-path] < patch.json\n");
-    exit(2);
-    return;
-  }
-
-  const reqId = /** @type {string} */ (positionals[0]);
+  const reqId = requireReqIdPositional(
+    flags,
+    "clif-d req edit <REQ-ID> [prd-path] < patch.json",
+  );
   const prdObj =
     /** @type {{ requirements: Array<Record<string, unknown>>, context: Array<Record<string, unknown>>, architecture: Array<Record<string, unknown>> }} */ (
       prd
     );
-  const req = prdObj.requirements.find((r) => r.id === reqId);
+  const req = Lookup.findRequirementOrExit(prd, reqId, { exit, stderr });
   if (!req) {
-    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
-    exit(1);
     return;
   }
 
@@ -944,13 +1119,11 @@ function reqDepAdd(prdPath, prd, flags) {
     return;
   }
 
-  const req = prdObj.requirements.find((r) => r.id === reqId);
+  const req = Lookup.findRequirementOrExit(prd, reqId, { exit, stderr });
   if (!req) {
-    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
-    exit(1);
     return;
   }
-  const dep = prdObj.requirements.find((r) => r.id === depId);
+  const dep = Lookup.findRequirement(prd, depId);
   if (!dep) {
     stderr.write(`Error: Dependency requirement ${depId} not found in PRD.\n`);
     exit(1);
@@ -998,13 +1171,9 @@ function reqDepRm(prdPath, prd, flags) {
 
   const reqId = /** @type {string} */ (positionals[1]);
   const depId = /** @type {string} */ (positionals[2]);
-  const prdObj =
-    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
 
-  const req = prdObj.requirements.find((r) => r.id === reqId);
+  const req = Lookup.findRequirementOrExit(prd, reqId, { exit, stderr });
   if (!req) {
-    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
-    exit(1);
     return;
   }
 
@@ -1403,16 +1572,212 @@ function checkIdUniqueness(items, namespace, issues) {
 }
 
 /**
+ * Frozen namespace grouping structural validation. `all` is the single entry
+ * point used by `validate` and (from Step 8 onward) by the PRD loader.
+ */
+const Validation = Object.freeze({
+  /**
+   * @param {object} prd
+   * @returns {ValidationIssue[]}
+   */
+  all(prd) {
+    return validate(prd);
+  },
+});
+
+/**
  * @param {object} prd
  */
 function runValidate(prd) {
-  const issues = validate(prd);
+  const issues = Validation.all(prd);
   stdout.write(`${JSON.stringify(issues, null, 2)}\n`);
   const hasError = issues.some((i) => i.level === "error");
   exit(hasError ? 1 : 0);
 }
 
-// -- Help text --------------------------------------------------------------
+// -- Help namespace ---------------------------------------------------------
+
+/**
+ * @typedef {{ flag: string, description: string }} HelpFlag
+ * @typedef {{ code: number, description: string }} HelpExitCode
+ * @typedef {{
+ *   usage: string,
+ *   description: string,
+ *   flags?: HelpFlag[],
+ *   exitCodes?: HelpExitCode[],
+ * }} HelpSpec
+ */
+
+const Help = Object.freeze({
+  /**
+   * Render a command help spec as plain text. Returns a string ending with
+   * a newline. Sections (Flags, Exit codes) are omitted when empty/missing.
+   * @param {HelpSpec} spec
+   * @returns {string}
+   */
+  renderCommand(spec) {
+    const lines = [`Usage: ${spec.usage}`, "", spec.description];
+    if (spec.flags && spec.flags.length > 0) {
+      lines.push("", "Flags:");
+      const width = Math.max(...spec.flags.map((f) => f.flag.length));
+      for (const f of spec.flags) {
+        lines.push(`  ${f.flag.padEnd(width)}  ${f.description}`);
+      }
+    }
+    if (spec.exitCodes && spec.exitCodes.length > 0) {
+      lines.push("", "Exit codes:");
+      for (const ec of spec.exitCodes) {
+        lines.push(`  ${ec.code}  ${ec.description}`);
+      }
+    }
+    return `${lines.join("\n")}\n`;
+  },
+});
+
+/** @type {Record<string, HelpSpec>} */
+const HELP_SPECS = {
+  "req ls": {
+    usage: "clif-d req ls [flags] [prd-path]",
+    description: "List requirements from the PRD.",
+    flags: [
+      {
+        flag: "--status, -s <val>",
+        description:
+          "Filter by status (comma-separated: not_started, in_progress, done, blocked)",
+      },
+      {
+        flag: "--abstraction, -a <val>",
+        description: "Filter by abstraction_level: high or low",
+      },
+      {
+        flag: "--priority",
+        description: "Sort by priority ascending (unranked last)",
+      },
+      {
+        flag: "--fields, -f <val>",
+        description:
+          "Comma-separated fields (default: id,title,status,abstraction_level,priority)",
+      },
+      {
+        flag: "--deps",
+        description: "Include dependencies field in output",
+      },
+      { flag: "--json", description: "JSON output (default)" },
+      { flag: "--plain", description: "Plain tabular text output" },
+    ],
+  },
+  "req show": {
+    usage: "clif-d req show <REQ-ID> [prd-path]",
+    description: "Show the full JSON object for a single requirement.",
+  },
+  "req block": {
+    usage: "clif-d req block <REQ-ID> [prd-path]",
+    description: "Mark a requirement blocked.",
+    exitCodes: [
+      { code: 0, description: "Status set to blocked and PRD written." },
+      { code: 1, description: "Validation error (not found, already done)." },
+      { code: 2, description: "Usage error or PRD file missing/unparseable." },
+    ],
+  },
+  "req done": {
+    usage: "clif-d req done <REQ-ID> --commit=<sha> [prd-path]",
+    description: "Mark a requirement done with an implementation commit SHA.",
+    flags: [
+      {
+        flag: "--commit, -c <sha>",
+        description:
+          "Git commit SHA that completed this requirement. Required. 7-40 hex chars.",
+      },
+    ],
+    exitCodes: [
+      { code: 0, description: "Status set to done and PRD written." },
+      {
+        code: 1,
+        description:
+          "Validation error (not found, already done, missing/bad SHA).",
+      },
+      { code: 2, description: "Usage error or PRD file missing/unparseable." },
+    ],
+  },
+  "req start": {
+    usage: "clif-d req start <REQ-ID> [prd-path]",
+    description: "Mark a requirement in_progress.",
+    exitCodes: [
+      { code: 0, description: "Status set to in_progress and PRD written." },
+      { code: 1, description: "Validation error (not found, already done)." },
+      { code: 2, description: "Usage error or PRD file missing/unparseable." },
+    ],
+  },
+  "req next": {
+    usage: "clif-d req next [prd-path]",
+    description:
+      "Print the highest-priority not_started requirement whose dependencies are all done.",
+    exitCodes: [
+      {
+        code: 0,
+        description: "An eligible requirement was found and printed.",
+      },
+      { code: 1, description: "No eligible requirement exists." },
+      { code: 2, description: "PRD file is missing or unparseable." },
+    ],
+  },
+  "req add": {
+    usage: "clif-d req add [prd-path] < requirement.json",
+    description:
+      "Add a new requirement from a JSON object on stdin. If 'id' is omitted, the next REQ-NNN is auto-assigned.",
+    exitCodes: [
+      { code: 0, description: "Requirement added and PRD written." },
+      {
+        code: 1,
+        description:
+          "Validation error (shape, dangling ref, cycle, duplicate id).",
+      },
+      { code: 2, description: "PRD file is missing or unparseable." },
+    ],
+  },
+  "req edit": {
+    usage: "clif-d req edit <REQ-ID> [prd-path] < patch.json",
+    description:
+      "Update fields on a requirement. Replace semantics for all fields, including arrays. Cannot change 'id'.",
+    exitCodes: [
+      { code: 0, description: "Requirement updated and PRD written." },
+      { code: 1, description: "Validation error." },
+      { code: 2, description: "Usage error or PRD file missing/unparseable." },
+    ],
+  },
+  "req dep": {
+    usage: "clif-d req dep add|rm <REQ-ID> <DEP-ID> [prd-path]",
+    description:
+      "Add or remove a single dependency edge from REQ-ID to DEP-ID. add enforces acyclicity; rm tolerates orphaned DEP-IDs.",
+    exitCodes: [
+      { code: 0, description: "Edge updated and PRD written." },
+      {
+        code: 1,
+        description:
+          "Validation error (missing ID, cycle, duplicate, edge not present).",
+      },
+      { code: 2, description: "Usage error or PRD file missing/unparseable." },
+    ],
+  },
+  validate: {
+    usage: "clif-d validate [prd-path]",
+    description:
+      "Validate PRD structural integrity. Checks ID uniqueness and format, referential integrity of dependencies, context_refs, and architecture_refs, dependency graph acyclicity, status/implementation_commit consistency, required fields, and enum values.",
+    exitCodes: [
+      { code: 0, description: "PRD is valid (no errors; warnings allowed)." },
+      { code: 1, description: "PRD has one or more validation errors." },
+      { code: 2, description: "PRD file is missing or unparseable." },
+    ],
+  },
+};
+
+/**
+ * @param {string} key
+ */
+function writeHelp(key) {
+  const spec = /** @type {HelpSpec} */ (HELP_SPECS[key]);
+  stderr.write(Help.renderCommand(spec));
+}
 
 function printMainHelp() {
   stderr.write("Usage: clif-d <command> [args] [flags] [prd-path]\n");
@@ -1432,297 +1797,141 @@ function printMainHelp() {
   stderr.write("Run clif-d <command> --help for command-specific usage.\n");
 }
 
-function printReqLsHelp() {
-  stderr.write("Usage: clif-d req ls [flags] [prd-path]\n");
-  stderr.write("\n");
-  stderr.write("List requirements from the PRD.\n");
-  stderr.write("\n");
-  stderr.write("Flags:\n");
-  stderr.write(
-    "  --status, -s <val>       Filter by status (comma-separated).\n",
-  );
-  stderr.write(
-    "                           Values: not_started, in_progress, done, blocked\n",
-  );
-  stderr.write(
-    "  --abstraction, -a <val>  Filter by abstraction_level: high or low\n",
-  );
-  stderr.write(
-    "  --priority               Sort by priority ascending (unranked last)\n",
-  );
-  stderr.write(
-    "  --fields, -f <val>       Comma-separated fields to include\n",
-  );
-  stderr.write(
-    "                           Default: id,title,status,abstraction_level,priority\n",
-  );
-  stderr.write(
-    "  --deps                   Include dependencies field in output\n",
-  );
-  stderr.write("  --json                   JSON output (default)\n");
-  stderr.write("  --plain                  Plain tabular text output\n");
-}
-
-function printReqShowHelp() {
-  stderr.write("Usage: clif-d req show <REQ-ID> [prd-path]\n");
-  stderr.write("\n");
-  stderr.write("Show the full JSON object for a single requirement.\n");
-}
-
-function printReqBlockHelp() {
-  stderr.write("Usage: clif-d req block <REQ-ID> [prd-path]\n");
-  stderr.write("\n");
-  stderr.write("Mark a requirement blocked.\n");
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  Status set to blocked and PRD written.\n");
-  stderr.write("  1  Validation error (not found, already done).\n");
-  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
-}
-
-function printReqDoneHelp() {
-  stderr.write("Usage: clif-d req done <REQ-ID> --commit=<sha> [prd-path]\n");
-  stderr.write("\n");
-  stderr.write("Mark a requirement done with an implementation commit SHA.\n");
-  stderr.write("\n");
-  stderr.write("Flags:\n");
-  stderr.write(
-    "  --commit, -c <sha>  Git commit SHA that completed this requirement.\n",
-  );
-  stderr.write(
-    "                      Required. Must be 7-40 hex characters.\n",
-  );
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  Status set to done and PRD written.\n");
-  stderr.write(
-    "  1  Validation error (not found, already done, missing/bad SHA).\n",
-  );
-  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
-}
-
-function printReqStartHelp() {
-  stderr.write("Usage: clif-d req start <REQ-ID> [prd-path]\n");
-  stderr.write("\n");
-  stderr.write("Mark a requirement in_progress.\n");
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  Status set to in_progress and PRD written.\n");
-  stderr.write("  1  Validation error (not found, already done).\n");
-  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
-}
-
-function printValidateHelp() {
-  stderr.write("Usage: clif-d validate [prd-path]\n");
-  stderr.write("\n");
-  stderr.write("Validate PRD structural integrity.\n");
-  stderr.write("\n");
-  stderr.write("Checks ID uniqueness and format, referential integrity of\n");
-  stderr.write(
-    "dependencies, context_refs, and architecture_refs, dependency\n",
-  );
-  stderr.write(
-    "graph acyclicity, status/implementation_commit consistency, required\n",
-  );
-  stderr.write("fields, and enum values.\n");
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  PRD is valid (no errors; warnings allowed).\n");
-  stderr.write("  1  PRD has one or more validation errors.\n");
-  stderr.write("  2  PRD file is missing or unparseable.\n");
-}
-
-function printReqAddHelp() {
-  stderr.write("Usage: clif-d req add [prd-path] < requirement.json\n");
-  stderr.write("\n");
-  stderr.write("Add a new requirement from a JSON object on stdin.\n");
-  stderr.write("If 'id' is omitted, the next REQ-NNN is auto-assigned.\n");
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  Requirement added and PRD written.\n");
-  stderr.write(
-    "  1  Validation error (shape, dangling ref, cycle, duplicate id).\n",
-  );
-  stderr.write("  2  PRD file is missing or unparseable.\n");
-}
-
-function printReqEditHelp() {
-  stderr.write("Usage: clif-d req edit <REQ-ID> [prd-path] < patch.json\n");
-  stderr.write("\n");
-  stderr.write(
-    "Update fields on a requirement. Replace semantics for all fields,\n",
-  );
-  stderr.write("including arrays. Cannot change 'id'.\n");
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  Requirement updated and PRD written.\n");
-  stderr.write("  1  Validation error.\n");
-  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
-}
-
-function printReqDepHelp() {
-  stderr.write("Usage: clif-d req dep add|rm <REQ-ID> <DEP-ID> [prd-path]\n");
-  stderr.write("\n");
-  stderr.write(
-    "Add or remove a single dependency edge from REQ-ID to DEP-ID.\n",
-  );
-  stderr.write("add enforces acyclicity; rm tolerates orphaned DEP-IDs.\n");
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  Edge updated and PRD written.\n");
-  stderr.write(
-    "  1  Validation error (missing ID, cycle, duplicate, edge not present).\n",
-  );
-  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
-}
-
-function printReqNextHelp() {
-  stderr.write("Usage: clif-d req next [prd-path]\n");
-  stderr.write("\n");
-  stderr.write("Print the highest-priority not_started requirement whose\n");
-  stderr.write("dependencies are all done.\n");
-  stderr.write("\n");
-  stderr.write("Exit codes:\n");
-  stderr.write("  0  An eligible requirement was found and printed.\n");
-  stderr.write("  1  No eligible requirement exists.\n");
-  stderr.write("  2  PRD file is missing or unparseable.\n");
-}
-
 // -- Router -----------------------------------------------------------------
 
-const args = argv.slice(2);
-
-if (args.length === 0) {
-  printMainHelp();
-  exit(2);
+if (require.main === module) {
+  main();
 }
 
-if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
-  printMainHelp();
-  exit(0);
+if (process.env.CLIF_D_TEST_EXPORTS) {
+  module.exports = {
+    __testMode: true,
+    Lookup,
+    Lifecycle,
+    Filters,
+    Sort,
+    Projection,
+    Format,
+    selectBestCandidate,
+    Help,
+    Validation,
+  };
 }
 
-const domain = args[0];
-const command = args[1];
-const commandArgs = args.slice(2);
+function main() {
+  const args = argv.slice(2);
 
-if (domain === "req") {
-  const flags = parseFlags(commandArgs);
-
-  switch (command) {
-    case "ls": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqLsHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 0);
-      const prd = loadPrd(prdPath);
-      reqLs(prd, flags);
-      break;
-    }
-    case "show": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqShowHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 1);
-      const prd = loadPrd(prdPath);
-      reqShow(prd, flags);
-      break;
-    }
-    case "block": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqBlockHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 1);
-      const prd = loadPrd(prdPath);
-      reqBlock(prdPath, prd, flags);
-      break;
-    }
-    case "done": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqDoneHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 1);
-      const prd = loadPrd(prdPath);
-      reqDone(prdPath, prd, flags);
-      break;
-    }
-    case "start": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqStartHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 1);
-      const prd = loadPrd(prdPath);
-      reqStart(prdPath, prd, flags);
-      break;
-    }
-    case "next": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqNextHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 0);
-      const prd = loadPrd(prdPath);
-      reqNext(prd);
-      break;
-    }
-    case "add": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqAddHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 0);
-      const prd = loadPrd(prdPath);
-      reqAdd(prdPath, prd);
-      break;
-    }
-    case "edit": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqEditHelp();
-        exit(0);
-      }
-      const prdPath = resolvePrdPath(flags, 1);
-      const prd = loadPrd(prdPath);
-      reqEdit(prdPath, prd, flags);
-      break;
-    }
-    case "dep": {
-      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-        printReqDepHelp();
-        exit(0);
-      }
-      const depVerb = flags.positional[0];
-      const prdPath = resolvePrdPath(flags, 3);
-      const prd = loadPrd(prdPath);
-      if (depVerb === "add") {
-        reqDepAdd(prdPath, prd, flags);
-      } else if (depVerb === "rm") {
-        reqDepRm(prdPath, prd, flags);
-      } else {
-        stderr.write(`Unknown req dep verb: ${String(depVerb)}\n`);
-        exit(2);
-      }
-      break;
-    }
-    default: {
-      stderr.write(`Unknown req command: ${command}\n`);
-      exit(2);
-    }
+  if (args.length === 0) {
+    printMainHelp();
+    exit(2);
   }
-} else if (domain === "validate") {
-  const flags = parseFlags(args.slice(1));
-  if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-    printValidateHelp();
+
+  if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
+    printMainHelp();
     exit(0);
   }
-  const prdPath = resolvePrdPath(flags, 0);
-  const prd = loadPrd(prdPath);
-  runValidate(prd);
-} else {
-  stderr.write(`Unknown command: ${args.join(" ")}\n`);
-  exit(2);
+
+  const domain = args[0];
+  const command = args[1];
+  const commandArgs = args.slice(2);
+
+  if (domain === "req") {
+    const flags = parseFlags(commandArgs);
+    const helpRequested =
+      flags.boolean.has("--help") || flags.boolean.has("-h");
+    const commandLabel = `req ${String(command)}`;
+    const knownFlags = COMMAND_FLAG_SPECS[commandLabel];
+
+    if (helpRequested && knownFlags !== undefined) {
+      writeHelp(commandLabel);
+      exit(0);
+    }
+    if (knownFlags === undefined) {
+      stderr.write(`Unknown req command: ${String(command)}\n`);
+      return exit(2);
+    }
+    enforceKnownFlags(flags, knownFlags, commandLabel);
+
+    switch (command) {
+      case "ls": {
+        const prdPath = resolvePrdPath(flags, 0);
+        const prd = loadPrd(prdPath);
+        reqLs(prd, flags);
+        break;
+      }
+      case "show": {
+        const prdPath = resolvePrdPath(flags, 1);
+        const prd = loadPrd(prdPath);
+        reqShow(prd, flags);
+        break;
+      }
+      case "block": {
+        const prdPath = resolvePrdPath(flags, 1);
+        const prd = loadPrd(prdPath);
+        reqBlock(prdPath, prd, flags);
+        break;
+      }
+      case "done": {
+        const prdPath = resolvePrdPath(flags, 1);
+        const prd = loadPrd(prdPath);
+        reqDone(prdPath, prd, flags);
+        break;
+      }
+      case "start": {
+        const prdPath = resolvePrdPath(flags, 1);
+        const prd = loadPrd(prdPath);
+        reqStart(prdPath, prd, flags);
+        break;
+      }
+      case "next": {
+        const prdPath = resolvePrdPath(flags, 0);
+        const prd = loadPrd(prdPath);
+        reqNext(prd);
+        break;
+      }
+      case "add": {
+        const prdPath = resolvePrdPath(flags, 0);
+        const prd = loadPrd(prdPath);
+        reqAdd(prdPath, prd);
+        break;
+      }
+      case "edit": {
+        const prdPath = resolvePrdPath(flags, 1);
+        const prd = loadPrd(prdPath);
+        reqEdit(prdPath, prd, flags);
+        break;
+      }
+      case "dep": {
+        const depVerb = flags.positional[0];
+        const prdPath = resolvePrdPath(flags, 3);
+        const prd = loadPrd(prdPath);
+        if (depVerb === "add") {
+          reqDepAdd(prdPath, prd, flags);
+        } else if (depVerb === "rm") {
+          reqDepRm(prdPath, prd, flags);
+        } else {
+          stderr.write(`Unknown req dep verb: ${String(depVerb)}\n`);
+          exit(2);
+        }
+        break;
+      }
+      default: {
+        stderr.write(`Unknown req command: ${String(command)}\n`);
+        exit(2);
+      }
+    }
+  } else if (domain === "validate") {
+    const flags = parseFlags(args.slice(1));
+    if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+      writeHelp("validate");
+      exit(0);
+    }
+    enforceKnownFlags(flags, COMMAND_FLAG_SPECS["validate"] ?? [], "validate");
+    const prdPath = resolvePrdPath(flags, 0);
+    const prd = loadPrd(prdPath, { validate: false });
+    runValidate(prd);
+  } else {
+    stderr.write(`Unknown command: ${args.join(" ")}\n`);
+    exit(2);
+  }
 }
