@@ -54,7 +54,11 @@ log "npm $(npm --version) -- ok"
 # git-ignored, so it is absent in fresh worktrees. Copy from the primary worktree
 # when available to avoid a slow npm ci re-run.
 cd "${CLI_DIR}"
-if [[ -f "${REPO_ROOT}/.git" ]] && [[ ! -d "${CLI_DIR}/node_modules" ]]; then
+if [[ -d "${CLI_DIR}/node_modules" ]]; then
+    log "node_modules already present -- skipping"
+elif [[ -f "${REPO_ROOT}/.git" ]]; then
+    # Linked worktree: .git is a file, not a directory. Copy node_modules from the
+    # primary worktree to avoid a slow npm ci re-run.
     COMMON_GIT="$(git -C "${REPO_ROOT}" rev-parse --git-common-dir)"
     # --git-common-dir may return a relative path; make it absolute.
     if [[ "${COMMON_GIT}" != /* ]]; then
