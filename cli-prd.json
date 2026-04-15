@@ -962,6 +962,8 @@
       "acceptance_criteria": "Across the CLI, no two command handlers contain the same multi-step logic inline; shared operations (lookup by ID, status-transition validation, field projection, filtering, output formatting) are implemented once and invoked by all callers. Long procedures that mix filtering, sorting, projection, and output have been decomposed into focused units. Pure logic is separated from I/O so that it can be exercised without invoking the CLI as a subprocess. Adding a new command of the same shape as existing commands requires composing existing helpers rather than copying an existing handler.",
       "priority": 2,
       "abstraction_level": "high",
+      "status": "done",
+      "implementation_commit": "c7b115dd7ee73be2a191db54dd9e5c60fa438f7e",
       "context_refs": [
         "CTX-002",
         "CTX-010",
@@ -1000,6 +1002,8 @@
       "priority": 2,
       "dependencies": [],
       "abstraction_level": "low",
+      "status": "done",
+      "implementation_commit": "c7b115dd7ee73be2a191db54dd9e5c60fa438f7e",
       "context_refs": [
         "CTX-002",
         "CTX-010",
@@ -1040,6 +1044,8 @@
       "priority": 2,
       "dependencies": [],
       "abstraction_level": "low",
+      "status": "done",
+      "implementation_commit": "c7b115dd7ee73be2a191db54dd9e5c60fa438f7e",
       "context_refs": [
         "CTX-004",
         "CTX-005",
@@ -1063,6 +1069,8 @@
         "REQ-014"
       ],
       "abstraction_level": "low",
+      "status": "done",
+      "implementation_commit": "c7b115dd7ee73be2a191db54dd9e5c60fa438f7e",
       "context_refs": [
         "CTX-003",
         "CTX-008",
