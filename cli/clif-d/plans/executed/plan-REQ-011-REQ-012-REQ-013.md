@@ -5,7 +5,8 @@
 **Backpressure:** `cli/clif-d/backpressure.md`
 **Preceding plans:** `cli/clif-d/plans/active/plan-REQ-008-REQ-009.md` (establishes core infrastructure: arg parsing, PRD loading, command routing, JSON output)
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** 4475eee335f7232d1bf7097f45d40af76b7fbeb5
 
 ## 1. Objective
 
