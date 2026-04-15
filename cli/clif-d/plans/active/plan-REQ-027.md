@@ -120,31 +120,43 @@ If the refactor plan is not done first, this plan is still executable, but the "
 
 **Verify:** doc reads consistently with the actual config. A fresh reader can set up the gates locally from section 8 alone.
 
-### Step 5: Surface the quality-relevant PRD items to coding agents via rules files
+### Step 5: Surface the quality-relevant PRD items to coding agents via glob-scoped rules files
 
-Backpressure only bites after code is written. Agents will do a better job if they know which CTX and ARCH items govern implementation style *before* they type anything. This step makes those items discoverable to any coding agent operating in the repo (Claude Code, Cursor, Aider, Codex, etc.) via the agent rules files the repo already ships (`CLAUDE.md`, `AGENTS.md`, and any equivalents the dev-environment document tracks).
+Backpressure only bites after code is written. Agents will do a better job if they know which CTX and ARCH items govern implementation style *before* they type anything. But not every agent session is editing `bin/clif-d` -- a session editing skill Markdown or unrelated code does not need to read CLI-specific rules. The solution is a **glob-scoped rules system**: per-directory or per-glob rule files that the harness injects into the agent's context only when the agent is actually touching a matching file.
+
+Modern coding-agent harnesses ship this pattern under different names (e.g., `.claude/rules/*.md` with glob frontmatter, `.cursor/rules/*.mdc` with `globs:` frontmatter, `.github/copilot-instructions.md` scoped by path, Aider's `.aider.conf` include patterns). The rules file auto-loads when any file in the glob is read or edited and is otherwise inert.
 
 **Implement:**
-- Files: `CLAUDE.md`, `AGENTS.md` (and any other agent rules files declared in `cli/clif-d/dev-environment.md` -- check that document for the canonical list). If a `.claude/rules/` directory convention is preferred over appending to `CLAUDE.md`, follow whatever convention the dev-environment document already establishes; do not invent a new one.
-- Add a short "Implementation style and quality" section (or equivalent) pointing at the PRD items that govern how code should be written in `bin/clif-d`. The section must be short enough that agents read it by default. Specifically name:
+- Check `cli/clif-d/dev-environment.md` for the canonical list of agent rules conventions the repo supports. If that document has not yet settled the convention, add it there first -- do not invent a new one ad-hoc.
+- For each supported harness, create one rule file scoped to `bin/clif-d` (and the `cli/clif-d.js` symlink that points at it). Representative location and frontmatter (exact syntax depends on the harness, defer to the docs):
+  ```
+  .claude/rules/bin-clif-d.md
+  ---
+  globs: ["bin/clif-d", "cli/clif-d.js"]
+  ---
+  ```
+- Content of the rule file: a short "Implementation style and quality" signpost naming the governing PRD items, with one sentence each stating the behavioral rule they imply, and a pointer to `cli-prd.json` as the authoritative source. Specifically name:
   - **CTX-001** -- zero runtime dependencies (never `require`/`import` a non-built-in in `bin/clif-d`).
   - **CTX-002** -- single-file distribution (no splitting `bin/clif-d`, no transpilation).
-  - **CTX-010** -- quality backpressure (all four gates run pre-commit).
+  - **CTX-010** -- quality backpressure (all pre-commit gates must pass).
   - **CTX-012** -- internal modularity discipline (single-file is not a license for a flat script).
   - **ARCH-003** -- read-validate-write cycle for all mutations.
   - **ARCH-004** -- module-object internal structure (frozen namespace objects).
   - **ARCH-005** -- pure-helper testability seam (env-gated export).
-- For each listed item, include one sentence naming the item and one sentence stating the behavioral rule it implies, followed by a pointer to `cli-prd.json` as the authoritative source. Do NOT copy the PRD prose into the rules file -- the PRD stays authoritative; the rules file is a signpost.
-- Instruct the agent to read the named items from `cli-prd.json` before writing or modifying code in `bin/clif-d`. Use `clif-d ctx show <id>` / `clif-d arch show <id>` if those commands exist; fall back to grep or manual inspection otherwise (check current CLI capabilities).
+- Do NOT copy the PRD prose into the rule file. The rule file is a signpost; the PRD stays authoritative. Instruct the agent to read the named items from `cli-prd.json` (via `clif-d ctx show <id>` / `clif-d arch show <id>` if those commands exist, or grep otherwise) before writing or modifying code under the glob.
 - Include a one-line pointer to `cli/clif-d/backpressure.md` for the full guardrail list and the practitioner quick reference.
+- Do NOT append this content to the top-level `CLAUDE.md` or `AGENTS.md`. Those files are always in the context window; scoped rules belong in the scoped-rules system so agent sessions that are not touching `bin/clif-d` stay uncluttered.
+- If `cli/clif-d/dev-environment.md` lists multiple harnesses (Claude Code, Cursor, etc.), create the equivalent scoped rule file for each. Keep them in sync -- the content is the same signpost; only the frontmatter/location differs.
 
 **Rationale:**
-The rules file is preventative; the backpressure gates are corrective. Together they close the loop: agents know the rules before writing, and the gates catch lapses before commit. This also improves the feedback quality when a gate fires -- an agent that has already read CTX-012 understands *why* `max-lines-per-function` failed, rather than just grinding against the threshold.
+The rules system is preventative; the backpressure gates are corrective. Together they close the loop: agents working on `bin/clif-d` see the rules before writing, and the gates catch lapses before commit. Scoping by glob keeps the signal high -- the rules only fire for sessions that need them, preventing the CLAUDE.md/AGENTS.md files from accumulating context-window weight for unrelated work. A gate failure is also easier to interpret when the agent has already read CTX-012 -- they understand *why* `max-lines-per-function` failed, rather than grinding against the threshold.
 
 **Verify:**
-- A fresh read of `CLAUDE.md` (or equivalent) from the top makes clear which CTX/ARCH items to consult and where they live.
+- Editing `bin/clif-d` in an agent session causes the scoped rule file to appear in the agent's context (test manually per harness; the exact mechanism depends on the tool).
+- Editing an unrelated file (e.g., a skill Markdown under `skills/`) does NOT load the `bin-clif-d` rule file.
 - Pointers resolve: `cli-prd.json` contains every listed ID; `cli/clif-d/backpressure.md` is reachable from the repo root.
-- No duplication of PRD prose into the rules file (authority stays with the PRD).
+- No duplication of PRD prose into the rule file (authority stays with the PRD).
+- The top-level `CLAUDE.md` and `AGENTS.md` are not modified by this step.
 
 ### Step 6: Final pre-commit dry run
 
@@ -173,9 +185,8 @@ The rules file is preventative; the backpressure gates are corrective. Together 
 | `cli/test/backpressure-dup.test.js` | Create | 1, 3 |
 | `cli/test/backpressure-lint.test.js` | Create | 2, 3 |
 | `cli/clif-d/backpressure.md` | Modify (thresholds, relaxations, practitioner reference) | 4 |
-| `CLAUDE.md` | Modify (add implementation-style signpost) | 5 |
-| `AGENTS.md` | Modify (same signpost content) | 5 |
-| Other agent rules files per `cli/clif-d/dev-environment.md` | Modify (same signpost content) | 5 |
+| `.claude/rules/bin-clif-d.md` (or equivalent per harness) | Create (glob-scoped signpost; one per supported harness) | 5 |
+| `cli/clif-d/dev-environment.md` | Modify if needed (to declare the scoped-rules convention) | 5 |
 
 No changes to `bin/clif-d`. No new runtime dependencies (CTX-001 preserved).
 
