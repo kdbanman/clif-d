@@ -206,6 +206,235 @@ function validateTransition(currentStatus, targetStatus) {
   return null;
 }
 
+// -- Stdin --------------------------------------------------------------
+
+/**
+ * Read stdin synchronously and parse it as JSON. On read failure exits 2;
+ * on parse failure exits 1.
+ * @returns {unknown}
+ */
+function readStdinJson() {
+  /** @type {string} */
+  let raw = "";
+  try {
+    raw = fs.readFileSync(0, "utf8");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    stderr.write(`Error: failed to read stdin: ${message}\n`);
+    return exit(2);
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    stderr.write("Error: stdin is not valid JSON.\n");
+    return exit(1);
+  }
+}
+
+// -- Requirement shape validation --------------------------------------------
+
+const REQUIRED_REQ_FIELDS = [
+  "id",
+  "title",
+  "description",
+  "acceptance_criteria",
+  "abstraction_level",
+];
+
+/**
+ * Validate the shape of a requirement object. Returns an array of error
+ * messages; empty if valid. Does not check referential integrity or cycles.
+ * @param {Record<string, unknown>} req
+ * @param {{ requireAllFields: boolean }} options
+ * @returns {string[]}
+ */
+function validateRequirementShape(req, options) {
+  /** @type {string[]} */
+  const errors = [];
+
+  if (options.requireAllFields) {
+    for (const field of REQUIRED_REQ_FIELDS) {
+      const value = req[field];
+      if (value === undefined || value === null || value === "") {
+        errors.push(`Missing required field: ${field}`);
+      }
+    }
+  }
+
+  if ("id" in req && req.id !== undefined) {
+    const id = req.id;
+    if (typeof id !== "string" || !/^REQ-\d{3}$/.test(id)) {
+      errors.push(`Invalid id '${String(id)}': must match REQ-NNN`);
+    }
+  }
+
+  if (
+    req.abstraction_level !== undefined &&
+    !VALID_ABSTRACTION_LEVELS.has(/** @type {string} */ (req.abstraction_level))
+  ) {
+    errors.push(
+      `Invalid abstraction_level '${String(req.abstraction_level)}': must be 'high' or 'low'`,
+    );
+  }
+
+  if (
+    req.status !== undefined &&
+    !VALID_STATUSES.has(/** @type {string} */ (req.status))
+  ) {
+    errors.push(
+      `Invalid status '${String(req.status)}': must be one of not_started, in_progress, done, blocked`,
+    );
+  }
+
+  const ac = req.acceptance_criteria;
+  if (ac !== undefined && ac !== null && ac !== "") {
+    if (typeof ac === "string") {
+      // ok
+    } else if (typeof ac === "object" && !Array.isArray(ac)) {
+      const gwt = /** @type {Record<string, unknown>} */ (ac);
+      for (const key of ["given", "when", "then"]) {
+        if (typeof gwt[key] !== "string" || gwt[key] === "") {
+          errors.push(
+            `Invalid acceptance_criteria: object form requires string '${key}'`,
+          );
+        }
+      }
+    } else {
+      errors.push(
+        "Invalid acceptance_criteria: must be a string or {given, when, then} object",
+      );
+    }
+  }
+
+  const status = /** @type {string | undefined} */ (req.status);
+  const commit = req.implementation_commit;
+  if (status === "done" && !commit) {
+    errors.push("Status is 'done' but implementation_commit is missing");
+  }
+
+  for (const field of ["dependencies", "context_refs", "architecture_refs"]) {
+    const arr = req[field];
+    if (arr !== undefined && !Array.isArray(arr)) {
+      errors.push(`Invalid ${field}: must be an array`);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Compute the next REQ-NNN id by taking max+1 over existing numeric ids.
+ * @param {Array<Record<string, unknown>>} requirements
+ * @returns {string}
+ */
+function nextReqId(requirements) {
+  const numbers = requirements
+    .map((r) => {
+      const id = /** @type {unknown} */ (r.id);
+      if (typeof id !== "string") {
+        return Number.NaN;
+      }
+      const match = /^REQ-(\d+)$/.exec(id);
+      return match ? Number(match[1]) : Number.NaN;
+    })
+    .filter((n) => Number.isFinite(n));
+  const next = (Math.max(0, ...numbers) + 1).toString().padStart(3, "0");
+  return `REQ-${next}`;
+}
+
+/**
+ * Check referential integrity of a single requirement's ref arrays against
+ * the PRD's ID sets. Returns error messages.
+ * @param {Record<string, unknown>} req
+ * @param {Set<string>} reqIds
+ * @param {Set<string>} ctxIds
+ * @param {Set<string>} archIds
+ * @returns {string[]}
+ */
+function checkRequirementRefs(req, reqIds, ctxIds, archIds) {
+  /** @type {string[]} */
+  const errors = [];
+  const checks = [
+    { field: "dependencies", ids: reqIds },
+    { field: "context_refs", ids: ctxIds },
+    { field: "architecture_refs", ids: archIds },
+  ];
+  for (const { field, ids } of checks) {
+    const refs = /** @type {unknown} */ (req[field]);
+    if (!Array.isArray(refs)) {
+      continue;
+    }
+    for (const ref of refs) {
+      if (typeof ref !== "string" || !ids.has(ref)) {
+        errors.push(`Dangling ${field} ref: ${String(ref)}`);
+      }
+    }
+  }
+  return errors;
+}
+
+/**
+ * Returns true if the requirements array has a dependency cycle. Only edges
+ * pointing to known IDs are traversed.
+ * @param {Array<Record<string, unknown>>} requirements
+ * @returns {boolean}
+ */
+function hasDependencyCycle(requirements) {
+  const reqIds = collectIds(requirements);
+  /** @type {Map<string, string[]>} */
+  const graph = new Map();
+  for (const req of requirements) {
+    const id = /** @type {string | undefined} */ (req.id);
+    if (typeof id !== "string") {
+      continue;
+    }
+    const deps = /** @type {unknown} */ (req.dependencies);
+    const edges = Array.isArray(deps)
+      ? deps.filter(
+          /** @returns {d is string} */ (d) =>
+            typeof d === "string" && reqIds.has(d),
+        )
+      : [];
+    graph.set(id, edges);
+  }
+
+  const WHITE = 0;
+  const GRAY = 1;
+  const BLACK = 2;
+  /** @type {Map<string, number>} */
+  const color = new Map();
+  for (const id of graph.keys()) {
+    color.set(id, WHITE);
+  }
+
+  /**
+   * @param {string} node
+   * @returns {boolean}
+   */
+  function dfs(node) {
+    color.set(node, GRAY);
+    const edges = graph.get(node) ?? [];
+    for (const next of edges) {
+      const c = color.get(next);
+      if (c === GRAY) {
+        return true;
+      }
+      if (c === WHITE && dfs(next)) {
+        return true;
+      }
+    }
+    color.set(node, BLACK);
+    return false;
+  }
+
+  for (const id of graph.keys()) {
+    if (color.get(id) === WHITE && dfs(id)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // -- Command handlers -------------------------------------------------------
 
 /**
@@ -528,6 +757,268 @@ function reqBlock(prdPath, prd, flags) {
   }
 
   req.status = "blocked";
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Add a new requirement from stdin JSON. Auto-assigns id if missing.
+ * @param {string} prdPath
+ * @param {object} prd
+ */
+function reqAdd(prdPath, prd) {
+  const body = readStdinJson();
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    stderr.write("Error: stdin must be a JSON object.\n");
+    exit(1);
+    return;
+  }
+  const input = /** @type {Record<string, unknown>} */ (body);
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>>, context: Array<Record<string, unknown>>, architecture: Array<Record<string, unknown>> }} */ (
+      prd
+    );
+  const requirements = prdObj.requirements;
+
+  const candidate = { ...input };
+  if (candidate.id === undefined) {
+    candidate.id = nextReqId(requirements);
+  }
+
+  const shapeErrors = validateRequirementShape(candidate, {
+    requireAllFields: true,
+  });
+  if (shapeErrors.length > 0) {
+    for (const err of shapeErrors) {
+      stderr.write(`Error: ${err}\n`);
+    }
+    exit(1);
+    return;
+  }
+
+  const newId = /** @type {string} */ (candidate.id);
+  if (requirements.some((r) => r.id === newId)) {
+    stderr.write(`Error: Requirement id ${newId} already exists.\n`);
+    exit(1);
+    return;
+  }
+
+  const newReq = fullRequirementObject(candidate);
+  const speculative = [...requirements, newReq];
+
+  const reqIds = collectIds(speculative);
+  const ctxIds = collectIds(prdObj.context ?? []);
+  const archIds = collectIds(prdObj.architecture ?? []);
+  const refErrors = checkRequirementRefs(newReq, reqIds, ctxIds, archIds);
+  if (refErrors.length > 0) {
+    for (const err of refErrors) {
+      stderr.write(`Error: ${err}\n`);
+    }
+    exit(1);
+    return;
+  }
+
+  if (hasDependencyCycle(speculative)) {
+    stderr.write(
+      `Error: Adding ${newId} would introduce a dependency cycle.\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  requirements.push(newReq);
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(newReq, null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Edit an existing requirement. Reads a partial JSON object from stdin and
+ * applies it with replace semantics (arrays are replaced, not merged).
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqEdit(prdPath, prd, flags) {
+  const positionals = flags.positional;
+  if (positionals.length === 0) {
+    stderr.write("Error: REQ-ID argument is required.\n");
+    stderr.write("Usage: clif-d req edit <REQ-ID> [prd-path] < patch.json\n");
+    exit(2);
+    return;
+  }
+
+  const reqId = /** @type {string} */ (positionals[0]);
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>>, context: Array<Record<string, unknown>>, architecture: Array<Record<string, unknown>> }} */ (
+      prd
+    );
+  const req = prdObj.requirements.find((r) => r.id === reqId);
+  if (!req) {
+    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
+    exit(1);
+    return;
+  }
+
+  const body = readStdinJson();
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    stderr.write("Error: stdin must be a JSON object.\n");
+    exit(1);
+    return;
+  }
+  const patch = /** @type {Record<string, unknown>} */ (body);
+
+  if ("id" in patch) {
+    stderr.write("Error: Cannot change id via req edit.\n");
+    exit(1);
+    return;
+  }
+
+  const merged = { ...req, ...patch };
+  const shapeErrors = validateRequirementShape(merged, {
+    requireAllFields: true,
+  });
+  if (shapeErrors.length > 0) {
+    for (const err of shapeErrors) {
+      stderr.write(`Error: ${err}\n`);
+    }
+    exit(1);
+    return;
+  }
+
+  const reqIds = collectIds(prdObj.requirements);
+  const ctxIds = collectIds(prdObj.context ?? []);
+  const archIds = collectIds(prdObj.architecture ?? []);
+  const refErrors = checkRequirementRefs(merged, reqIds, ctxIds, archIds);
+  if (refErrors.length > 0) {
+    for (const err of refErrors) {
+      stderr.write(`Error: ${err}\n`);
+    }
+    exit(1);
+    return;
+  }
+
+  for (const key of Object.keys(patch)) {
+    req[key] = patch[key];
+  }
+
+  if (hasDependencyCycle(prdObj.requirements)) {
+    stderr.write(
+      `Error: Editing ${reqId} would introduce a dependency cycle.\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Add a dependency edge from REQ-ID to DEP-ID. Enforces acyclicity.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqDepAdd(prdPath, prd, flags) {
+  const positionals = flags.positional;
+  if (positionals.length < 3) {
+    stderr.write("Error: req dep add requires REQ-ID and DEP-ID.\n");
+    stderr.write("Usage: clif-d req dep add <REQ-ID> <DEP-ID> [prd-path]\n");
+    exit(2);
+    return;
+  }
+
+  const reqId = /** @type {string} */ (positionals[1]);
+  const depId = /** @type {string} */ (positionals[2]);
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+
+  if (reqId === depId) {
+    stderr.write(
+      `Error: self-loop rejected: ${reqId} cannot depend on itself (cycle).\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  const req = prdObj.requirements.find((r) => r.id === reqId);
+  if (!req) {
+    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
+    exit(1);
+    return;
+  }
+  const dep = prdObj.requirements.find((r) => r.id === depId);
+  if (!dep) {
+    stderr.write(`Error: Dependency requirement ${depId} not found in PRD.\n`);
+    exit(1);
+    return;
+  }
+
+  const current = /** @type {unknown} */ (req.dependencies);
+  const deps = Array.isArray(current) ? [...current] : [];
+  if (deps.includes(depId)) {
+    stderr.write(
+      `Error: ${reqId} already has a dependency on ${depId} (duplicate edge).\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  req.dependencies = [...deps, depId];
+  if (hasDependencyCycle(prdObj.requirements)) {
+    stderr.write(
+      `Error: Adding ${reqId} -> ${depId} would introduce a dependency cycle.\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Remove a dependency edge from REQ-ID to DEP-ID. Tolerates orphaned DEP-IDs.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqDepRm(prdPath, prd, flags) {
+  const positionals = flags.positional;
+  if (positionals.length < 3) {
+    stderr.write("Error: req dep rm requires REQ-ID and DEP-ID.\n");
+    stderr.write("Usage: clif-d req dep rm <REQ-ID> <DEP-ID> [prd-path]\n");
+    exit(2);
+    return;
+  }
+
+  const reqId = /** @type {string} */ (positionals[1]);
+  const depId = /** @type {string} */ (positionals[2]);
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+
+  const req = prdObj.requirements.find((r) => r.id === reqId);
+  if (!req) {
+    stderr.write(`Error: Requirement ${reqId} not found in PRD.\n`);
+    exit(1);
+    return;
+  }
+
+  const current = /** @type {unknown} */ (req.dependencies);
+  const deps = Array.isArray(current) ? [...current] : [];
+  if (!deps.includes(depId)) {
+    stderr.write(
+      `Error: edge not present: ${depId} is not a dependency of ${reqId}.\n`,
+    );
+    exit(1);
+    return;
+  }
+
+  req.dependencies = deps.filter((d) => d !== depId);
   writePrd(prdPath, prd);
   stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
   exit(0);
@@ -933,6 +1424,9 @@ function printMainHelp() {
   stderr.write("  req start    Mark requirement in-progress\n");
   stderr.write("  req done     Mark requirement done\n");
   stderr.write("  req block    Mark requirement blocked\n");
+  stderr.write("  req add      Add a requirement (JSON on stdin)\n");
+  stderr.write("  req edit     Edit requirement fields (JSON on stdin)\n");
+  stderr.write("  req dep      Add or remove dependency edges\n");
   stderr.write("  validate     Validate PRD structural integrity\n");
   stderr.write("\n");
   stderr.write("Run clif-d <command> --help for command-specific usage.\n");
@@ -1038,6 +1532,50 @@ function printValidateHelp() {
   stderr.write("  2  PRD file is missing or unparseable.\n");
 }
 
+function printReqAddHelp() {
+  stderr.write("Usage: clif-d req add [prd-path] < requirement.json\n");
+  stderr.write("\n");
+  stderr.write("Add a new requirement from a JSON object on stdin.\n");
+  stderr.write("If 'id' is omitted, the next REQ-NNN is auto-assigned.\n");
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  Requirement added and PRD written.\n");
+  stderr.write(
+    "  1  Validation error (shape, dangling ref, cycle, duplicate id).\n",
+  );
+  stderr.write("  2  PRD file is missing or unparseable.\n");
+}
+
+function printReqEditHelp() {
+  stderr.write("Usage: clif-d req edit <REQ-ID> [prd-path] < patch.json\n");
+  stderr.write("\n");
+  stderr.write(
+    "Update fields on a requirement. Replace semantics for all fields,\n",
+  );
+  stderr.write("including arrays. Cannot change 'id'.\n");
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  Requirement updated and PRD written.\n");
+  stderr.write("  1  Validation error.\n");
+  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
+}
+
+function printReqDepHelp() {
+  stderr.write("Usage: clif-d req dep add|rm <REQ-ID> <DEP-ID> [prd-path]\n");
+  stderr.write("\n");
+  stderr.write(
+    "Add or remove a single dependency edge from REQ-ID to DEP-ID.\n",
+  );
+  stderr.write("add enforces acyclicity; rm tolerates orphaned DEP-IDs.\n");
+  stderr.write("\n");
+  stderr.write("Exit codes:\n");
+  stderr.write("  0  Edge updated and PRD written.\n");
+  stderr.write(
+    "  1  Validation error (missing ID, cycle, duplicate, edge not present).\n",
+  );
+  stderr.write("  2  Usage error or PRD file missing/unparseable.\n");
+}
+
 function printReqNextHelp() {
   stderr.write("Usage: clif-d req next [prd-path]\n");
   stderr.write("\n");
@@ -1130,6 +1668,44 @@ if (domain === "req") {
       const prdPath = resolvePrdPath(flags, 0);
       const prd = loadPrd(prdPath);
       reqNext(prd);
+      break;
+    }
+    case "add": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqAddHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 0);
+      const prd = loadPrd(prdPath);
+      reqAdd(prdPath, prd);
+      break;
+    }
+    case "edit": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqEditHelp();
+        exit(0);
+      }
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqEdit(prdPath, prd, flags);
+      break;
+    }
+    case "dep": {
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        printReqDepHelp();
+        exit(0);
+      }
+      const depVerb = flags.positional[0];
+      const prdPath = resolvePrdPath(flags, 3);
+      const prd = loadPrd(prdPath);
+      if (depVerb === "add") {
+        reqDepAdd(prdPath, prd, flags);
+      } else if (depVerb === "rm") {
+        reqDepRm(prdPath, prd, flags);
+      } else {
+        stderr.write(`Unknown req dep verb: ${String(depVerb)}\n`);
+        exit(2);
+      }
       break;
     }
     default: {
