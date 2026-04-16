@@ -137,7 +137,7 @@ Keep interrogation minimal. Prefer making reasonable assumptions (stated explici
 
 The output is a Markdown file saved as `clif-d/plans/active/plan-<requirement-ids>.md` in the product repository (e.g., `clif-d/plans/active/plan-REQ-003.md` or `clif-d/plans/active/plan-REQ-003-REQ-007.md` for multiple requirements). Create the `clif-d/plans/active/` directory if it does not yet exist. See the README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
 
-Active plans live in `clif-d/plans/active/`. After implementation, the `implement-plan` skill moves completed plans to `clif-d/plans/executed/`. The future `compact-planning-artifacts` skill compacts executed plans into `clif-d/plans/archive/`. This skill should not move or archive plans itself.
+Active plans live in `clif-d/plans/active/`. After implementation, the `implement-plan` skill moves completed plans to `clif-d/plans/executed/`. The `compactify-artifacts` skill periodically distills executed plans into compact entries in `clif-d/plans/archive/` and deletes the originals. This skill should not move or archive plans itself.
 
 ### Header
 

@@ -14,6 +14,7 @@ CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for struc
 | `design-backpressure` | Researches and implements quality guardrails — aggressive linting, maximal type enforcement, pre-commit hooks — as hard local gates that block low-quality code before it enters the repo |
 | `plan-requirement` | Takes PRD requirement IDs, resolves the full dependency graph, explores the codebase, and produces a self-contained implementation plan (Markdown) with TDD step ordering |
 | `implement-plan` | Executes an implementation plan step-by-step with strict Red-Green-Refactor discipline, running all quality checks after every step |
+| `compactify-artifacts` | Distills accumulated executed plans and per-plan lessons into terse archive entries plus a single durable `lessons.md` log; deletes the originals (git history preserves them) and flags upstream design docs that have drifted from what shipped |
 
 ## Pipeline
 
@@ -33,6 +34,8 @@ create-product-concept
                                                             └──▶ plan-requirement  (repeats per requirement)
                                                                         │
                                                                         └──▶ implement-plan  (repeats per plan)
+                                                                                    │
+                                                                                    └──▶ compactify-artifacts  (periodic; clears executed/ and lessons_learned/)
 ```
 
 ## The `clif-d/` directory
@@ -51,19 +54,20 @@ All CLIF-D artifacts for a given product live in a single `clif-d/` directory at
       *.mmd
     dev-environment.md      # bootstrap-dev-environment (design record + setup instructions)
     backpressure.md         # design-backpressure (design record + practitioner reference)
+    lessons.md              # compactify-artifacts (durable lessons log, append-only)
     plans/
       active/               # plan-requirement writes here
         plan-REQ-NNN.md
-      executed/             # implement-plan moves completed plans here
+      executed/             # implement-plan moves completed plans here; compactify-artifacts clears
         plan-REQ-NNN.md
-      lessons_learned/      # implement-plan writes post-implementation lessons here
+      lessons_learned/      # implement-plan writes post-implementation lessons here; compactify-artifacts clears
         lessons-REQ-NNN.md
-      archive/              # compact-planning-artifacts compacts executed plans here
-        ...
+      archive/              # compactify-artifacts writes compact archive entries here
+        plan-REQ-NNN.md
   <source code, tests, configs...>
 ```
 
-All design documents (concept, PRD, architecture, dev-environment, backpressure) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (setup commands, how to run checks, suppression policy).
+All design documents (concept, PRD, architecture, dev-environment, backpressure) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (setup commands, how to run checks, suppression policy). The `lessons.md` log sits alongside them as a separate, append-only memory artifact -- not a design document, but durable across the project's life.
 
 ### Artifact precedence and lifecycle
 
@@ -75,8 +79,10 @@ Artifacts are listed here in **order of authority**. When two artifacts disagree
 4. **`dev-environment.md`** — *How the product is built and tested on a developer or agent machine.* Updated when toolchain versions, containerization, or agent rules-file conventions change. Every change should be a deliberate, documented decision — relaxations especially.
 5. **`backpressure.md`** — *What quality standards the product enforces.* Updated when guardrails change. Every change should be a deliberate, documented decision — relaxations especially.
 6. **`plans/active/*.md`** — *How specific requirements will be implemented.* Short-lived. Each plan targets a set of requirements and is consumed by `implement-plan`. After implementation is complete, plans are moved to `plans/executed/` by `implement-plan`.
-7. **`plans/executed/*.md`** — *Completed plans with implementation commit SHAs.* Full step-by-step detail is preserved. These accumulate until `compact-planning-artifacts` compacts them into `plans/archive/`.
-8. **`plans/archive/*.md`** — *Historical record of what was implemented and how.* Compacted to preserve traceability (requirement IDs, commit SHAs, acceptance criteria verification) without keeping the full step-by-step detail.
+7. **`plans/executed/*.md`** — *Completed plans with implementation commit SHAs.* Full step-by-step detail is preserved. These accumulate until `compactify-artifacts` distills them into `plans/archive/` and deletes the originals (git history preserves them).
+8. **`plans/lessons_learned/*.md`** — *Per-plan post-implementation lessons.* Written by `implement-plan`. Short-lived; consumed by `compactify-artifacts`, which interrogates the user about which lessons are durable and discards the rest.
+9. **`plans/archive/*.md`** — *Compact historical map of what was implemented and how.* One terse entry per executed plan: requirement IDs, major commit SHAs, acceptance-criteria checklist, one-paragraph summary, pointers for git/PR deep dive. Not a comprehensive history -- a starting point for one.
+10. **`lessons.md`** — *Durable lessons learned across the project.* Append-only. Populated by `compactify-artifacts` from `plans/lessons_learned/` files, gated by user interrogation against a high bar (recurring pitfall, regression-prone pattern, skill-instruction gap, or reversed decision). Not authoritative in the same sense as the design documents above -- it is accumulated wisdom, not specification.
 
 ### The PRD as a living document
 
@@ -149,7 +155,6 @@ The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalo
   - `clif-d req dep add <REQ-ID> <DEP-ID> [prd.json]` — add a dependency edge from REQ-ID to DEP-ID
   - `clif-d req dep rm <REQ-ID> <DEP-ID> [prd.json]` — remove a dependency edge
 - [ ] **Implement `extend-low-level-requirements` skill** — keeps the "bow wave" of low-level requirement granularity just ahead of the implementation ship. Called after a round of implementation to add the next slice of clear-first-step low-level requirements to the PRD, informed by what's now known from the code and what's newly unblocked. Must preserve the bow-wave principle from `create-initial-prd`: only specify what's clear *right now*, never more.
-- [ ] **Implement `compactify-planning-artifacts` skill** — runs when the `clif-d/plans/executed/` directory is getting onerous. Compacts executed plans into concise archive entries in `clif-d/plans/archive/`, preserving traceability (requirement IDs, commit SHAs, acceptance criteria verification) while dropping the step-by-step implementation detail. Operates on `executed/` plans only — active plans are untouched. Must also digest files from `clif-d/plans/lessons_learned/`.  Both directories will contain quite a bit of noise, so just keep track of durable lessons for the future. (TODO: where should the compactified context go? Existing documents?  New documents?  If existing documents contradict anything that concretely emerged during plan execution, the existing documents should be fixed.  It's also possible that new requirements emerged during the plan execution, so PRD updates may be a part of this skill as well.  For example, lessons learned could be a source of new backpressure system requirements for the PRD.  But I'd consider existing documentation updates to be an optional "when necessary" output of this skill.  More likely, this skill should output compactified "plan execution log" and "important lesson log" type of documents. Interview the user on which lessons are worth remembering long-term (e.g. recurring tooling pitfalls, patterns that consistently cause regressions, corrections that reveal a gap in a skill's instructions). Lessons the user confirms should be preserved in the archive entry or a persistent lessons file; the rest are discarded with the compacted plans.
 - [ ] **Implement `clif-d-health-check` skill** — aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
 - [ ] **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
 - [ ] **Implement `clif-d-help` skill (or reference file)** — a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
