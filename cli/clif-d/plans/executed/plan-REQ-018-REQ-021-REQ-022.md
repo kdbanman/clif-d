@@ -5,7 +5,8 @@
 **Backpressure:** `cli/clif-d/backpressure.md`
 **Preceding plans:** `cli/clif-d/plans/active/plan-REQ-008-REQ-009.md` (core infrastructure), `cli/clif-d/plans/active/plan-REQ-014.md` (cycle detection logic, reusable for graph traversal)
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** 718ad14
 
 ## 1. Objective
 
