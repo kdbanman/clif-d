@@ -771,7 +771,9 @@
           "1": "Referenced requirement ID does not exist.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "718ad14"
     },
     {
       "id": "REQ-019",
@@ -882,7 +884,9 @@
           "1": "Invalid prefix.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "718ad14"
     },
     {
       "id": "REQ-022",
@@ -921,7 +925,9 @@
           "1": "Destination directory does not exist.",
           "2": "Plugin schema file not found (broken installation)."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "718ad14"
     },
     {
       "id": "REQ-023",

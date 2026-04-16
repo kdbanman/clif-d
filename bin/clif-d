@@ -122,6 +122,7 @@ function parseFlags(args) {
     "-f",
     "--commit",
     "-c",
+    "--root",
   ]);
 
   for (let i = 0; i < args.length; i++) {
@@ -177,7 +178,10 @@ const COMMAND_FLAG_SPECS = Object.freeze({
   "req add": [],
   "req edit": [],
   "req dep": [],
+  "req dep graph": ["--root", "--dot", "--plain", "--json"],
   validate: [],
+  "id next": [],
+  "schema copy": [],
 });
 
 /**
@@ -458,23 +462,36 @@ function validateAcceptanceCriteria(ac, errors) {
 }
 
 /**
+ * Compute the next PREFIX-NNN id by taking max+1 over existing numeric ids
+ * in the given item array. Works for any prefix (REQ, CTX, ARCH).
+ * @param {string} prefix
+ * @param {Array<Record<string, unknown>>} items
+ * @returns {string}
+ */
+function nextId(prefix, items) {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- prefix is from internal ID_PREFIX_TO_ARRAY, not user input
+  const pattern = new RegExp(`^${prefix}-(\\d+)$`);
+  const numbers = items
+    .map((item) => {
+      const id = /** @type {unknown} */ (item.id);
+      if (typeof id !== "string") {
+        return Number.NaN;
+      }
+      const match = pattern.exec(id);
+      return match ? Number(match[1]) : Number.NaN;
+    })
+    .filter((n) => Number.isFinite(n));
+  const next = (Math.max(0, ...numbers) + 1).toString().padStart(3, "0");
+  return `${prefix}-${next}`;
+}
+
+/**
  * Compute the next REQ-NNN id by taking max+1 over existing numeric ids.
  * @param {Array<Record<string, unknown>>} requirements
  * @returns {string}
  */
 function nextReqId(requirements) {
-  const numbers = requirements
-    .map((r) => {
-      const id = /** @type {unknown} */ (r.id);
-      if (typeof id !== "string") {
-        return Number.NaN;
-      }
-      const match = /^REQ-(\d+)$/.exec(id);
-      return match ? Number(match[1]) : Number.NaN;
-    })
-    .filter((n) => Number.isFinite(n));
-  const next = (Math.max(0, ...numbers) + 1).toString().padStart(3, "0");
-  return `REQ-${next}`;
+  return nextId("REQ", requirements);
 }
 
 /**
@@ -1185,6 +1202,195 @@ function reqDepRm(prdPath, prd, flags) {
   exit(0);
 }
 
+/**
+ * Build a JSON adjacency list from a dependency graph map.
+ * @param {Map<string, string[]>} graph
+ * @returns {Record<string, string[]>}
+ */
+function graphToAdjacencyList(graph) {
+  /** @type {Record<string, string[]>} */
+  const adjacency = {};
+  for (const [id, deps] of graph) {
+    adjacency[id] = deps;
+  }
+  return adjacency;
+}
+
+/**
+ * Render a dependency graph as plain text: one edge per line "A -> B".
+ * Nodes with no edges are omitted. Empty graph yields empty string.
+ * @param {Map<string, string[]>} graph
+ * @returns {string}
+ */
+function graphToPlain(graph) {
+  /** @type {string[]} */
+  const lines = [];
+  for (const [id, deps] of graph) {
+    for (const dep of deps) {
+      lines.push(`${id} -> ${dep}`);
+    }
+  }
+  return lines.length > 0 ? `${lines.join("\n")}\n` : "";
+}
+
+/**
+ * Render a dependency graph as Graphviz DOT format.
+ * @param {Map<string, string[]>} graph
+ * @returns {string}
+ */
+function graphToDot(graph) {
+  /** @type {string[]} */
+  const lines = ["digraph dependencies {"];
+  for (const [id, deps] of graph) {
+    if (deps.length === 0) {
+      lines.push(`  "${id}";`);
+    }
+    for (const dep of deps) {
+      lines.push(`  "${id}" -> "${dep}";`);
+    }
+  }
+  lines.push("}");
+  return `${lines.join("\n")}\n`;
+}
+
+/**
+ * Print the dependency graph. Supports --json (default), --plain, --dot.
+ * When --root is specified, only the ancestor subgraph is printed.
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function reqDepGraph(prd, flags) {
+  const prdObj =
+    /** @type {{ requirements: Array<Record<string, unknown>> }} */ (prd);
+  const requirements = prdObj.requirements;
+  const reqIds = collectIds(requirements);
+  const fullGraph = buildDependencyGraph(requirements, reqIds);
+
+  const rootId = flags.named.get("--root");
+  const graph = rootId ? filterAncestors(fullGraph, rootId) : fullGraph;
+
+  if (flags.boolean.has("--plain")) {
+    stdout.write(graphToPlain(graph));
+  } else if (flags.boolean.has("--dot")) {
+    stdout.write(graphToDot(graph));
+  } else {
+    const adjacency = graphToAdjacencyList(graph);
+    stdout.write(`${JSON.stringify(adjacency, null, 2)}\n`);
+  }
+  exit(0);
+}
+
+/**
+ * BFS from rootId following dependency edges (ancestors). Returns a new
+ * graph containing only the root and its transitive ancestors.
+ * @param {Map<string, string[]>} graph
+ * @param {string} rootId
+ * @returns {Map<string, string[]>}
+ */
+function filterAncestors(graph, rootId) {
+  if (!graph.has(rootId)) {
+    stderr.write(`Error: Requirement ${rootId} not found in PRD.\n`);
+    return exit(1);
+  }
+  /** @type {Set<string>} */
+  const visited = new Set();
+  /** @type {string[]} */
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const current = /** @type {string} */ (queue.shift());
+    if (visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+    const deps = graph.get(current) ?? [];
+    for (const dep of deps) {
+      if (!visited.has(dep)) {
+        queue.push(dep);
+      }
+    }
+  }
+  /** @type {Map<string, string[]>} */
+  const subgraph = new Map();
+  for (const id of visited) {
+    const deps = (graph.get(id) ?? []).filter((d) => visited.has(d));
+    subgraph.set(id, deps);
+  }
+  return subgraph;
+}
+
+// -- schema copy ------------------------------------------------------------
+
+/**
+ * Copy the canonical PRD schema to the specified destination directory.
+ * @param {ParsedFlags} flags
+ */
+function schemaCopy(flags) {
+  const destDir = flags.positional[0];
+  if (!destDir) {
+    stderr.write("Error: dest-dir argument is required.\n");
+    stderr.write("Usage: clif-d schema copy <dest-dir>\n");
+    return exit(2);
+  }
+
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- user-supplied dest is by design
+  if (!fs.existsSync(destDir) || !fs.statSync(destDir).isDirectory()) {
+    stderr.write(`Error: Destination directory does not exist: ${destDir}\n`);
+    return exit(1);
+  }
+
+  const binDir = path.dirname(process.argv[1] ?? __filename);
+  const schemaSource = path.resolve(
+    binDir,
+    "../skills/create-initial-prd/assets/prd-schema.json",
+  );
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved from plugin install path
+  if (!fs.existsSync(schemaSource)) {
+    stderr.write(`Error: Plugin schema file not found: ${schemaSource}\n`);
+    return exit(2);
+  }
+
+  const destFile = path.join(destDir, "prd-schema.json");
+  fs.copyFileSync(schemaSource, destFile);
+  stdout.write(`${path.resolve(destFile)}\n`);
+  exit(0);
+}
+
+// -- id next ----------------------------------------------------------------
+
+/** @type {ReadonlyMap<string, string>} */
+const ID_PREFIX_TO_ARRAY = new Map([
+  ["REQ", "requirements"],
+  ["CTX", "context"],
+  ["ARCH", "architecture"],
+]);
+
+/**
+ * Print the next available ID for the given prefix (REQ, CTX, or ARCH).
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ */
+function idNext(prd, flags) {
+  const prefix = flags.positional[0];
+  if (!prefix) {
+    stderr.write("Error: prefix argument is required (REQ, CTX, or ARCH).\n");
+    stderr.write("Usage: clif-d id next <prefix> [prd-path]\n");
+    return exit(2);
+  }
+  const arrayKey = ID_PREFIX_TO_ARRAY.get(prefix);
+  if (!arrayKey) {
+    stderr.write(
+      `Error: Invalid prefix '${prefix}'. Must be REQ, CTX, or ARCH.\n`,
+    );
+    return exit(1);
+  }
+  const prdObj = /** @type {Record<string, unknown>} */ (prd);
+  const items = /** @type {Array<Record<string, unknown>>} */ (
+    Array.isArray(prdObj[arrayKey]) ? prdObj[arrayKey] : []
+  );
+  stdout.write(`${nextId(prefix, items)}\n`);
+  exit(0);
+}
+
 // -- Validate ---------------------------------------------------------------
 
 /**
@@ -1774,6 +1980,55 @@ const HELP_SPECS = {
       { code: 2, description: "Usage error or PRD file missing/unparseable." },
     ],
   },
+  "req dep graph": {
+    usage: "clif-d req dep graph [flags] [prd-path]",
+    description:
+      "Print the dependency graph as a JSON adjacency list, Graphviz DOT, or plain text.",
+    flags: [
+      {
+        flag: "--root <REQ-ID>",
+        description:
+          "Print only the ancestor subgraph reachable from this requirement.",
+      },
+      { flag: "--json", description: "JSON adjacency list output (default)." },
+      {
+        flag: "--plain",
+        description: "Plain text, one edge per line: REQ-X -> REQ-Y.",
+      },
+      { flag: "--dot", description: "Graphviz DOT format." },
+    ],
+    exitCodes: [
+      { code: 0, description: "Graph printed." },
+      {
+        code: 1,
+        description: "Referenced requirement ID does not exist (--root).",
+      },
+      { code: 2, description: "PRD file not found or not valid JSON." },
+    ],
+  },
+  "id next": {
+    usage: "clif-d id next <prefix> [prd-path]",
+    description:
+      "Print the next available ID for the given prefix (REQ, CTX, or ARCH).",
+    exitCodes: [
+      { code: 0, description: "ID printed." },
+      { code: 1, description: "Invalid prefix." },
+      { code: 2, description: "PRD file not found or not valid JSON." },
+    ],
+  },
+  "schema copy": {
+    usage: "clif-d schema copy <dest-dir>",
+    description:
+      "Copy the canonical PRD schema (prd-schema.json) to the specified directory.",
+    exitCodes: [
+      { code: 0, description: "Schema copied; stdout has absolute path." },
+      { code: 1, description: "Destination directory does not exist." },
+      {
+        code: 2,
+        description: "Plugin schema file not found (broken install).",
+      },
+    ],
+  },
   validate: {
     usage: "clif-d validate [prd-path]",
     description:
@@ -1806,13 +2061,195 @@ function printMainHelp() {
   stderr.write("  req block    Mark requirement blocked\n");
   stderr.write("  req add      Add a requirement (JSON on stdin)\n");
   stderr.write("  req edit     Edit requirement fields (JSON on stdin)\n");
-  stderr.write("  req dep      Add or remove dependency edges\n");
+  stderr.write("  req dep      Add, remove, or graph dependency edges\n");
   stderr.write("  validate     Validate PRD structural integrity\n");
+  stderr.write("  id next      Print the next available ID\n");
+  stderr.write("  schema copy  Copy PRD schema to a directory\n");
   stderr.write("\n");
   stderr.write("Run clif-d <command> --help for command-specific usage.\n");
 }
 
 // -- Router -----------------------------------------------------------------
+
+/**
+ * Dispatch `schema` subcommands. Currently only `copy`.
+ * @param {string | undefined} command
+ * @param {string[]} commandArgs
+ */
+function routeSchema(command, commandArgs) {
+  const flags = parseFlags(commandArgs);
+  if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+    writeHelp("schema copy");
+    exit(0);
+  }
+  if (command !== "copy") {
+    stderr.write(`Unknown schema command: ${String(command)}\n`);
+    return exit(2);
+  }
+  enforceKnownFlags(
+    flags,
+    COMMAND_FLAG_SPECS["schema copy"] ?? [],
+    "schema copy",
+  );
+  schemaCopy(flags);
+}
+
+/**
+ * Dispatch `id` subcommands. Currently only `next`.
+ * @param {string | undefined} command
+ * @param {string[]} commandArgs
+ */
+function routeId(command, commandArgs) {
+  const flags = parseFlags(commandArgs);
+  if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+    writeHelp("id next");
+    exit(0);
+  }
+  if (command !== "next") {
+    stderr.write(`Unknown id command: ${String(command)}\n`);
+    return exit(2);
+  }
+  enforceKnownFlags(flags, COMMAND_FLAG_SPECS["id next"] ?? [], "id next");
+  const prdPath = resolvePrdPath(flags, 1);
+  const prd = loadPrd(prdPath);
+  idNext(prd, flags);
+}
+
+/**
+ * Dispatch `req` subcommands. Extracted from main to keep function length
+ * and nesting depth within backpressure limits.
+ * @param {string | undefined} command
+ * @param {string[]} commandArgs
+ */
+function routeReq(command, commandArgs) {
+  const flags = parseFlags(commandArgs);
+  const helpRequested = flags.boolean.has("--help") || flags.boolean.has("-h");
+  const commandLabel = `req ${String(command)}`;
+  const knownFlags = COMMAND_FLAG_SPECS[commandLabel];
+
+  // dep delegates help and flag enforcement to routeReqDep (graph has its own flags)
+  if (command !== "dep") {
+    if (helpRequested && knownFlags !== undefined) {
+      writeHelp(commandLabel);
+      exit(0);
+    }
+    if (knownFlags === undefined) {
+      stderr.write(`Unknown req command: ${String(command)}\n`);
+      return exit(2);
+    }
+    enforceKnownFlags(flags, knownFlags, commandLabel);
+  } else if (knownFlags === undefined) {
+    stderr.write(`Unknown req command: ${String(command)}\n`);
+    return exit(2);
+  }
+
+  switch (command) {
+    case "ls": {
+      const prdPath = resolvePrdPath(flags, 0);
+      const prd = loadPrd(prdPath);
+      reqLs(prd, flags);
+      break;
+    }
+    case "show": {
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqShow(prd, flags);
+      break;
+    }
+    case "block": {
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqBlock(prdPath, prd, flags);
+      break;
+    }
+    case "done": {
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqDone(prdPath, prd, flags);
+      break;
+    }
+    case "start": {
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqStart(prdPath, prd, flags);
+      break;
+    }
+    case "next": {
+      const prdPath = resolvePrdPath(flags, 0);
+      const prd = loadPrd(prdPath);
+      reqNext(prd);
+      break;
+    }
+    case "add": {
+      const prdPath = resolvePrdPath(flags, 0);
+      const prd = loadPrd(prdPath);
+      reqAdd(prdPath, prd);
+      break;
+    }
+    case "edit": {
+      const prdPath = resolvePrdPath(flags, 1);
+      const prd = loadPrd(prdPath);
+      reqEdit(prdPath, prd, flags);
+      break;
+    }
+    case "dep": {
+      routeReqDep(flags, commandArgs);
+      break;
+    }
+    default: {
+      stderr.write(`Unknown req command: ${String(command)}\n`);
+      exit(2);
+    }
+  }
+}
+
+/**
+ * Dispatch `req dep` subcommands: `add`, `rm`, `graph`.
+ * Extracted from main to keep nesting depth and function length in check.
+ * @param {ParsedFlags} flags
+ * @param {string[]} commandArgs
+ */
+function routeReqDep(flags, commandArgs) {
+  const depVerb = flags.positional[0];
+  if (!depVerb && (flags.boolean.has("--help") || flags.boolean.has("-h"))) {
+    writeHelp("req dep");
+    exit(0);
+  }
+  switch (depVerb) {
+    case "graph": {
+      const graphFlags = parseFlags(commandArgs.slice(1));
+      if (graphFlags.boolean.has("--help") || graphFlags.boolean.has("-h")) {
+        writeHelp("req dep graph");
+        exit(0);
+      }
+      enforceKnownFlags(
+        graphFlags,
+        COMMAND_FLAG_SPECS["req dep graph"] ?? [],
+        "req dep graph",
+      );
+      const prdPath = resolvePrdPath(graphFlags, 0);
+      const prd = loadPrd(prdPath);
+      reqDepGraph(prd, graphFlags);
+      break;
+    }
+    case "add": {
+      const prdPath = resolvePrdPath(flags, 3);
+      const prd = loadPrd(prdPath);
+      reqDepAdd(prdPath, prd, flags);
+      break;
+    }
+    case "rm": {
+      const prdPath = resolvePrdPath(flags, 3);
+      const prd = loadPrd(prdPath);
+      reqDepRm(prdPath, prd, flags);
+      break;
+    }
+    default: {
+      stderr.write(`Unknown req dep verb: ${String(depVerb)}\n`);
+      exit(2);
+    }
+  }
+}
 
 if (require.main === module) {
   main();
@@ -1850,103 +2287,38 @@ function main() {
   const command = args[1];
   const commandArgs = args.slice(2);
 
-  if (domain === "req") {
-    const flags = parseFlags(commandArgs);
-    const helpRequested =
-      flags.boolean.has("--help") || flags.boolean.has("-h");
-    const commandLabel = `req ${String(command)}`;
-    const knownFlags = COMMAND_FLAG_SPECS[commandLabel];
-
-    if (helpRequested && knownFlags !== undefined) {
-      writeHelp(commandLabel);
-      exit(0);
+  switch (domain) {
+    case "req": {
+      routeReq(command, commandArgs);
+      break;
     }
-    if (knownFlags === undefined) {
-      stderr.write(`Unknown req command: ${String(command)}\n`);
-      return exit(2);
+    case "id": {
+      routeId(command, args.slice(2));
+      break;
     }
-    enforceKnownFlags(flags, knownFlags, commandLabel);
-
-    switch (command) {
-      case "ls": {
-        const prdPath = resolvePrdPath(flags, 0);
-        const prd = loadPrd(prdPath);
-        reqLs(prd, flags);
-        break;
-      }
-      case "show": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqShow(prd, flags);
-        break;
-      }
-      case "block": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqBlock(prdPath, prd, flags);
-        break;
-      }
-      case "done": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqDone(prdPath, prd, flags);
-        break;
-      }
-      case "start": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqStart(prdPath, prd, flags);
-        break;
-      }
-      case "next": {
-        const prdPath = resolvePrdPath(flags, 0);
-        const prd = loadPrd(prdPath);
-        reqNext(prd);
-        break;
-      }
-      case "add": {
-        const prdPath = resolvePrdPath(flags, 0);
-        const prd = loadPrd(prdPath);
-        reqAdd(prdPath, prd);
-        break;
-      }
-      case "edit": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqEdit(prdPath, prd, flags);
-        break;
-      }
-      case "dep": {
-        const depVerb = flags.positional[0];
-        const prdPath = resolvePrdPath(flags, 3);
-        const prd = loadPrd(prdPath);
-        if (depVerb === "add") {
-          reqDepAdd(prdPath, prd, flags);
-        } else if (depVerb === "rm") {
-          reqDepRm(prdPath, prd, flags);
-        } else {
-          stderr.write(`Unknown req dep verb: ${String(depVerb)}\n`);
-          exit(2);
-        }
-        break;
-      }
-      default: {
-        stderr.write(`Unknown req command: ${String(command)}\n`);
-        exit(2);
-      }
+    case "schema": {
+      routeSchema(command, args.slice(2));
+      break;
     }
-  } else if (domain === "validate") {
-    const flags = parseFlags(args.slice(1));
-    if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-      writeHelp("validate");
-      exit(0);
+    case "validate": {
+      const flags = parseFlags(args.slice(1));
+      if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+        writeHelp("validate");
+        exit(0);
+      }
+      enforceKnownFlags(
+        flags,
+        COMMAND_FLAG_SPECS["validate"] ?? [],
+        "validate",
+      );
+      const prdPath = resolvePrdPath(flags, 0);
+      const prd = loadPrd(prdPath, { validate: false });
+      runValidate(prd);
+      break;
     }
-    enforceKnownFlags(flags, COMMAND_FLAG_SPECS["validate"] ?? [], "validate");
-    const prdPath = resolvePrdPath(flags, 0);
-    const prd = loadPrd(prdPath, { validate: false });
-    runValidate(prd);
-  } else {
-    stderr.write(`Unknown command: ${args.join(" ")}\n`);
-    exit(2);
+    default: {
+      stderr.write(`Unknown command: ${args.join(" ")}\n`);
+      exit(2);
+    }
   }
 }
