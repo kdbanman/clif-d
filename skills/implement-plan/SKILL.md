@@ -155,9 +155,15 @@ State that the step is complete. Summarize what was implemented and what tests v
    - Never use `git commit -m`. Wrap body at 72 characters.
    - See [Git hygiene reference](references/git-hygiene.md) for full format, trailer vocabulary, and rationale.
 4. **Record the commit SHA** — you will need it for the next steps.
-5. **Update the PRD.** For each requirement targeted by the plan:
-   - Set `status` to `"done"`.
-   - Set `implementation_commit` to the commit SHA from step 4.
+5. **Apply the PRD status transitions.** The plan enumerates every transition in §4 **High-level Requirements Realized** and in the per-step sections. Execute them with the `clif-d req` CLI, never by hand-editing `prd.json`:
+   - **Every low-level requirement targeted by the plan:** `clif-d req done REQ-NNN --commit=<sha>` (the SHA from step 4). This sets `status` to `"done"` and records `implementation_commit` in one atomic, validated write.
+   - **Every high-level requirement marked "Fully realized" in §4:** `clif-d req done REQ-MMM --commit=<sha>` using the same implementation SHA. A high-level requirement is realized by the collection of low-level requirements this plan closes, so it shares their commit.
+   - **Every high-level requirement marked "Partially realized" in §4 that is still `not_started`:** `clif-d req start REQ-MMM`. No `implementation_commit` — it is not done yet; a future plan will close it.
+   - **Any partially-realized high-level requirement already `in_progress`:** no transition; it stays `in_progress`.
+
+   If some transitions were already performed inline as individual plan steps (per the plan's Status Transition Steps guidance), the remaining ones are whatever is left. Verify the final PRD state matches §4 before committing.
+
+   If the plan has no §4 section (older plans predating this guidance), close only the low-level requirements the plan explicitly targets, and flag in your completion summary which high-level requirements appear to have been realized but were not closed. The reviewer can then update them or schedule a follow-up plan.
 6. **Move the plan to executed.** Move the plan file from `clif-d/plans/active/` to `clif-d/plans/executed/`. Create the `executed/` directory if it does not yet exist. Append the commit SHA to the plan's header metadata (e.g. `**Implementation commit:** <sha>`).
 7. **Write a lessons-learned file.** Create `clif-d/plans/lessons_learned/` if it does not yet exist. Write a Markdown file named to match the plan (e.g. `lessons-REQ-NNN.md`) that records any significant problems encountered during implementation and how they were resolved. Include:
    - **User corrections** -- places where the user redirected your approach or pointed out a misunderstanding.
