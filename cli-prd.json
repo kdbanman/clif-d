@@ -809,7 +809,9 @@
           "1": "Validation error.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "85bf80d"
     },
     {
       "id": "REQ-020",
@@ -845,7 +847,9 @@
           "1": "Validation error.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "status": "done",
+      "implementation_commit": "85bf80d"
     },
     {
       "id": "REQ-021",
