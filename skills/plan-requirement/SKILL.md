@@ -258,7 +258,8 @@ Once you've explored the codebase and resolved any ambiguities:
 2. **Write the plan** following the output structure above.
 3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section. Every architecture element referenced by the requirements should appear in the Context Summary.
 4. **Verify completeness**: every file mentioned in Implementation Steps should appear in the Files Created or Modified summary. Every test mentioned should have a corresponding implementation step.
-5. **Review step granularity**: each step should be completable and verifiable in isolation. If a step depends on uncommitted work from a previous step, that's fine — but if a step can't be tested without completing the *next* step, the plan needs restructuring.
+5. **Review step granularity**: each step should be completable and verifiable in isolation. If a step depends on uncommitted work from a previous step, that's fine -- but if a step can't be tested without completing the *next* step, the plan needs restructuring.
+6. **Commit the plan.** The plan file is a project artifact and should be committed when complete. Use a clear commit message with a `Requirement:` trailer for each targeted requirement so the plan is discoverable via `git log --grep`. Example subject: `plans: Add implementation plan for REQ-003`. The body should briefly state what the plan covers and name the requirement IDs.
 
 ---
 
