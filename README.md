@@ -172,7 +172,6 @@ The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalo
     - Present each candidate lesson to the user with enough context that it could be understood (without digging through the code) by a technical engineering manager
     - Include information about why it may (or may not) be a good candidate for a durable lesson that will save significant time or mistakes.
     - Suggestions about where the lesson should end up: Which high level document? or as a rule file glob matched to which patterns?
-- [ ] **Update the `design-backpressure` skill to forbid suppressions.** The skill currently teaches a "rare exception" suppression policy as a sane default. It should teach the opposite: backpressure suppressions are forbidden, and the skill's generated `backpressure.md` template states the prohibition explicitly. If a rule is wrong for a codebase, the rule is changed globally with a documented rationale; it is not suppressed locally. The skill should also recommend implementing meta-backpressure (a pre-commit check that fails commits introducing any suppression directive in any supported format) so the prohibition is enforced, not just stated.
 
 ## Potential Issues
 

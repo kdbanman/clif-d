@@ -134,7 +134,7 @@ State which step you're executing and what it will accomplish. This provides a c
 
 Run all quality checks:
 - **Formatter**: Format the code. Stage any formatting changes.
-- **Linter**: Run the linter. Fix any violations. Do not suppress lint rules without a clear, documented justification.
+- **Linter**: Run the linter. Fix any violations. Do not suppress lint rules: inline suppressions are forbidden by the backpressure policy. If a rule is genuinely wrong for this codebase, stop and surface it to the user rather than working around it - the rule must be changed globally (with a rationale recorded in `clif-d/backpressure.md` §4), not bypassed locally.
 - **Type checker**: Run the type checker. Fix any errors.
 - **Full test suite**: One final run to confirm everything is green.
 

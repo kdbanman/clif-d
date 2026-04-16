@@ -27,14 +27,22 @@ Every guardrail must be a **hard gate** — a check that runs automatically and 
 
 ### Maximal strictness as the starting point
 
-Start with the **strictest viable configuration** for every tool, then relax only with explicit justification. This means:
+Start with the **strictest viable configuration** for every tool, then relax globally (never locally) with explicit justification. This means:
 
-- The most aggressive linter preset available (not "recommended" — the one that makes experienced developers uncomfortable)
+- The most aggressive linter preset available (not "recommended" - the one that makes experienced developers uncomfortable)
 - The strictest type-checking mode the language supports
 - Zero tolerance for test failures
-- Zero tolerance for linter violations (no `// eslint-disable`, no `# type: ignore` without documented justification)
+- Zero tolerance for linter violations
 
 The rationale: it's easy to relax a rule that proves counterproductive. It's hard to tighten rules after a codebase has accumulated violations. Start strict.
+
+### Suppressions are forbidden
+
+**Local rule suppressions are prohibited in every form.** No `// eslint-disable`, no `/* eslint-disable */`, no `// @ts-ignore`, no `// @ts-expect-error`, no `# type: ignore`, no `# noqa`, no `#[allow(...)]`, no `//nolint`, no `/* istanbul ignore */`, no `jscpd:ignore-start/end`, no equivalent pragma in any other language.
+
+If a rule is wrong for the codebase, **the rule is changed globally** with a documented rationale in the backpressure document's Relaxations section. A local suppression is a private decision that bypasses the gate on a single line; a global relaxation is a public decision recorded in the design document and re-evaluated on every change. The first produces slow erosion as suppressions accrete silently; the second produces a small, visible list of known trade-offs that a reviewer (human or agent) can audit.
+
+This prohibition is not just stated - it is **enforced by meta-backpressure**: a pre-commit check that scans staged changes for any suppression directive in any supported format and fails the commit if one is introduced. A prohibition without enforcement is a suggestion, and suggestions are not backpressure (see "Hard gates, not suggestions" above).
 
 ### Fast feedback loops
 
@@ -115,7 +123,23 @@ Research the best pre-commit hook mechanism for the project:
 
 Prefer the approach most natural to the language ecosystem.
 
-### 4. Present the plan for confirmation
+### 4. Catalog suppression directive forms
+
+For every tool you are configuring, list every inline suppression pragma it supports. This list becomes the pattern set for the meta-backpressure scanner (see Hook Architecture below). Be exhaustive - missed directives create silent escape hatches that defeat the prohibition.
+
+Representative directives by ecosystem:
+
+- **ESLint**: `eslint-disable`, `eslint-disable-line`, `eslint-disable-next-line`, `/* eslint-disable */`
+- **TypeScript**: `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`
+- **Python (ruff, flake8, mypy, pylint)**: `# noqa`, `# type: ignore`, `# pylint: disable`, `# flake8:`, `# mypy: ignore-errors`
+- **Rust / clippy**: `#[allow(...)]`, `#![allow(...)]`
+- **Go / golangci-lint**: `//nolint`, `//nolint:<rule>`
+- **Coverage tools**: `/* istanbul ignore */`, `# pragma: no cover`
+- **Duplication detectors**: jscpd's `jscpd:ignore-start` / `jscpd:ignore-end`
+
+Add any language-specific or plugin-specific pragma the project's tooling recognizes. When in doubt, include it - the scanner is cheap to run and a false negative is far worse than a false positive.
+
+### 5. Present the plan for confirmation
 
 Before generating any configuration, present:
 - Every tool that will be installed and configured
@@ -160,22 +184,30 @@ A table of every guardrail, its tool, its configuration, and its rationale:
 
 **4. Relaxations from Maximum Strictness**
 
-Every rule or check that was deliberately disabled or relaxed from the absolute strictest setting, with explicit justification. If this section is empty, that's fine — it means maximum strictness was viable across the board. This section exists so that future reviewers can evaluate whether relaxations are still justified.
+Every rule or check that was deliberately disabled or relaxed from the absolute strictest setting, with explicit justification. If this section is empty, that's fine - it means maximum strictness was viable across the board. This section exists so that future reviewers can evaluate whether relaxations are still justified.
 
-**5. Suppression Policy**
+**This table is the only legitimate place to turn off a rule.** Local inline suppressions are forbidden (see §5). If a rule must be disabled, disable it here, globally, in the tool's configuration file, with a written rationale. Every entry is a public, reviewed trade-off - not a silent bypass.
 
-When and how it's acceptable to suppress a lint rule or type error inline. The default policy:
-- Suppression requires an inline comment
-- The comment must explain **why the rule doesn't apply**, not why it's inconvenient
-- Suppression of security-related rules requires a second reviewer or explicit sign-off
-- Blanket file-level suppressions are not permitted without design document amendment
+**5. Suppression Prohibition**
+
+State the prohibition explicitly in the generated `backpressure.md`. The default text, to be included verbatim (adjusted only to match the specific pragmas the project's toolchain recognizes):
+
+> **Local rule suppressions are forbidden.** No `// eslint-disable`, no `/* eslint-disable */`, no `// @ts-ignore`, no `// @ts-expect-error`, no `# type: ignore`, no `# noqa`, no `#[allow(...)]`, no `//nolint`, no `/* istanbul ignore */`, no `jscpd:ignore-start/end`, no equivalent pragma in any other language.
+>
+> If a rule is wrong for this codebase, change the rule globally. Add the disabled rule and its written justification to §4 "Relaxations from Maximum Strictness" above, and disable the rule in the tool's configuration file. Do not suppress it locally.
+>
+> This prohibition is enforced by a meta-backpressure pre-commit check (see §6 "Hook Architecture") that scans staged changes for any suppression directive and fails the commit if one is introduced. The prohibition is not a convention to remember - it is a gate.
+
+If the project has narrow, legitimate reasons a specific rule cannot apply in a specific location (for example, a generated file, or a vendored third-party directory that cannot be cleaned up), handle it by **scoping the lint rule's configuration to exclude that file or directory** in §4. Inline suppressions are never the answer.
 
 **6. Hook Architecture**
 
 What runs at each stage, in what order, and why:
-- **Pre-commit**: Format → lint → type-check → unit tests. Must complete in seconds.
+- **Pre-commit**: Meta-backpressure (suppression scan) -> format -> lint -> type-check -> unit tests. Must complete in seconds. The suppression scan runs first so that an attempted suppression fails fast with an unambiguous message, pointing the developer (or agent) at the Relaxations workflow before any downstream tool reports derivative violations.
 - **Pre-push** (if applicable): Full test suite, integration tests. Must complete in under a minute.
 - **CI** (out of scope for this skill, but note what belongs here): Coverage enforcement, security scanning, etc.
+
+Document the meta-backpressure check concretely: what pattern set it matches, what files it scans, what its allowlist contains (if any), and what the failure message tells the developer to do (answer: move the rule into §4 Relaxations with a rationale and change the rule globally).
 
 **7. Developer/Agent Experience**
 
@@ -183,7 +215,7 @@ A narrative description of what happens when:
 - A developer (or agent) tries to commit code with a lint violation
 - A developer (or agent) tries to commit code with a type error
 - A developer (or agent) tries to commit code with a failing test
-- A developer (or agent) tries to suppress a lint rule
+- A developer (or agent) tries to introduce a suppression directive (meta-backpressure blocks the commit, names the file and line, and points at the Relaxations workflow)
 
 This section helps the reader understand the guardrails in practice, not just in theory.
 
@@ -191,13 +223,13 @@ This section helps the reader understand the guardrails in practice, not just in
 
 A concise, actionable section for developers and agents. Covers:
 
-1. **What guardrails are in place** — a summary of every check that runs
-2. **When they run** — pre-commit, pre-push, CI
-3. **How to set up** — the setup command
-4. **How to run manually** — commands to run each check individually
-5. **How to handle failures** — what to do when a check blocks your commit
-6. **Suppression policy** — summary of the policy from §5 above
-7. **How to update** — how to add or modify rules, and when the design sections above must be amended
+1. **What guardrails are in place** - a summary of every check that runs (including the meta-backpressure suppression scanner)
+2. **When they run** - pre-commit, pre-push, CI
+3. **How to set up** - the setup command
+4. **How to run manually** - commands to run each check individually
+5. **How to handle failures** - what to do when a check blocks your commit
+6. **Suppression prohibition** - one-line restatement of §5 ("no inline suppressions, ever") plus a pointer to the Relaxations workflow (§4) when a rule genuinely needs to change
+7. **How to update** - how to add or modify rules (always globally, always with a rationale in §4), and when the design sections above must be amended
 
 **9. PRD and Architecture Traceability**
 
@@ -245,12 +277,41 @@ The setup must be idempotent — safe to run multiple times.
 
 The pre-commit hook should:
 
-1. **Format** changed files (auto-fix, stage the formatted result)
-2. **Lint** changed files (no auto-fix — fail and show errors)
-3. **Type-check** (may need to check the full project, not just changed files)
-4. **Run tests** affected by changes (or all unit tests if scoping is impractical)
-5. **Block the commit** if any step fails with a non-zero exit code
-6. **Print clear, actionable error messages** — the developer (or agent) should know exactly what to fix
+1. **Scan for suppression directives** (meta-backpressure). Fail the commit if any staged change introduces a suppression pragma in any supported format. Runs first so the failure message is unambiguous.
+2. **Format** changed files (auto-fix, stage the formatted result)
+3. **Lint** changed files (no auto-fix - fail and show errors)
+4. **Type-check** (may need to check the full project, not just changed files)
+5. **Run tests** affected by changes (or all unit tests if scoping is impractical)
+6. **Block the commit** if any step fails with a non-zero exit code
+7. **Print clear, actionable error messages** - the developer (or agent) should know exactly what to fix
+
+#### Meta-backpressure: the suppression scanner
+
+The suppression prohibition (Design Document §5) is only real if it is enforced. Generate a lightweight scanner wired in as the first pre-commit step.
+
+**Scope.** The scanner inspects staged changes - specifically, added lines in the diff. Pre-existing suppressions discovered during setup must be surfaced to the user and either removed outright or added to an explicit, version-controlled allowlist with a written rationale. The scanner does not silently mask pre-existing suppressions; doing so would hide the very problem it exists to prevent.
+
+**Pattern set.** Every suppression pragma every tool in the project's toolchain recognizes. Use the catalog built during interrogation (§4 of the Interrogation section). Typical minimum coverage:
+
+- ESLint: `eslint-disable`, `eslint-disable-line`, `eslint-disable-next-line`
+- TypeScript: `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`
+- Python: `# noqa`, `# type: ignore`, `# pylint: disable`, `# flake8:`, `# mypy: ignore-errors`
+- Rust: `#[allow(...)]`, `#![allow(...)]`
+- Go: `//nolint`, `//nolint:<rule>`
+- Coverage: `/* istanbul ignore */`, `# pragma: no cover`
+- jscpd: `jscpd:ignore-start`, `jscpd:ignore-end`
+
+Include every other pragma the project's tooling recognizes. A missed directive is a silent escape hatch.
+
+**Implementation.** A short grep-style script - shell, Python, or a small Node script, whichever is natural for the stack. Roughly 30-60 lines. It is not a linter; it is a pattern matcher with an allowlist. Keep it simple and auditable. Exit non-zero on match. Print, for each match, the file path, line number, and the matched directive.
+
+**Failure message.** Tell the developer exactly what to do instead. Recommended wording:
+
+> Suppression directives are forbidden (see `clif-d/backpressure.md` §5). If this rule is genuinely wrong for this codebase, disable it globally in the tool's configuration and document the rationale in `clif-d/backpressure.md` §4 "Relaxations from Maximum Strictness". Do not suppress it locally.
+
+**Allowlist.** Some files legitimately contain strings that match suppression patterns - test fixtures that assert on suppression text, the `backpressure.md` document itself, and this skill's `SKILL.md` are the common examples. Maintain an explicit, version-controlled allowlist of file paths. Every allowlist entry must appear in the backpressure document's Relaxations section with a one-line justification. Allowlist entries are reviewed like any other relaxation.
+
+**Self-test.** The scanner must include at least one test that asserts it catches each pragma in its pattern set. A pattern that is never tested is a pattern that silently rots.
 
 #### What the guardrails should NOT do
 
@@ -265,17 +326,19 @@ The pre-commit hook should:
 
 Once the user confirms the plan:
 
-1. **Generate the design document** at `clif-d/backpressure.md` in the product repository, following the structure above. Include the practitioner-facing content (setup commands, how to run checks manually, how to handle failures, suppression policy summary) directly in the backpressure document. The backpressure document is both the design record and the developer reference. Create the `clif-d/` directory if it does not yet exist.
+1. **Generate the design document** at `clif-d/backpressure.md` in the product repository, following the structure above. Include the practitioner-facing content (setup commands, how to run checks manually, how to handle failures, suppression prohibition summary) directly in the backpressure document. The backpressure document is both the design record and the developer reference. Create the `clif-d/` directory if it does not yet exist.
 2. **Wait for user confirmation** of the design document before generating implementation artifacts.
 3. **Generate configuration files** for each tool, placed at their conventional locations in the product repository.
-4. **Generate the setup script** or `Makefile` targets.
-5. **Wire up git hooks** — either via the hook framework's installation mechanism or by generating hook scripts directly.
-6. **Test the setup** by running the setup script and verifying each check runs successfully on the current codebase (or reports expected violations if the codebase doesn't yet exist).
-7. **Backfill PRD references.** The backpressure guardrails are shared constraints that affect all implementation. Update `clif-d/prd.json`:
-   - If a context item for the quality backpressure approach does not already exist, add one (type `constraint`) describing the guardrail standards.
+4. **Generate the meta-backpressure suppression scanner** and wire it in as the first pre-commit step. Seed its allowlist with only the minimum entries required (typically `clif-d/backpressure.md` itself). Include its self-tests.
+5. **Audit the existing codebase for pre-existing suppressions.** Run the scanner over the whole tree (not just staged changes) during setup. For every hit, either delete the suppression (preferred) or surface it to the user and - only with explicit justification - add a global rule relaxation in §4 or an allowlist entry. Do not silently grandfather suppressions; that defeats the prohibition on day one.
+6. **Generate the setup script** or `Makefile` targets.
+7. **Wire up git hooks** - either via the hook framework's installation mechanism or by generating hook scripts directly.
+8. **Test the setup** by running the setup script and verifying each check runs successfully on the current codebase (or reports expected violations if the codebase doesn't yet exist). Include a negative test: introduce a suppression directive in a scratch file and confirm the scanner blocks the commit with the expected message.
+9. **Backfill PRD references.** The backpressure guardrails are shared constraints that affect all implementation. Update `clif-d/prd.json`:
+   - If a context item for the quality backpressure approach does not already exist, add one (type `constraint`) describing the guardrail standards, including the suppression prohibition.
    - Add the backpressure context item's ID to the `context_refs` of every requirement that will be subject to the guardrails (which is typically all of them).
    - This closes the referencing gap: the backpressure document traces back to PRD items (§8), and now PRD items trace forward to the backpressure constraint.
-8. **Report** what was generated and how to use it.
+10. **Report** what was generated and how to use it.
 
 ---
 
