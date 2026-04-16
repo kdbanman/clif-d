@@ -1128,6 +1128,88 @@
         "CTX-011"
       ],
       "architecture_refs": []
+    },
+    {
+      "id": "REQ-032",
+      "title": "Declarative per-command flag specs",
+      "description": "COMMAND_FLAG_SPECS today is a flat allow-list of valid flag names per command -- enough to reject unknown flags, but it duplicates everything else: short aliases, types, defaults, and descriptions live again in the argument parser and the help-text generator. When a flag is added or its semantics change, multiple places must be updated in lockstep, and there is no structural guarantee they stay in sync. Promote COMMAND_FLAG_SPECS to a richer per-command schema (each entry: name, short alias, type, default, description, value validation) and have the argument parser, the help-text generator, and any other consumer derive their behavior from that single source of truth.",
+      "acceptance_criteria": {
+        "given": "A command's flag set is defined once in COMMAND_FLAG_SPECS with full metadata (name, short, type, default, description)",
+        "when": "The CLI parses argv, validates flags, generates --help text, or rejects unknown flags",
+        "then": "Every code path consults COMMAND_FLAG_SPECS for the metadata it needs. No flag's name, alias, type, default, or description appears in more than one place. Adding a new flag is a one-line edit to COMMAND_FLAG_SPECS; the parser and help text pick it up automatically."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-005",
+        "CTX-010",
+        "CTX-012"
+      ],
+      "architecture_refs": [
+        "ARCH-002",
+        "ARCH-004"
+      ]
+    },
+    {
+      "id": "REQ-033",
+      "title": "resolvePrdPath operates on a positionals slice, not raw argv",
+      "description": "resolvePrdPath today takes the full argv and an index identifying which slot may hold the optional [prd-path] positional. Every call site must compute the correct argv index for its command, which depends on how many domain/verb tokens were consumed by routing -- a fragile coupling that produces off-by-one bugs whenever a sub-router is added or restructured. After argv parsing already separates positionals from flags, callers should hand resolvePrdPath the positionals slice (or a single optional path string) that may contain the path. The helper has no business reasoning about argv layout; it should look at exactly the slot the caller designates as path-bearing.",
+      "acceptance_criteria": {
+        "given": "Multiple command handlers across all command groups (req, ctx, arch, id, schema, validate) need to resolve the optional [prd-path] positional",
+        "when": "The refactor is complete",
+        "then": "resolvePrdPath accepts a positionals slice (or a single optional path string) rather than argv plus an index. No call site computes an argv index for path resolution. Adding a new command -- or restructuring an existing sub-router -- cannot reintroduce the argv-index coupling because the helper no longer accepts one."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-005",
+        "CTX-009",
+        "CTX-012"
+      ],
+      "architecture_refs": [
+        "ARCH-002",
+        "ARCH-004"
+      ]
+    },
+    {
+      "id": "REQ-034",
+      "title": "Forbid backpressure suppressions and enforce the prohibition",
+      "description": "Backpressure exists to stop low-quality code from entering the repo. A suppression directive (ESLint disable comments, TypeScript @ts-ignore/@ts-expect-error, Prettier ignore-next, jscpd:disable, or equivalent in any tool added later) silently subtracts from that protection at exactly the spot the gate was meant to fire. Today cli/clif-d/backpressure.md documents a 'rare exception' suppression policy and one such exception exists in bin/clif-d (a security/detect-non-literal-regexp suppression). The policy must flip: suppressions are forbidden. Update cli/clif-d/backpressure.md to state the prohibition unambiguously (no per-line exceptions, no time-bound waivers; if a rule is wrong for this codebase, change the rule globally with a documented rationale, do not paper over it locally). Eliminate the existing suppression in bin/clif-d -- either by restructuring the offending code so the rule does not fire, or by relaxing the rule globally with a note in backpressure.md. Then add meta-backpressure: a pre-commit check that scans bin/clif-d and the cli/ tooling configs for any suppression directive in any supported format and fails the commit when one is found. The result is that backpressure cannot be silently weakened -- any attempt is itself a backpressure failure.",
+      "acceptance_criteria": {
+        "given": "A commit that introduces any suppression directive in bin/clif-d (eslint-disable, eslint-disable-next-line, eslint-disable-line, ts-ignore, ts-expect-error, prettier-ignore, jscpd:disable, or equivalent), or that the existing security/detect-non-literal-regexp suppression remains in the file",
+        "when": "The agent attempts git commit",
+        "then": "The pre-commit hook fails with a message identifying the offending file, line, and directive. cli/clif-d/backpressure.md states explicitly that backpressure suppressions are prohibited and explains how to handle a rule that is wrong for the codebase (relax it globally with a documented rationale, never suppress it locally). The existing security/detect-non-literal-regexp suppression in bin/clif-d has been eliminated."
+      },
+      "priority": 2,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-010",
+        "CTX-012"
+      ],
+      "architecture_refs": []
+    },
+    {
+      "id": "REQ-035",
+      "title": "skipIfRoot test helper for permission-mode tests",
+      "description": "Tests that exercise file-permission failure paths (unreadable PRD via chmod 000, unwritable target via chmod 444, etc.) silently lose their assertion when the test process runs as root, because chmod has no effect on root's access -- the file remains readable and the 'should fail with EACCES' assertion fails, or worse, passes for the wrong reason. Cloud agent runtimes and some CI environments routinely run as root, so this is not a hypothetical. Add a skipIfRoot helper to the test support code (cli/test/_helpers.js or equivalent) that tests can call to cleanly skip themselves with an informative reason when geteuid() === 0. Every existing and future test that depends on file-permission semantics must call it; tests that pass regardless of permissions are unaffected.",
+      "acceptance_criteria": {
+        "given": "A test that depends on chmod-driven permission failures (e.g., asserting EACCES on an unreadable PRD)",
+        "when": "The test runs as root",
+        "then": "skipIfRoot causes the test to be reported as skipped with a reason identifying root as the cause, rather than failing or passing for the wrong reason. When the same test runs as a non-root user, it executes normally and asserts the permission failure. Every existing permission-dependent test calls skipIfRoot."
+      },
+      "priority": 3,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-010",
+        "CTX-011"
+      ],
+      "architecture_refs": [
+        "ARCH-005"
+      ]
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 This document defines how the `clif-d` CLI development environment is bootstrapped and how coding agents inherit context about it. The CLI itself is a zero-dependency single-file Node.js executable (`bin/clif-d`) shipped as part of the CLIF-D Claude Code plugin; the development tooling that lints, type-checks, and tests it lives in `cli/` as a small npm project.
 
-The authoritative inputs are `cli-prd.json` (repo root) and `cli/clif-d/backpressure.md`. No `architecture.md` exists for this tool -- the CLI's scope is small enough that the PRD's context items (CTX-001 through CTX-010) and architecture items (ARCH-001 through ARCH-003) have served as the design contract.
+The authoritative inputs are `cli-prd.json` (repo root) and `cli/clif-d/backpressure.md`. No `architecture.md` exists for this tool -- the CLI's scope is small enough that the PRD's context items (CTX-001 through CTX-012) and architecture items (ARCH-001 through ARCH-005) have served as the design contract.
 
 The bootstrap is script-based, not containerized. A single entry-point script (`cli/scripts/bootstrap.sh`) installs pinned dev dependencies, registers the git pre-commit hook, and leaves the repo ready for development, linting, type checking, and testing. The same script works from the user's shell, from a coding agent's non-interactive subshell, and from a near-empty cloud agent runtime, provided Node.js 18+ is already on `PATH`.
 
@@ -97,7 +97,7 @@ Run from the repo root. Every downstream artifact (rules files, README snippets,
 2. `cd cli && npm run format:check` -- Prettier over `bin/clif-d`.
 3. `cd cli && npm run lint` -- ESLint over `bin/clif-d` (via the `cli/clif-d.js` symlink; see backpressure §4 configuration notes).
 4. `cd cli && npm run typecheck` -- `tsc --noEmit` over the project.
-5. `cd cli && npm test` -- `node --test test/**/*.test.js`. Exits 0 even when `cli/test/` is empty (node's test runner treats zero discovered tests as success). Once REQ-008 lands, real tests will run here; the verification contract does not change.
+5. `cd cli && npm test` -- `node --test test/**/*.test.js`. Exits 0 even when `cli/test/` is empty (node's test runner treats zero discovered tests as success). The suite now contains real tests (the first arrived with REQ-008); the verification contract is unchanged.
 6. `./bin/clif-d --help` -- sanity check that the shebang resolves and the CLI is executable end-to-end.
 
 Steps 2-5 collectively equal `cd cli && npm run check` (the aggregated script in `cli/package.json`); the verify script runs them individually so a single failure is attributable without interpreting combined output.
@@ -158,7 +158,6 @@ Glob-frontmatter rule files (Cursor's `.cursor/rules/*.mdc`, Claude Code's emerg
 - **Node not installed by bootstrap.** The script detects and demands 18+ but never installs it. Justification: Claude Code guarantees 18+ in plugin environments, macOS users already have a Node via one of many managers, and cloud runtimes typically ship a Node base image. Installing Node inside the script would require choosing a manager (bad for reproducibility) or shipping a tarball-download path (brittle). Detection + actionable error is the cleaner contract.
 - **Node pin is major-only.** `cli/.nvmrc` contains `18`, not `18.20.4`. Justification: the PRD's CTX-001 language is "Node.js 18+", not a specific minor. Pinning to an exact minor causes spurious failures on runtimes that ship any compatible 18.x.y.
 - **No containerization.** Justification: the project is a zero-dep single-file CLI with one dev-tooling package. A container adds weight without adding reproducibility over `npm ci` against a lockfile.
-- **No tests yet.** `cli/test/` is empty until REQ-008 lands. `node --test` exits 0 on zero discovered tests, so verification passes in the current baseline; adding real tests cannot regress the contract.
 - **Antigravity-specific rules file deferred** pending authoritative documentation of its rules-file convention. `AGENTS.md` covers it if it follows the ecosystem standard.
 
 ## 10. PRD and Architecture Traceability
@@ -174,4 +173,4 @@ Glob-frontmatter rule files (Cursor's `.cursor/rules/*.mdc`, Claude Code's emerg
 | Verification script exercises every backpressure tool | CTX-010; backpressure §8 |
 | Rules files at repo root, linked to PRD/backpressure/this doc | CTX-006 (PRD as living document -- agents must be able to find the living doc) |
 
-A new context item (proposed ID `CTX-011`, type `constraint`, titled "Development environment bootstrap") will be added to `cli-prd.json` with `reference_link: cli/clif-d/dev-environment.md`. Every existing requirement that is implemented inside this environment gains that ID in its `context_refs` -- in practice, all 23 existing requirements, since there is one dev environment covering the whole CLI.
+CTX-011 (`constraint`, "Development environment bootstrap") is recorded in `cli-prd.json` with `reference_link: cli/clif-d/dev-environment.md`. Every requirement implemented inside this environment carries that ID in its `context_refs` -- in practice, every requirement that has touched code under this bootstrap, since there is one dev environment covering the whole CLI.
