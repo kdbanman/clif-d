@@ -10,7 +10,8 @@
 - `cli/clif-d/plans/active/plan-REQ-015-REQ-016-REQ-017.md` (stdin handling, auto-assigned IDs, `req add`/`req edit` shape as the template)
 
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** dbd65dc6ab43594606889d9aa94ea6171d540f83
 
 ## 1. Objective
 
