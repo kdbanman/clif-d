@@ -122,6 +122,8 @@ function parseFlags(args) {
     "-f",
     "--commit",
     "-c",
+    "--type",
+    "--level",
   ]);
 
   for (let i = 0; i < args.length; i++) {
@@ -177,6 +179,14 @@ const COMMAND_FLAG_SPECS = Object.freeze({
   "req add": [],
   "req edit": [],
   "req dep": [],
+  "ctx ls": ["--type", "--fields", "-f", "--plain"],
+  "ctx show": [],
+  "ctx add": [],
+  "ctx edit": [],
+  "arch ls": ["--level", "--fields", "-f", "--plain"],
+  "arch show": [],
+  "arch add": [],
+  "arch edit": [],
   validate: [],
 });
 
@@ -457,24 +467,140 @@ function validateAcceptanceCriteria(ac, errors) {
   }
 }
 
+const REQUIRED_CTX_FIELDS = ["id", "title", "description", "type"];
+const REQUIRED_ARCH_FIELDS = ["id", "title", "description", "level"];
+
 /**
- * Compute the next REQ-NNN id by taking max+1 over existing numeric ids.
- * @param {Array<Record<string, unknown>>} requirements
+ * Push a "Missing required field" error for each empty required field on
+ * `item`. Shared by the three shape validators.
+ * @param {Record<string, unknown>} item
+ * @param {readonly string[]} required
+ * @param {string[]} errors
+ */
+function collectMissingFields(item, required, errors) {
+  for (const field of required) {
+    const value = item[field];
+    if (value === undefined || value === null || value === "") {
+      errors.push(`Missing required field: ${field}`);
+    }
+  }
+}
+
+/**
+ * If `item.id` is present, verify it matches `PREFIX-NNN`. Otherwise no-op.
+ * @param {Record<string, unknown>} item
+ * @param {string} prefix
+ * @param {string[]} errors
+ */
+function collectIdFormatError(item, prefix, errors) {
+  if (!("id" in item) || item.id === undefined) {
+    return;
+  }
+  const id = item.id;
+  const pattern = new RegExp(`^${prefix}-\\d{3}$`);
+  if (typeof id !== "string" || !pattern.test(id)) {
+    errors.push(`Invalid id '${String(id)}': must match ${prefix}-NNN`);
+  }
+}
+
+/**
+ * Push errors for optional fields that must be strings when present.
+ * @param {Record<string, unknown>} item
+ * @param {readonly string[]} fieldNames
+ * @param {string[]} errors
+ */
+function collectOptionalStringErrors(item, fieldNames, errors) {
+  for (const field of fieldNames) {
+    const value = item[field];
+    if (value !== undefined && typeof value !== "string") {
+      errors.push(`Invalid ${field}: must be a string`);
+    }
+  }
+}
+
+/**
+ * Validate the shape of a context item. Referential integrity is handled
+ * elsewhere (context items have no outbound refs today).
+ * @param {Record<string, unknown>} item
+ * @param {{ requireAllFields: boolean }} options
+ * @returns {string[]}
+ */
+function validateContextShape(item, options) {
+  /** @type {string[]} */
+  const errors = [];
+  if (options.requireAllFields) {
+    collectMissingFields(item, REQUIRED_CTX_FIELDS, errors);
+  }
+  collectIdFormatError(item, "CTX", errors);
+  if (
+    item.type !== undefined &&
+    !VALID_CONTEXT_TYPES.has(/** @type {string} */ (item.type))
+  ) {
+    errors.push(
+      `Invalid type '${String(item.type)}': must be one of non_functional, constraint, persona, domain, product_goal`,
+    );
+  }
+  collectOptionalStringErrors(item, ["reference_link"], errors);
+  return errors;
+}
+
+/**
+ * Validate the shape of an architecture item.
+ * @param {Record<string, unknown>} item
+ * @param {{ requireAllFields: boolean }} options
+ * @returns {string[]}
+ */
+function validateArchitectureShape(item, options) {
+  /** @type {string[]} */
+  const errors = [];
+  if (options.requireAllFields) {
+    collectMissingFields(item, REQUIRED_ARCH_FIELDS, errors);
+  }
+  collectIdFormatError(item, "ARCH", errors);
+  if (
+    item.level !== undefined &&
+    !VALID_ARCH_LEVELS.has(/** @type {string} */ (item.level))
+  ) {
+    errors.push(
+      `Invalid level '${String(item.level)}': must be one of context, container, component`,
+    );
+  }
+  collectOptionalStringErrors(item, ["diagram_file", "reference_link"], errors);
+  return errors;
+}
+
+/**
+ * Compute the next PREFIX-NNN id by taking max+1 over existing numeric ids
+ * in `items` whose `id` matches `^PREFIX-\d+$`. Always zero-pads to 3 digits.
+ * Shared by `req add`, `ctx add`, and `arch add` so they all follow identical
+ * "max+1, do not gap-fill" semantics.
+ * @param {string} prefix
+ * @param {Array<Record<string, unknown>>} items
  * @returns {string}
  */
-function nextReqId(requirements) {
-  const numbers = requirements
-    .map((r) => {
-      const id = /** @type {unknown} */ (r.id);
+function nextId(prefix, items) {
+  const re = new RegExp(`^${prefix}-(\\d+)$`);
+  const numbers = items
+    .map((item) => {
+      const id = /** @type {unknown} */ (item.id);
       if (typeof id !== "string") {
         return Number.NaN;
       }
-      const match = /^REQ-(\d+)$/.exec(id);
+      const match = re.exec(id);
       return match ? Number(match[1]) : Number.NaN;
     })
     .filter((n) => Number.isFinite(n));
   const next = (Math.max(0, ...numbers) + 1).toString().padStart(3, "0");
-  return `REQ-${next}`;
+  return `${prefix}-${next}`;
+}
+
+/**
+ * Compute the next REQ-NNN id. Thin wrapper over `nextId`.
+ * @param {Array<Record<string, unknown>>} requirements
+ * @returns {string}
+ */
+function nextReqId(requirements) {
+  return nextId("REQ", requirements);
 }
 
 /**
@@ -640,29 +766,43 @@ const Format = Object.freeze({
   /**
    * Render a list of requirements as tab-separated text with a header row.
    * Object-valued fields are JSON-stringified; null/undefined become empty.
+   * Projects requirements through `Projection.selectFields` (which preserves
+   * `SCHEMA_FIELD_ORDER` and defaults status/dependencies); tabular rendering
+   * is shared with ctx/arch via `renderTable`.
    * @param {Array<Record<string, unknown>>} reqs
    * @param {string[]} fields
    * @returns {string}
    */
   toPlain(reqs, fields) {
-    const lines = [fields.join("\t")];
-    for (const req of reqs) {
-      const selected = Projection.selectFields(req, fields);
-      const values = fields.map((f) => {
-        const v = selected[f];
-        if (v === undefined || v === null) {
-          return "";
-        }
-        if (typeof v === "object") {
-          return JSON.stringify(v);
-        }
-        return String(v);
-      });
-      lines.push(values.join("\t"));
-    }
-    return `${lines.join("\n")}\n`;
+    const projected = reqs.map((r) => Projection.selectFields(r, fields));
+    return renderTable(projected, fields);
   },
 });
+
+/**
+ * Render a list of already-projected items (each is a plain object with the
+ * caller's selected fields) as a tab-separated table with header row.
+ * @param {Array<Record<string, unknown>>} rows
+ * @param {readonly string[]} fields
+ * @returns {string}
+ */
+function renderTable(rows, fields) {
+  const lines = [fields.join("\t")];
+  for (const row of rows) {
+    const values = fields.map((f) => {
+      const v = row[f];
+      if (v === undefined || v === null) {
+        return "";
+      }
+      if (typeof v === "object") {
+        return JSON.stringify(v);
+      }
+      return String(v);
+    });
+    lines.push(values.join("\t"));
+  }
+  return `${lines.join("\n")}\n`;
+}
 
 // -- Command handlers -------------------------------------------------------
 
@@ -968,23 +1108,12 @@ function reqAdd(prdPath, prd) {
     candidate.id = nextReqId(requirements);
   }
 
-  const shapeErrors = validateRequirementShape(candidate, {
-    requireAllFields: true,
-  });
-  if (shapeErrors.length > 0) {
-    for (const err of shapeErrors) {
-      stderr.write(`Error: ${err}\n`);
-    }
-    exit(1);
-    return;
-  }
+  exitOnShapeErrors(
+    validateRequirementShape(candidate, { requireAllFields: true }),
+  );
 
   const newId = /** @type {string} */ (candidate.id);
-  if (requirements.some((r) => r.id === newId)) {
-    stderr.write(`Error: Requirement id ${newId} already exists.\n`);
-    exit(1);
-    return;
-  }
+  exitOnDuplicateId(requirements, newId, "Requirement id");
 
   const newReq = fullRequirementObject(candidate);
   const speculative = [...requirements, newReq];
@@ -1051,16 +1180,9 @@ function reqEdit(prdPath, prd, flags) {
   }
 
   const merged = { ...req, ...patch };
-  const shapeErrors = validateRequirementShape(merged, {
-    requireAllFields: true,
-  });
-  if (shapeErrors.length > 0) {
-    for (const err of shapeErrors) {
-      stderr.write(`Error: ${err}\n`);
-    }
-    exit(1);
-    return;
-  }
+  exitOnShapeErrors(
+    validateRequirementShape(merged, { requireAllFields: true }),
+  );
 
   const reqIds = collectIds(prdObj.requirements);
   const ctxIds = collectIds(prdObj.context ?? []);
@@ -1182,6 +1304,328 @@ function reqDepRm(prdPath, prd, flags) {
   req.dependencies = deps.filter((d) => d !== depId);
   writePrd(prdPath, prd);
   stdout.write(`${JSON.stringify(fullRequirementObject(req), null, 2)}\n`);
+  exit(0);
+}
+
+// -- ctx / arch CRUD --------------------------------------------------------
+
+/** @type {readonly string[]} */
+const CTX_SCHEMA_FIELD_ORDER = [
+  "id",
+  "title",
+  "description",
+  "type",
+  "reference_link",
+];
+
+/** @type {readonly string[]} */
+const ARCH_SCHEMA_FIELD_ORDER = [
+  "id",
+  "title",
+  "description",
+  "level",
+  "diagram_file",
+  "reference_link",
+];
+
+const CTX_DEFAULT_LIST_FIELDS = ["id", "title", "type"];
+const ARCH_DEFAULT_LIST_FIELDS = ["id", "title", "level"];
+
+/**
+ * @typedef {Object} ItemDomainSpec
+ * @property {string} prefix            - e.g. "CTX" or "ARCH".
+ * @property {string} arrayKey          - PRD array key, e.g. "context".
+ * @property {readonly string[]} schemaOrder
+ * @property {readonly string[]} defaultListFields
+ * @property {string} filterFlag        - e.g. "--type" or "--level".
+ * @property {string} filterField       - field name corresponding to filterFlag.
+ * @property {(item: Record<string, unknown>, options: { requireAllFields: boolean }) => string[]} validateShape
+ * @property {string} notFoundLabel     - e.g. "Context item" or "Architecture item".
+ */
+
+/** @type {ItemDomainSpec} */
+const CTX_SPEC = {
+  prefix: "CTX",
+  arrayKey: "context",
+  schemaOrder: CTX_SCHEMA_FIELD_ORDER,
+  defaultListFields: CTX_DEFAULT_LIST_FIELDS,
+  filterFlag: "--type",
+  filterField: "type",
+  validateShape: validateContextShape,
+  notFoundLabel: "Context item",
+};
+
+/** @type {ItemDomainSpec} */
+const ARCH_SPEC = {
+  prefix: "ARCH",
+  arrayKey: "architecture",
+  schemaOrder: ARCH_SCHEMA_FIELD_ORDER,
+  defaultListFields: ARCH_DEFAULT_LIST_FIELDS,
+  filterFlag: "--level",
+  filterField: "level",
+  validateShape: validateArchitectureShape,
+  notFoundLabel: "Architecture item",
+};
+
+/**
+ * Project an item onto a given set of fields, preserving a caller-supplied
+ * schema order. Generic counterpart to `Projection.selectFields` (which
+ * hard-codes the requirement schema order and defaults for status/deps).
+ * @param {Record<string, unknown>} item
+ * @param {readonly string[]} fields
+ * @param {readonly string[]} schemaOrder
+ * @returns {Record<string, unknown>}
+ */
+function projectItem(item, fields, schemaOrder) {
+  const fieldSet = new Set(fields);
+  /** @type {Record<string, unknown>} */
+  const result = {};
+  for (const key of schemaOrder) {
+    if (fieldSet.has(key) && key in item) {
+      result[key] = item[key];
+    }
+  }
+  return result;
+}
+
+/**
+ * Build a full item object in the given schema order, dropping fields not
+ * present on the input. Used as the on-disk and stdout-canonical shape for
+ * ctx/arch items (which have no defaulted fields -- unlike requirements).
+ * @param {Record<string, unknown>} item
+ * @param {readonly string[]} schemaOrder
+ * @returns {Record<string, unknown>}
+ */
+function fullItemObject(item, schemaOrder) {
+  return projectItem(item, schemaOrder, schemaOrder);
+}
+
+/**
+ * Render a list of items as tab-separated text, projecting each through the
+ * ctx/arch schema order. Thin wrapper around `renderTable`.
+ * @param {Array<Record<string, unknown>>} items
+ * @param {readonly string[]} fields
+ * @param {readonly string[]} schemaOrder
+ * @returns {string}
+ */
+function formatItemsPlain(items, fields, schemaOrder) {
+  const projected = items.map((i) => projectItem(i, fields, schemaOrder));
+  return renderTable(projected, fields);
+}
+
+/**
+ * Look up an item in a PRD array by id. Writes a diagnostic and exits 1 if
+ * not found; otherwise returns the item.
+ * @param {Array<Record<string, unknown>>} items
+ * @param {string} itemId
+ * @param {string} label
+ * @returns {Record<string, unknown> | undefined}
+ */
+function findItemOrExit(items, itemId, label) {
+  const found = items.find((i) => i.id === itemId);
+  if (!found) {
+    stderr.write(`Error: ${label} ${itemId} not found in PRD.\n`);
+    exit(1);
+  }
+  return found;
+}
+
+/**
+ * Read an item body from stdin and normalize it to a plain object or exit 1
+ * with a diagnostic matching the other mutation handlers.
+ * @returns {Record<string, unknown>}
+ */
+function readStdinItemBody() {
+  const body = readStdinJson();
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    stderr.write("Error: stdin must be a JSON object.\n");
+    exit(1);
+    // exit() has side-effect typing; return an unreachable cast.
+    return /** @type {Record<string, unknown>} */ ({});
+  }
+  return /** @type {Record<string, unknown>} */ (body);
+}
+
+/**
+ * If `shapeErrors` is non-empty, write each to stderr as `Error: <msg>` and
+ * exit 1. Otherwise no-op.
+ * @param {string[]} shapeErrors
+ */
+function exitOnShapeErrors(shapeErrors) {
+  if (shapeErrors.length === 0) {
+    return;
+  }
+  for (const err of shapeErrors) {
+    stderr.write(`Error: ${err}\n`);
+  }
+  exit(1);
+}
+
+/**
+ * If `items` already contains `newId`, write a diagnostic and exit 1.
+ * `label` supplies the human-readable noun (e.g. "Requirement id" or
+ * "Context item id") so error messages stay specific.
+ * @param {Array<Record<string, unknown>>} items
+ * @param {string} newId
+ * @param {string} label
+ */
+function exitOnDuplicateId(items, newId, label) {
+  if (items.some((i) => i.id === newId)) {
+    stderr.write(`Error: ${label} ${newId} already exists.\n`);
+    exit(1);
+  }
+}
+
+/**
+ * Add a context or architecture item. Mirrors `reqAdd` with per-domain
+ * validation, schema order, and array key.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ItemDomainSpec} spec
+ */
+function itemAdd(prdPath, prd, spec) {
+  const input = readStdinItemBody();
+  const prdObj = /** @type {Record<string, unknown>} */ (prd);
+  const items = /** @type {Array<Record<string, unknown>>} */ (
+    Array.isArray(prdObj[spec.arrayKey]) ? prdObj[spec.arrayKey] : []
+  );
+
+  const candidate = { ...input };
+  if (candidate.id === undefined) {
+    candidate.id = nextId(spec.prefix, items);
+  }
+
+  exitOnShapeErrors(spec.validateShape(candidate, { requireAllFields: true }));
+
+  const newId = /** @type {string} */ (candidate.id);
+  exitOnDuplicateId(items, newId, `${spec.notFoundLabel} id`);
+
+  const newItem = fullItemObject(candidate, spec.schemaOrder);
+  items.push(newItem);
+  prdObj[spec.arrayKey] = items;
+  writePrd(prdPath, prd);
+  stdout.write(`${JSON.stringify(newItem, null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * List ctx/arch items with optional filter + field selection. Mirrors
+ * `reqLs` but parameterized by domain spec.
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ * @param {ItemDomainSpec} spec
+ */
+function itemLs(prd, flags, spec) {
+  const prdObj = /** @type {Record<string, unknown>} */ (prd);
+  let items = /** @type {Array<Record<string, unknown>>} */ (
+    Array.isArray(prdObj[spec.arrayKey]) ? prdObj[spec.arrayKey] : []
+  );
+
+  const filterValue = flags.named.get(spec.filterFlag);
+  if (filterValue) {
+    const values = new Set(filterValue.split(","));
+    items = items.filter((i) =>
+      values.has(/** @type {string} */ (i[spec.filterField])),
+    );
+  }
+
+  let fields = spec.defaultListFields;
+  const customFields = flags.named.get("--fields") ?? flags.named.get("-f");
+  if (customFields) {
+    fields = customFields.split(",");
+  }
+
+  if (flags.boolean.has("--plain")) {
+    stdout.write(formatItemsPlain(items, fields, spec.schemaOrder));
+    exit(0);
+  }
+
+  const output = items.map((i) => projectItem(i, fields, spec.schemaOrder));
+  stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+  exit(0);
+}
+
+/**
+ * Short domain noun (`ctx`/`arch`) used in usage strings and diagnostics.
+ * @param {ItemDomainSpec} spec
+ * @returns {string}
+ */
+function domainVerb(spec) {
+  return spec.arrayKey === "context" ? "ctx" : "arch";
+}
+
+/**
+ * Resolve a positional ID and the target items array for ctx/arch
+ * show/edit handlers. Returns the found item or undefined when it has
+ * already triggered an exit.
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ * @param {ItemDomainSpec} spec
+ * @param {"show" | "edit"} verb
+ * @returns {{ items: Array<Record<string, unknown>>, item: Record<string, unknown> | undefined, itemId: string }}
+ */
+function locateItemByPositional(prd, flags, spec, verb) {
+  const suffix = verb === "edit" ? " < patch.json" : "";
+  const itemId = requireReqIdPositional(
+    flags,
+    `clif-d ${domainVerb(spec)} ${verb} <${spec.prefix}-ID> [prd-path]${suffix}`,
+  );
+  const prdObj = /** @type {Record<string, unknown>} */ (prd);
+  const items = /** @type {Array<Record<string, unknown>>} */ (
+    Array.isArray(prdObj[spec.arrayKey]) ? prdObj[spec.arrayKey] : []
+  );
+  const item = findItemOrExit(items, itemId, spec.notFoundLabel);
+  return { items, item, itemId };
+}
+
+/**
+ * Show a single ctx/arch item by id.
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ * @param {ItemDomainSpec} spec
+ */
+function itemShow(prd, flags, spec) {
+  const { item } = locateItemByPositional(prd, flags, spec, "show");
+  if (!item) {
+    return;
+  }
+  stdout.write(
+    `${JSON.stringify(fullItemObject(item, spec.schemaOrder), null, 2)}\n`,
+  );
+  exit(0);
+}
+
+/**
+ * Edit a ctx/arch item: merge a partial JSON patch from stdin with replace
+ * semantics, validate, write atomically. Rejects `id` changes.
+ * @param {string} prdPath
+ * @param {object} prd
+ * @param {ParsedFlags} flags
+ * @param {ItemDomainSpec} spec
+ */
+function itemEdit(prdPath, prd, flags, spec) {
+  const { item } = locateItemByPositional(prd, flags, spec, "edit");
+  if (!item) {
+    return;
+  }
+
+  const patch = readStdinItemBody();
+  if ("id" in patch) {
+    stderr.write(`Error: Cannot change id via ${domainVerb(spec)} edit.\n`);
+    exit(1);
+    return;
+  }
+
+  const merged = { ...item, ...patch };
+  exitOnShapeErrors(spec.validateShape(merged, { requireAllFields: true }));
+
+  for (const key of Object.keys(patch)) {
+    item[key] = patch[key];
+  }
+  writePrd(prdPath, prd);
+  stdout.write(
+    `${JSON.stringify(fullItemObject(item, spec.schemaOrder), null, 2)}\n`,
+  );
   exit(0);
 }
 
@@ -1774,6 +2218,88 @@ const HELP_SPECS = {
       { code: 2, description: "Usage error or PRD file missing/unparseable." },
     ],
   },
+  "ctx ls": {
+    usage: "clif-d ctx ls [flags] [prd-path]",
+    description: "List context items from the PRD.",
+    flags: [
+      {
+        flag: "--type <val>",
+        description:
+          "Filter by type (comma-separated: non_functional, constraint, persona, domain, product_goal)",
+      },
+      {
+        flag: "--fields, -f <val>",
+        description: "Comma-separated fields (default: id,title,type)",
+      },
+      { flag: "--json", description: "JSON output (default)" },
+      { flag: "--plain", description: "Plain tabular text output" },
+    ],
+  },
+  "ctx show": {
+    usage: "clif-d ctx show <CTX-ID> [prd-path]",
+    description: "Show the full JSON object for a single context item.",
+  },
+  "ctx add": {
+    usage: "clif-d ctx add [prd-path] < context-item.json",
+    description:
+      "Add a new context item from a JSON object on stdin. If 'id' is omitted, the next CTX-NNN is auto-assigned.",
+    exitCodes: [
+      { code: 0, description: "Item added and PRD written." },
+      { code: 1, description: "Validation error (shape, duplicate id)." },
+      { code: 2, description: "PRD file is missing or unparseable." },
+    ],
+  },
+  "ctx edit": {
+    usage: "clif-d ctx edit <CTX-ID> [prd-path] < patch.json",
+    description:
+      "Update fields on a context item. Replace semantics. Cannot change 'id'.",
+    exitCodes: [
+      { code: 0, description: "Item updated and PRD written." },
+      { code: 1, description: "Validation error or CTX-ID not found." },
+      { code: 2, description: "Usage error or PRD file missing/unparseable." },
+    ],
+  },
+  "arch ls": {
+    usage: "clif-d arch ls [flags] [prd-path]",
+    description: "List architecture items from the PRD.",
+    flags: [
+      {
+        flag: "--level <val>",
+        description:
+          "Filter by C4 level (comma-separated: context, container, component)",
+      },
+      {
+        flag: "--fields, -f <val>",
+        description: "Comma-separated fields (default: id,title,level)",
+      },
+      { flag: "--json", description: "JSON output (default)" },
+      { flag: "--plain", description: "Plain tabular text output" },
+    ],
+  },
+  "arch show": {
+    usage: "clif-d arch show <ARCH-ID> [prd-path]",
+    description: "Show the full JSON object for a single architecture item.",
+  },
+  "arch add": {
+    usage: "clif-d arch add [prd-path] < architecture-item.json",
+    description:
+      "Add a new architecture item from a JSON object on stdin. If 'id' is omitted, the next ARCH-NNN is auto-assigned.",
+    exitCodes: [
+      { code: 0, description: "Item added and PRD written." },
+      { code: 1, description: "Validation error (shape, duplicate id)." },
+      { code: 2, description: "PRD file is missing or unparseable." },
+    ],
+  },
+  "arch edit": {
+    usage: "clif-d arch edit <ARCH-ID> [prd-path] < patch.json",
+    description:
+      "Update fields on an architecture item. Replace semantics. Cannot change 'id'.",
+    exitCodes: [
+      { code: 0, description: "Item updated and PRD written." },
+      { code: 1, description: "Validation error or ARCH-ID not found." },
+      { code: 2, description: "Usage error or PRD file missing/unparseable." },
+    ],
+  },
   validate: {
     usage: "clif-d validate [prd-path]",
     description:
@@ -1807,6 +2333,16 @@ function printMainHelp() {
   stderr.write("  req add      Add a requirement (JSON on stdin)\n");
   stderr.write("  req edit     Edit requirement fields (JSON on stdin)\n");
   stderr.write("  req dep      Add or remove dependency edges\n");
+  stderr.write("  ctx ls       List context items\n");
+  stderr.write("  ctx show     Show a single context item\n");
+  stderr.write("  ctx add      Add a context item (JSON on stdin)\n");
+  stderr.write("  ctx edit     Edit context item fields (JSON on stdin)\n");
+  stderr.write("  arch ls      List architecture items\n");
+  stderr.write("  arch show    Show a single architecture item\n");
+  stderr.write("  arch add     Add an architecture item (JSON on stdin)\n");
+  stderr.write(
+    "  arch edit    Edit architecture item fields (JSON on stdin)\n",
+  );
   stderr.write("  validate     Validate PRD structural integrity\n");
   stderr.write("\n");
   stderr.write("Run clif-d <command> --help for command-specific usage.\n");
@@ -1850,103 +2386,201 @@ function main() {
   const command = args[1];
   const commandArgs = args.slice(2);
 
-  if (domain === "req") {
-    const flags = parseFlags(commandArgs);
-    const helpRequested =
-      flags.boolean.has("--help") || flags.boolean.has("-h");
-    const commandLabel = `req ${String(command)}`;
-    const knownFlags = COMMAND_FLAG_SPECS[commandLabel];
-
-    if (helpRequested && knownFlags !== undefined) {
-      writeHelp(commandLabel);
-      exit(0);
+  switch (domain) {
+    case "req": {
+      dispatchReq(command, commandArgs);
+      break;
     }
-    if (knownFlags === undefined) {
+    case "ctx": {
+      dispatchItemDomain("ctx", command, commandArgs, CTX_SPEC);
+      break;
+    }
+    case "arch": {
+      dispatchItemDomain("arch", command, commandArgs, ARCH_SPEC);
+      break;
+    }
+    case "validate": {
+      dispatchValidate(args.slice(1));
+      break;
+    }
+    default: {
+      stderr.write(`Unknown command: ${args.join(" ")}\n`);
+      exit(2);
+    }
+  }
+}
+
+/**
+ * Handle the `req` domain: parse flags, enforce them, then dispatch to the
+ * matching handler. Extracted from `main` so each domain stays within the
+ * function-size gate.
+ * @param {string | undefined} command
+ * @param {string[]} commandArgs
+ */
+function dispatchReq(command, commandArgs) {
+  const flags = parseFlags(commandArgs);
+  const helpRequested = flags.boolean.has("--help") || flags.boolean.has("-h");
+  const commandLabel = `req ${String(command)}`;
+  const knownFlags = COMMAND_FLAG_SPECS[commandLabel];
+
+  if (helpRequested && knownFlags !== undefined) {
+    writeHelp(commandLabel);
+    exit(0);
+  }
+  if (knownFlags === undefined) {
+    stderr.write(`Unknown req command: ${String(command)}\n`);
+    return exit(2);
+  }
+  enforceKnownFlags(flags, knownFlags, commandLabel);
+  runReqCommand(command, flags);
+}
+
+/**
+ * @param {string | undefined} command
+ * @param {ParsedFlags} flags
+ */
+function runReqCommand(command, flags) {
+  switch (command) {
+    case "ls": {
+      const prdPath = resolvePrdPath(flags, 0);
+      reqLs(loadPrd(prdPath), flags);
+      break;
+    }
+    case "show": {
+      const prdPath = resolvePrdPath(flags, 1);
+      reqShow(loadPrd(prdPath), flags);
+      break;
+    }
+    case "block": {
+      const prdPath = resolvePrdPath(flags, 1);
+      reqBlock(prdPath, loadPrd(prdPath), flags);
+      break;
+    }
+    case "done": {
+      const prdPath = resolvePrdPath(flags, 1);
+      reqDone(prdPath, loadPrd(prdPath), flags);
+      break;
+    }
+    case "start": {
+      const prdPath = resolvePrdPath(flags, 1);
+      reqStart(prdPath, loadPrd(prdPath), flags);
+      break;
+    }
+    case "next": {
+      const prdPath = resolvePrdPath(flags, 0);
+      reqNext(loadPrd(prdPath));
+      break;
+    }
+    case "add": {
+      const prdPath = resolvePrdPath(flags, 0);
+      reqAdd(prdPath, loadPrd(prdPath));
+      break;
+    }
+    case "edit": {
+      const prdPath = resolvePrdPath(flags, 1);
+      reqEdit(prdPath, loadPrd(prdPath), flags);
+      break;
+    }
+    case "dep": {
+      runReqDep(flags);
+      break;
+    }
+    default: {
       stderr.write(`Unknown req command: ${String(command)}\n`);
-      return exit(2);
+      exit(2);
     }
-    enforceKnownFlags(flags, knownFlags, commandLabel);
+  }
+}
 
-    switch (command) {
-      case "ls": {
-        const prdPath = resolvePrdPath(flags, 0);
-        const prd = loadPrd(prdPath);
-        reqLs(prd, flags);
-        break;
-      }
-      case "show": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqShow(prd, flags);
-        break;
-      }
-      case "block": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqBlock(prdPath, prd, flags);
-        break;
-      }
-      case "done": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqDone(prdPath, prd, flags);
-        break;
-      }
-      case "start": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqStart(prdPath, prd, flags);
-        break;
-      }
-      case "next": {
-        const prdPath = resolvePrdPath(flags, 0);
-        const prd = loadPrd(prdPath);
-        reqNext(prd);
-        break;
-      }
-      case "add": {
-        const prdPath = resolvePrdPath(flags, 0);
-        const prd = loadPrd(prdPath);
-        reqAdd(prdPath, prd);
-        break;
-      }
-      case "edit": {
-        const prdPath = resolvePrdPath(flags, 1);
-        const prd = loadPrd(prdPath);
-        reqEdit(prdPath, prd, flags);
-        break;
-      }
-      case "dep": {
-        const depVerb = flags.positional[0];
-        const prdPath = resolvePrdPath(flags, 3);
-        const prd = loadPrd(prdPath);
-        if (depVerb === "add") {
-          reqDepAdd(prdPath, prd, flags);
-        } else if (depVerb === "rm") {
-          reqDepRm(prdPath, prd, flags);
-        } else {
-          stderr.write(`Unknown req dep verb: ${String(depVerb)}\n`);
-          exit(2);
-        }
-        break;
-      }
-      default: {
-        stderr.write(`Unknown req command: ${String(command)}\n`);
-        exit(2);
-      }
-    }
-  } else if (domain === "validate") {
-    const flags = parseFlags(args.slice(1));
-    if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-      writeHelp("validate");
-      exit(0);
-    }
-    enforceKnownFlags(flags, COMMAND_FLAG_SPECS["validate"] ?? [], "validate");
-    const prdPath = resolvePrdPath(flags, 0);
-    const prd = loadPrd(prdPath, { validate: false });
-    runValidate(prd);
+/**
+ * @param {ParsedFlags} flags
+ */
+function runReqDep(flags) {
+  const depVerb = flags.positional[0];
+  const prdPath = resolvePrdPath(flags, 3);
+  const prd = loadPrd(prdPath);
+  if (depVerb === "add") {
+    reqDepAdd(prdPath, prd, flags);
+  } else if (depVerb === "rm") {
+    reqDepRm(prdPath, prd, flags);
   } else {
-    stderr.write(`Unknown command: ${args.join(" ")}\n`);
+    stderr.write(`Unknown req dep verb: ${String(depVerb)}\n`);
     exit(2);
   }
+}
+
+/**
+ * Handle a ctx/arch domain: same verb set for both (ls/show/add/edit).
+ * @param {"ctx" | "arch"} domain
+ * @param {string | undefined} command
+ * @param {string[]} commandArgs
+ * @param {ItemDomainSpec} spec
+ */
+function dispatchItemDomain(domain, command, commandArgs, spec) {
+  const flags = parseFlags(commandArgs);
+  const helpRequested = flags.boolean.has("--help") || flags.boolean.has("-h");
+  const commandLabel = `${domain} ${String(command)}`;
+  const knownFlags = COMMAND_FLAG_SPECS[commandLabel];
+
+  if (helpRequested && knownFlags !== undefined) {
+    writeHelp(commandLabel);
+    exit(0);
+  }
+  if (knownFlags === undefined) {
+    stderr.write(`Unknown ${domain} command: ${String(command)}\n`);
+    return exit(2);
+  }
+  enforceKnownFlags(flags, knownFlags, commandLabel);
+  runItemCommand(command, flags, spec);
+}
+
+/**
+ * @param {string | undefined} command
+ * @param {ParsedFlags} flags
+ * @param {ItemDomainSpec} spec
+ */
+function runItemCommand(command, flags, spec) {
+  switch (command) {
+    case "ls": {
+      const prdPath = resolvePrdPath(flags, 0);
+      itemLs(loadPrd(prdPath), flags, spec);
+      break;
+    }
+    case "show": {
+      const prdPath = resolvePrdPath(flags, 1);
+      itemShow(loadPrd(prdPath), flags, spec);
+      break;
+    }
+    case "add": {
+      const prdPath = resolvePrdPath(flags, 0);
+      itemAdd(prdPath, loadPrd(prdPath), spec);
+      break;
+    }
+    case "edit": {
+      const prdPath = resolvePrdPath(flags, 1);
+      itemEdit(prdPath, loadPrd(prdPath), flags, spec);
+      break;
+    }
+    default: {
+      stderr.write(
+        `Unknown ${spec.prefix.toLowerCase()} command: ${String(command)}\n`,
+      );
+      exit(2);
+    }
+  }
+}
+
+/**
+ * @param {string[]} argsAfterDomain
+ */
+function dispatchValidate(argsAfterDomain) {
+  const flags = parseFlags(argsAfterDomain);
+  if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
+    writeHelp("validate");
+    exit(0);
+  }
+  enforceKnownFlags(flags, COMMAND_FLAG_SPECS["validate"] ?? [], "validate");
+  const prdPath = resolvePrdPath(flags, 0);
+  const prd = loadPrd(prdPath, { validate: false });
+  runValidate(prd);
 }
