@@ -194,6 +194,6 @@ Heavy CLI user. Would use `clif-d req ls` to survey current state, `clif-d req a
 
 Maps primarily to `clif-d validate` for PRD-internal checks, plus `clif-d req ls --status=done --fields=id,implementation_commit` cross-referenced with `git log` for PRD-to-code consistency.
 
-### compact-planning-artifacts
+### compactify-artifacts
 
 Minimal CLI interaction. May use `clif-d req ls --status=done` to confirm which plans are safe to compact.
