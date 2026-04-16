@@ -1107,6 +1107,23 @@
       "architecture_refs": [],
       "status": "done",
       "implementation_commit": "1c84a55"
+    },
+    {
+      "id": "REQ-031",
+      "title": "Purge non-Claude agent support; Claude-only simplification",
+      "description": "This plugin repo was built with multi-agent support -- AGENTS.md, GEMINI.md, and their bin/ counterparts, plus the bootstrap-dev-environment skill teaching users to generate rules files for Gemini, Cursor, Windsurf, OpenCode, Cline, Aider, and the generic AGENTS.md convention. In practice, only Claude Code is used. The multi-agent machinery adds maintenance burden (dual-file synchronization, enumerating agent harnesses, documenting conventions for tools nobody runs) with no payoff. Purge all non-Claude agent references from the repo: delete the redundant rules files, simplify the bootstrap skill to Claude-only, update the CLI dev-environment design document and this PRD to stop referencing AGENTS.md and GEMINI.md. Executed plans are historical records and should not be edited.",
+      "acceptance_criteria": {
+        "given": "The repo currently contains AGENTS.md, GEMINI.md, bin/AGENTS.md, bin/GEMINI.md, and multi-agent references across skills, design docs, and the PRD",
+        "when": "The purge is complete",
+        "then": "AGENTS.md, GEMINI.md, bin/AGENTS.md, and bin/GEMINI.md are deleted. bin/CLAUDE.md no longer references its deleted peers. The bootstrap-dev-environment skill teaches only CLAUDE.md generation -- no enumeration of Gemini, Cursor, Windsurf, OpenCode, Cline, Aider, Copilot, or the generic AGENTS.md convention. cli/clif-d/dev-environment.md section 8 documents only CLAUDE.md and bin/CLAUDE.md. CTX-011 in the PRD references only CLAUDE.md. README.md references only CLAUDE.md. No non-Claude agent names appear outside of executed plan files (which are historical records). All quality checks pass."
+      },
+      "priority": 1,
+      "dependencies": [],
+      "abstraction_level": "low",
+      "context_refs": [
+        "CTX-011"
+      ],
+      "architecture_refs": []
     }
   ]
 }
