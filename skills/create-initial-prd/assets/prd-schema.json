@@ -101,7 +101,7 @@
     },
     "requirements": {
       "type": "array",
-      "description": "A flat list of functional requirements at two abstraction levels. High-level requirements form a COMPLETE picture of the system's intended behavior. Low-level requirements form a PARTIAL picture — only the clear first steps are specified; the rest are deferred to future planning. Requirements are peers, not parent-child. Linkage is via explicit dependencies and context_refs. Field order within each requirement object should be: id, description, title, acceptance_criteria, priority, dependencies, abstraction_level, context_refs, architecture_refs, cli_spec.",
+      "description": "A flat list of functional requirements at two abstraction levels. High-level requirements form a COMPLETE picture of the system's intended behavior. Low-level requirements form a PARTIAL picture — only the clear first steps are specified; the rest are deferred to future planning. Requirements are peers, not parent-child. Linkage is via explicit dependencies and context_refs. Field order within each requirement object should be: id, description, title, acceptance_criteria, priority, dependencies, abstraction_level, status, context_refs, architecture_refs, cli_spec.",
       "items": {
         "type": "object",
         "required": ["id", "description", "title", "acceptance_criteria", "abstraction_level", "status"],
