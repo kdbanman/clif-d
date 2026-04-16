@@ -18,6 +18,7 @@ const GRAPH_PRD = {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     },
     {
       id: "REQ-002",
@@ -25,6 +26,7 @@ const GRAPH_PRD = {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
       dependencies: ["REQ-001"],
     },
     {
@@ -33,6 +35,7 @@ const GRAPH_PRD = {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
       dependencies: ["REQ-001", "REQ-002"],
     },
     {
@@ -41,6 +44,7 @@ const GRAPH_PRD = {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     },
   ],
 };

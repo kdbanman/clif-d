@@ -129,6 +129,7 @@
       "acceptance_criteria": "An agent or developer can list requirements filtered by status and abstraction level, retrieve any single requirement by ID, and identify the next implementable requirement -- all via CLI commands that output valid, parseable JSON to stdout.",
       "priority": 1,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-004",
         "CTX-007",
@@ -156,6 +157,7 @@
       "acceptance_criteria": "An agent can transition a requirement through its lifecycle (start, done, block) via CLI commands. Each transition validates preconditions (e.g., cannot block a done requirement, done requires a commit SHA). Invalid transitions exit nonzero with a clear error. Valid transitions write the updated PRD atomically.",
       "priority": 1,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-007",
         "CTX-006",
@@ -184,6 +186,7 @@
       "acceptance_criteria": "An agent can add and remove dependency edges between requirements, query the full dependency graph or a subgraph rooted at a specific requirement, and receive clear errors if a proposed edge would create a cycle. The graph output is structured enough to determine implementation order.",
       "priority": 2,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-008",
         "CTX-010",
@@ -211,6 +214,7 @@
       "acceptance_criteria": "An agent can add new requirements, context items, and architecture items by piping JSON to stdin. The CLI auto-assigns the next available ID when id is omitted. An agent can update fields on existing items via merge-edit from stdin. All mutations are validated against the PRD schema before writing.",
       "priority": 2,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-003",
         "CTX-006",
@@ -240,6 +244,7 @@
       "acceptance_criteria": "An agent or developer can run a single command that checks JSON validity, schema conformance, referential integrity of all ID references, dependency graph acyclicity, ID uniqueness, and status/implementation_commit consistency. The output is a structured list of issues with severity levels.",
       "priority": 1,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-003",
         "CTX-008",
@@ -257,6 +262,7 @@
       "acceptance_criteria": "An agent can copy the PRD schema from the plugin into the product repository's clif-d/ directory via a CLI command. After copying, the $schema field in prd.json can reference the local copy with a relative path that works on any machine.",
       "priority": 3,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-009",
         "CTX-010",
@@ -273,6 +279,7 @@
       "acceptance_criteria": "An agent can query the next available ID for any prefix (REQ, CTX, ARCH) and receive it on stdout. The ID follows the NNN zero-padded pattern and is guaranteed not to collide with any existing ID in the PRD.",
       "priority": 3,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-003",
         "CTX-010",
@@ -954,6 +961,7 @@
         "REQ-022"
       ],
       "abstraction_level": "low",
+      "status": "not_started",
       "context_refs": [
         "CTX-002",
         "CTX-004",
@@ -991,6 +999,7 @@
       "acceptance_criteria": "Every command that loads a PRD verifies structural invariants before operating on it. If the file is malformed, fails schema conformance, contains a dependency cycle, has dangling cross-references, or has duplicate IDs, the command exits nonzero with a diagnostic identifying the specific invariant that failed. Read commands fail cleanly rather than returning partial or inconsistent data from a corrupt PRD. Mutation commands refuse to operate on a PRD that is already structurally invalid, so an agent cannot compound an existing inconsistency.",
       "priority": 2,
       "abstraction_level": "high",
+      "status": "not_started",
       "context_refs": [
         "CTX-003",
         "CTX-008",
@@ -1124,6 +1133,7 @@
       "priority": 1,
       "dependencies": [],
       "abstraction_level": "low",
+      "status": "not_started",
       "context_refs": [
         "CTX-011"
       ],

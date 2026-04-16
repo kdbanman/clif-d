@@ -18,7 +18,7 @@ after(() => {
   delete require.cache[require.resolve("../clif-d.js")];
 });
 
-const NON_TERMINAL = [undefined, "not_started", "in_progress", "blocked"];
+const NON_TERMINAL = ["not_started", "in_progress", "blocked"];
 
 describe("Lifecycle.canStart", () => {
   for (const s of NON_TERMINAL) {

@@ -20,13 +20,13 @@ after(() => {
 
 const REQS = [
   { id: "REQ-001", title: "A", status: "done", abstraction_level: "high", priority: 3 },
-  { id: "REQ-002", title: "B", abstraction_level: "low", priority: 1 },
+  { id: "REQ-002", title: "B", status: "not_started", abstraction_level: "low", priority: 1 },
   { id: "REQ-003", title: "C", status: "in_progress", abstraction_level: "low" },
   { id: "REQ-004", title: "D", status: "blocked", abstraction_level: "high", priority: 2 },
 ];
 
 describe("Filters.byStatus", () => {
-  it("treats missing status as not_started", () => {
+  it("matches the requested statuses", () => {
     const filtered = internals.Filters.byStatus(REQS, new Set(["not_started"]));
     assert.deepEqual(filtered.map((r) => r.id), ["REQ-002"]);
   });
@@ -61,7 +61,7 @@ describe("Sort.byPriority", () => {
 });
 
 describe("Projection.selectFields", () => {
-  it("returns default fields when undefined", () => {
+  it("returns the requested fields verbatim", () => {
     const projected = internals.Projection.selectFields(REQS[0], [
       "id",
       "title",
@@ -73,9 +73,12 @@ describe("Projection.selectFields", () => {
       status: "done",
     });
   });
-  it("fills default status when absent", () => {
-    const projected = internals.Projection.selectFields(REQS[1], ["id", "status"]);
-    assert.equal(projected.status, "not_started");
+  it("omits status when absent from the input (validation owns presence)", () => {
+    const projected = internals.Projection.selectFields(
+      { id: "REQ-099", title: "X" },
+      ["id", "status"],
+    );
+    assert.deepEqual(projected, { id: "REQ-099" });
   });
 });
 

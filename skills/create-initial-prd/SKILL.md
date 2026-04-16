@@ -135,7 +135,9 @@ When architecture diagrams are helpful, generate them as Mermaid (`.mmd`) files 
 
 ### `requirements`
 
-The core of the PRD. A flat array of requirements, each with fields in this order: `id`, `description`, `title`, `acceptance_criteria`, `priority`, `dependencies`, `abstraction_level`, `context_refs`, `architecture_refs`, `cli_spec`.
+The core of the PRD. A flat array of requirements, each with fields in this order: `id`, `description`, `title`, `acceptance_criteria`, `priority`, `dependencies`, `abstraction_level`, `status`, `context_refs`, `architecture_refs`, `cli_spec`.
+
+**`status` is required on every requirement**, high-level and low-level alike. A freshly-authored requirement is always `not_started` — write it down explicitly. A never-touched requirement must not read identically to one mid-implementation, so the field does not default and is validated on every PRD load.
 
 **For high-level requirements:**
 - `description`: Heavy on motivating context. Why does this behavior matter? What user problem does it address? What would a user experience without it?
@@ -162,8 +164,8 @@ Once the user confirms your understanding, generate the PRD:
 3. **Write `concept_summary`** by condensing the product concept document. Include the `reference_link` to the original concept file.
 4. **Write `context` items.** Derive these from the interrogation — constraints, personas, conventions, domain definitions. Assign IDs as `CTX-001`, `CTX-002`, etc.
 5. **Write `architecture` items.** Only what's needed for CLIF-D. Assign IDs as `ARCH-001`, `ARCH-002`, etc. Generate diagram files if helpful.
-6. **Write high-level requirements first** — the complete picture. Assign IDs as `REQ-001`, `REQ-002`, etc.
-7. **Write low-level requirements** — the clear first steps only. Continue the ID sequence.
+6. **Write high-level requirements first** — the complete picture. Assign IDs as `REQ-001`, `REQ-002`, etc. Set `status: "not_started"` on every one.
+7. **Write low-level requirements** — the clear first steps only. Continue the ID sequence. Set `status: "not_started"` on every one.
 8. **Cross-reference.** Ensure `dependencies`, `context_refs`, and `architecture_refs` are consistent. Every referenced ID must exist. Inline ID references in description text should also be valid.
 9. **Validate** the generated PRD against the schema for structural correctness.
 

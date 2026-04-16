@@ -13,6 +13,7 @@ function threeReqPrd() {
     description: "D",
     acceptance_criteria: "Done",
     abstraction_level: "high",
+    status: "not_started",
   });
   return prd;
 }

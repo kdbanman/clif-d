@@ -67,6 +67,7 @@ describe("req ls", () => {
       description: "Desc",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     });
     const dir = withFixture(prd);
     const result = run(["req", "ls", "--priority"], { cwd: dir });

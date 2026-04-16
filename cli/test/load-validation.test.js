@@ -17,6 +17,7 @@ const REQ_TEMPLATE = {
   description: "d",
   acceptance_criteria: "ac",
   abstraction_level: "high",
+  status: "not_started",
 };
 
 function prdWithDuplicateIds() {

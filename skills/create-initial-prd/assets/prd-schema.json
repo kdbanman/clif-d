@@ -104,7 +104,7 @@
       "description": "A flat list of functional requirements at two abstraction levels. High-level requirements form a COMPLETE picture of the system's intended behavior. Low-level requirements form a PARTIAL picture — only the clear first steps are specified; the rest are deferred to future planning. Requirements are peers, not parent-child. Linkage is via explicit dependencies and context_refs. Field order within each requirement object should be: id, description, title, acceptance_criteria, priority, dependencies, abstraction_level, context_refs, architecture_refs, cli_spec.",
       "items": {
         "type": "object",
-        "required": ["id", "description", "title", "acceptance_criteria", "abstraction_level"],
+        "required": ["id", "description", "title", "acceptance_criteria", "abstraction_level", "status"],
         "properties": {
           "id": {
             "type": "string",
@@ -169,7 +169,7 @@
           "status": {
             "type": "string",
             "enum": ["not_started", "in_progress", "done", "blocked"],
-            "description": "Optional. Implementation lifecycle state of this requirement. Omitting this field is equivalent to 'not_started'. Use 'in_progress' when work has begun but is not complete. Use 'done' when all acceptance criteria are verifiably satisfied. Use 'blocked' when progress is prevented by an unresolved external factor (note the blocker in the description or a comment). This field is the primary mechanism for tracking living-document state — the PRD evolves as implementation progresses."
+            "description": "Required. Implementation lifecycle state of this requirement. Must be set explicitly on every requirement -- a never-touched requirement reads identically to one mid-implementation if this field is allowed to be absent. Use 'not_started' for work that has not begun (the initial value an author writes when adding a requirement). Use 'in_progress' when work has begun but is not complete. Use 'done' when all acceptance criteria are verifiably satisfied. Use 'blocked' when progress is prevented by an unresolved external factor (note the blocker in the description or a comment). This field is the primary mechanism for tracking living-document state -- the PRD evolves as implementation progresses."
           },
           "implementation_commit": {
             "type": "string",

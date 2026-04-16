@@ -53,6 +53,7 @@ describe("id next", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     });
     const dir = withFixture(prd);
     const result = run(["id", "next", "REQ"], { cwd: dir });
