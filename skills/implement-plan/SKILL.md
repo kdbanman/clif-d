@@ -148,7 +148,12 @@ State that the step is complete. Summarize what was implemented and what tests v
 
 1. **Run the complete acceptance criteria checklist** from the plan's "Acceptance Criteria Verification" section. Confirm each criterion is verified by passing tests.
 2. **Run the full quality check suite** one final time.
-3. **Commit the implementation** with a high-quality commit message that summarizes what was built, which requirements were satisfied, and any notable deviations from the plan. The commit message should be useful to someone reading `git log` months later.
+3. **Commit the implementation** with a commit message that treats the git history as a durable implementation log. The audience is future humans and AI agents running `git log`, `git blame`, and `git bisect` months or years later -- someone tracing a regression, recovering the rationale behind non-obvious code, or understanding why a design decision was made. Write accordingly:
+   - **Subject:** `<area>: <imperative summary>`, 72 chars max, capitalized, no trailing period.
+   - **Body (mandatory):** context and motivation (which requirement, which plan step, why now), non-obvious design choices, terse notes on alternatives tried or rejected (when the TDD loop revealed a failed approach -- encouraged but not mandatory), constraints preserved, and verification performed (which quality checks passed).
+   - **Trailers:** `Requirement: REQ-NNN`, `Plan: <path>`, `Step: N/M`, and `Fixes:` / `Refs:` / `Link:` as applicable.
+   - Never use `git commit -m`. Wrap body at 72 characters.
+   - See [Git hygiene reference](references/git-hygiene.md) for full format, trailer vocabulary, and rationale.
 4. **Record the commit SHA** — you will need it for the next steps.
 5. **Update the PRD.** For each requirement targeted by the plan:
    - Set `status` to `"done"`.
@@ -161,7 +166,7 @@ State that the step is complete. Summarize what was implemented and what tests v
    - **Plan deviations** -- steps where the plan was wrong or insufficient, what the actual solution was, and why.
    - **Environment or tooling issues** -- dependency problems, version mismatches, configuration surprises.
    If nothing significant happened -- the implementation went smoothly with no surprises -- write a short file noting that and skip the categories above. Do not fabricate lessons for the sake of filling the file.
-8. **Commit the lifecycle updates** (PRD status changes, plan move, and lessons-learned file) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct.
+8. **Commit the lifecycle updates** (PRD status changes, plan move, and lessons-learned file) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct. The bookkeeping commit follows the same format as the implementation commit (see [Git hygiene reference](references/git-hygiene.md)), but its body should: name the implementation commit's SHA in a `Refs:` trailer, list the PRD status transitions (e.g., "REQ-042: not_started -> done"), list plan-file moves, and name any lessons-learned file created.
 9. **Summarize** what was implemented: files created/modified, tests written, any deviations from the plan and why. Include both commit SHAs (implementation and lifecycle).
 
 ---
@@ -238,14 +243,20 @@ Exception: if the plan asks you to do something that would break existing tests,
 
 ---
 
-## Testing References
+## References
 
-This skill's references directory contains detailed, language-agnostic guidance on writing sound tests. Consult them as needed during implementation — don't try to memorize them upfront.
+This skill's references directory contains detailed, language-agnostic guidance. Consult them as needed during implementation -- don't try to memorize them upfront.
 
-- **Quick lookup**: [Cheat sheet](references/testing-cheat-sheet.md) — dos, don'ts, smells, naming templates
-- **Principles**: [Testing principles](references/testing-principles.md) — universal test design guidance with Do/Don't examples
-- **Unit tests**: [Unit test guide](references/testing-unit.md) — scope, worked examples, pitfalls, checklist
-- **Integration tests**: [Integration test guide](references/testing-integration.md) — scope, worked examples, pitfalls, checklist
-- **Scenarios**: [Overview](references/testing-overview.md) — "what kind of test do I need?" quick-reference table
+### Testing
 
-These references focus on *writing* tests during Red-Green-Refactor execution. They assume the plan already specifies which types of tests to write and where — that's the plan-requirement skill's job. They also assume quality guardrails (linting, type checking, test enforcement) are already in place — that's the design-backpressure skill's job.
+- **Quick lookup**: [Cheat sheet](references/testing-cheat-sheet.md) -- dos, don'ts, smells, naming templates
+- **Principles**: [Testing principles](references/testing-principles.md) -- universal test design guidance with Do/Don't examples
+- **Unit tests**: [Unit test guide](references/testing-unit.md) -- scope, worked examples, pitfalls, checklist
+- **Integration tests**: [Integration test guide](references/testing-integration.md) -- scope, worked examples, pitfalls, checklist
+- **Scenarios**: [Overview](references/testing-overview.md) -- "what kind of test do I need?" quick-reference table
+
+These references focus on *writing* tests during Red-Green-Refactor execution. They assume the plan already specifies which types of tests to write and where -- that's the plan-requirement skill's job. They also assume quality guardrails (linting, type checking, test enforcement) are already in place -- that's the design-backpressure skill's job.
+
+### Git
+
+- **Commit messages**: [Git hygiene](references/git-hygiene.md) -- subject format, body structure, trailer vocabulary, self-containment principle, bookkeeping commits
