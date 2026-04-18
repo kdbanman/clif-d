@@ -153,18 +153,42 @@ This repo is a Claude Code plugin and marketplace. Skills are namespaced as `cli
 
 ### Install
 
+Run these in a Claude Code session:
+
 ```
-# Add the marketplace (once)
+# Add the marketplace (once per machine)
 /plugin marketplace add kdbanman/clif-d
 
-# Install the plugin
+# Install the plugin from that marketplace
 /plugin install clif-d@clif-d
 
-# Update when new versions are pushed
+# Pull the latest published version
 /plugin marketplace update
 ```
 
-The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalog) and `skills/` (skill definitions). The old git-hooks sync approach (`sync-skills.sh`) is retired.
+In `clif-d@clif-d`, the first `clif-d` is the plugin name and the second is the marketplace name -- both are defined in `.claude-plugin/`. After install:
+
+- Skills are invokable as `clif-d:<skill-name>` (e.g. `clif-d:create-initial-prd`).
+- The `clif-d` CLI lands on the Bash tool's `PATH` and is callable by bare name from any agent session while the plugin is enabled.
+
+The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalog), `skills/` (skill definitions), and `bin/` (the `clif-d` CLI, auto-discovered and added to `PATH`). The old git-hooks sync approach (`sync-skills.sh`) is retired.
+
+### Ship a new version
+
+This repo is its own marketplace: the default branch on GitHub *is* the published version. There is no registry, no release tag, and no `npm publish` step. Merging to `main` publishes.
+
+1. **Bump both manifests.** Update `version` in `.claude-plugin/plugin.json` AND the matching `plugins[].version` entry in `.claude-plugin/marketplace.json`. They must agree -- `cli/scripts/verify-plugin-payload.sh` enforces this.
+2. **Verify the payload.** Run `./cli/scripts/verify-plugin-payload.sh`. Confirms manifests parse, versions agree, `bin/clif-d` is executable with the right shebang, and the `bin/` directory contains only the expected files (everything in `bin/` ships on the user's `PATH`).
+3. **If the CLI changed, run the full gate.** `cd cli && npm run check` runs prettier, eslint, jscpd, tsc, and `node --test`. The husky pre-commit hook runs this automatically on every commit that touches the CLI.
+4. **Call out breakage in the commit message.** There is no official breaking-change signal for Claude Code plugins -- users pick up updates pull-style via `/plugin marketplace update` and cannot be interrogated at install time. See "Current constraints" below. Any change to `prd.json` schema, CLI flags, skill inputs/outputs, or artifact layout should be explicit in the commit message (and eventually a CHANGELOG).
+5. **Merge to `main`.** Opening a PR from your feature branch and merging it publishes the new version. No additional release step.
+6. **Users update** with `/plugin marketplace update` in their session (or auto-update if they have it enabled).
+
+Semver guidance for the version bump:
+
+- **Patch** -- bug fix in a skill or the CLI with no interface change.
+- **Minor** -- new skill, new CLI subcommand, new optional field in `prd.json`, or any other additive change.
+- **Major** -- backwards-incompatible change to the `prd.json` schema, a CLI flag's meaning, a skill's inputs/outputs, or the `clif-d/` artifact layout.
 
 ## Current constraints
 
@@ -185,14 +209,6 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 ## TODO
 
 - [ ] **Add `references/` to `design-backpressure`** — opinionated reference material on agentic quality backpressure principles
-- [ ] **Implement `clif-d` CLI for PRD CRUD operations** — a command-line tool for reading and mutating PRD JSON files without hand-editing. Key commands:
-  - `clif-d req next [prd.json]` — print the highest-priority `not_started` requirement whose dependencies are all `done`
-  - `clif-d req start <REQ-ID> [prd.json]` — set a requirement's `status` to `in_progress`
-  - `clif-d req done <REQ-ID> [prd.json]` — set a requirement's `status` to `done`
-  - `clif-d req block <REQ-ID> [prd.json]` — set a requirement's `status` to `blocked`
-  - `clif-d req ls [prd.json]` — list requirements with their status; supports `--status=<value>` filter and `--abstraction=high|low` filter
-  - `clif-d req dep add <REQ-ID> <DEP-ID> [prd.json]` — add a dependency edge from REQ-ID to DEP-ID
-  - `clif-d req dep rm <REQ-ID> <DEP-ID> [prd.json]` — remove a dependency edge
 - [ ] **Implement `extend-low-level-requirements` skill** — keeps the "bow wave" of low-level requirement granularity just ahead of the implementation ship. Called after a round of implementation to add the next slice of clear-first-step low-level requirements to the PRD, informed by what's now known from the code and what's newly unblocked. Must preserve the bow-wave principle from `create-initial-prd`: only specify what's clear *right now*, never more.
 - [ ] **Implement `clif-d-health-check` skill** — aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
 - [ ] **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
