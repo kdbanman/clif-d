@@ -128,6 +128,8 @@ Research the best pre-commit hook mechanism for the project:
 
 Prefer the approach most natural to the language ecosystem.
 
+Whichever mechanism is chosen, it must satisfy the **hook propagation contract**: `.git/hooks/` is not version controlled, so a fresh clone -- on a new laptop or a cloud agent runtime -- starts with no hooks installed. The chosen mechanism must therefore (a) store the hook definitions in version-controlled files at a stable path (e.g. `.husky/`, `.pre-commit-config.yaml`, `scripts/hooks/`), (b) install or re-point those hooks via a deterministic, idempotent activation step (e.g. a `prepare` lifecycle script, an explicit `pre-commit install`, a `git config core.hooksPath`), and (c) re-activate without manual intervention every time the bootstrap runs, so that a backpressure design change that ships as a hook edit automatically reaches every environment on the next bootstrap. If the candidate mechanism cannot meet all three, choose a different one. `bootstrap-dev-environment` will implement propagation per this spec; this skill must specify it.
+
 ### 4. Catalog suppression directive forms
 
 For every tool you are configuring, list every inline suppression pragma it supports. This list becomes the pattern set for the meta-backpressure scanner (see Hook Architecture below). Be exhaustive - missed directives create silent escape hatches that defeat the prohibition.
@@ -150,6 +152,7 @@ Before generating any configuration, present:
 - Every tool that will be installed and configured
 - The strictness level of each tool's configuration, with specific presets/flags named
 - The hook mechanism and what runs at each stage (pre-commit, pre-push)
+- How hooks propagate to fresh clones and cloud agent runtimes: where hook definitions live in version control, what activates them on bootstrap, and how a future backpressure-design change reaches existing environments
 - Any rules you're proposing to disable from the strictest preset, with rationale
 - The expected developer experience: what happens when a developer (or agent) tries to commit code that violates a rule
 
@@ -262,6 +265,7 @@ Concretely, the design document should name:
 - **Every enabled rule set or preset**, including every plugin to load and every rule overridden from default. Copy exact rule names where useful. If the preset is "ALL rules except X, Y, Z", name X, Y, Z.
 - **Every relaxation** from §4, with its rationale -- the dev-environment step installs these verbatim.
 - **The hook framework** (husky, pre-commit.com, lefthook, Makefile-wrapped git hooks, etc.) and the exact hook stages it will register.
+- **The hook propagation mechanism.** Name the version-controlled path where hook definitions live (e.g. `.husky/`, `.pre-commit-config.yaml`, `scripts/hooks/pre-commit`), the activation command that wires those definitions into the clone's `.git/hooks/` (or redirects via `core.hooksPath`), and the trigger that re-runs activation on bootstrap (e.g. npm `prepare` lifecycle, explicit call inside `scripts/bootstrap.sh`, `pre-commit install` invocation). Also name the trigger that re-runs the bootstrap itself in ephemeral environments -- typically a Claude Code SessionStart hook in `.claude/settings.json` pointing at the bootstrap command -- so a fresh cloud session ends up with hooks active without manual intervention. Every one of these must be idempotent.
 - **The ordered sequence of commands** each hook stage runs. The dev-environment step wires these, not invents them.
 - **The suppression scanner specification**: what language it is implemented in, the exact pattern set it matches, what inputs it takes (staged diff vs. full tree), how it prints matches, the exact failure message, the allowlist format and seeded entries, and the self-test behavior.
 - **The setup command** (e.g. `npm install`, `make setup`, `./scripts/bootstrap.sh`) that the dev-environment bootstrap will wire to install the hooks. State it once here so both documents can quote it.
@@ -293,6 +297,7 @@ Before handing off, confirm:
 
 - Every tool the design names is something `bootstrap-dev-environment` can install reproducibly. If a tool has no scriptable installer, flag it in §4 Relaxations now rather than surprising the bootstrap step.
 - The hook framework chosen is compatible with the bootstrap mechanism (containerized vs. script-based). A devcontainer-only project cannot assume global `brew install pre-commit`; a script-based project cannot assume `corepack` if Node is not yet installed.
+- The hook framework has a version-controlled definition path and an idempotent activation step, so hooks reach fresh clones and cloud agent runtimes automatically when the bootstrap runs. A mechanism that writes to `.git/hooks/` once during initial setup and is never re-invoked fails this contract -- choose again.
 - The suppression scanner's language is available after bootstrap. If the scanner is a shell script, every project bootstrap supplies a shell; if it is a Node script, Node must be in the bootstrap.
 - The design document names a specific setup command and states it exactly once, so `bootstrap-dev-environment` and `CLAUDE.md` can quote it verbatim.
 

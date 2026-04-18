@@ -115,7 +115,20 @@ Expected first-run output on a correctly bootstrapped machine in the current PRD
 [verify] 6 hard checks passed, 0 soft warnings.
 ```
 
-## 8. Agent Instruction Files
+## 8. Agent Instruction Files and Session Hooks
+
+### SessionStart hook -- hook propagation
+
+`.claude/settings.json` at the repo root registers a single SessionStart hook that runs `./cli/scripts/bootstrap.sh` whenever a Claude Code session begins. This is the mechanism that propagates the husky-registered pre-commit hook to every new environment where the repo is checked out:
+
+- `.git/hooks/` is not version-controlled, so a fresh clone, a fresh worktree, or a cloud agent runtime begins with zero hooks installed.
+- The husky `prepare` lifecycle (wired in `cli/package.json`) re-registers `.husky/pre-commit` into `.git/hooks/` every time `npm ci` runs.
+- The bootstrap script runs `npm ci`, so any invocation of the bootstrap reconciles the live hooks against the committed `.husky/` definitions.
+- The SessionStart hook guarantees the bootstrap runs at the start of every Claude Code session, so an agent spawned against a fresh clone has hooks active before touching any code -- no manual setup, no re-invocation of `design-backpressure` or `bootstrap-dev-environment`.
+
+A backpressure-design change that ships as an edit to `cli/.husky/pre-commit` therefore reaches every environment on the next session start. If a user runs a terminal outside Claude Code, the explicit `./cli/scripts/bootstrap.sh` invocation covers the same ground; the bootstrap script's hook-presence check (step 4 in `cli/scripts/bootstrap.sh`) fails loudly if the hooks are missing.
+
+### Instruction files vs. rule files
 
 Claude Code ingests two kinds of agent-facing Markdown in a repo, and it is worth naming them:
 
