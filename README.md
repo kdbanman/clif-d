@@ -40,10 +40,10 @@ create-product-concept
 
 ## Skill disposition: HITL vs HOTL
 
-Every CLIF-D skill is classified by **what kind of uncertainty it resolves**. This determines whether it interrogates the user or runs without intervention.
+Every CLIF-D skill is classified by **where uncertainty gets resolved**. HITL skills resolve it in-session by interrogating the user; HOTL skills consume resolutions that upstream artifacts have already made. This determines whether the skill interrogates or runs without intervention.
 
 - **HITL (human-in-the-loop) skills interrogate ruthlessly.** They resolve uncertainty that only the user can resolve -- product intent, brand taste, which lessons are durable, which trade-off to accept. They block progress until ambiguity is closed. The interrogation *is* the skill's main work.
-- **HOTL (human-out-of-the-loop) skills execute without interruption.** They resolve uncertainty that upstream artifacts already answer. They trace upstream, research, and only stop when an upstream artifact proves wrong, silent, or self-contradictory on a load-bearing question. A well-run HOTL skill produces a complete artifact end-to-end without a single AskUserQuestion call.
+- **HOTL (human-out-of-the-loop) skills execute without interruption.** They do not resolve uncertainty themselves -- they consume the resolutions that upstream artifacts have already made. They trace upstream, research, and only stop when an upstream artifact proves wrong, silent, or self-contradictory on a load-bearing question. A well-run HOTL skill produces a complete artifact end-to-end without a single AskUserQuestion call.
 - **HITL-lite skills sit between.** They research autonomously, draft provisional decisions, and present the whole package for one confirmation gate per phase -- not a loop on every micro-decision.
 
 The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HITL skills do their job.** If a PRD is vague, `plan-requirement` degrades into interrogation. If an architecture is incomplete, `implement-plan` stalls. The rubric is symbiotic: HITL skills pay the attention cost up front so HOTL skills do not have to pay it in a loop.
@@ -60,7 +60,7 @@ The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HI
 | `bootstrap-dev-environment` | HOTL | Toolchain installation, hook wiring, verification (one HITL gate: pre-existing-suppression audit) |
 | `plan-requirement` | HOTL | Step decomposition, test ordering, codebase state |
 | `implement-plan` | HOTL | Red-Green-Refactor execution, quality checks |
-| `compactify-artifacts` | HITL (per-lesson) | Which lessons are durable, where each one routes |
+| `compactify-artifacts` | HITL | Which lessons are durable, where each one routes |
 
 `compactify-artifacts` is a special case: it silently discards most lesson noise via aggressive pre-filter, then escalates high-signal survivors to the user one at a time via AskUserQuestion. Every routed lesson requires explicit per-lesson authorization -- no silent amendments to design docs.
 
@@ -87,6 +87,8 @@ The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HI
 - Use a single confirmation gate per phase, not a per-decision loop.
 
 Every AskUserQuestion call is a tax on user attention. HITL skills spend that tax to earn clarity; HOTL skills hoard it.
+
+A SKILL.md that does not reflect the discipline its disposition requires is a smell -- either the skill is misclassified, or its instructions have not caught up with the rubric. Audit for this when revising skills.
 
 ## The `clif-d/` directory
 
@@ -212,8 +214,8 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 
 ## TODO
 
-- [ ] **Add `references/` to `design-backpressure`** — opinionated reference material on agentic quality backpressure principles
-- [ ] **Implement `clif-d` CLI for PRD CRUD operations** — a command-line tool for reading and mutating PRD JSON files without hand-editing. Key commands:
+- **Add `references/` to `design-backpressure`** — opinionated reference material on agentic quality backpressure principles
+- **Implement `clif-d` CLI for PRD CRUD operations** — a command-line tool for reading and mutating PRD JSON files without hand-editing. Key commands:
   - `clif-d req next [prd.json]` — print the highest-priority `not_started` requirement whose dependencies are all `done`
   - `clif-d req start <REQ-ID> [prd.json]` — set a requirement's `status` to `in_progress`
   - `clif-d req done <REQ-ID> [prd.json]` — set a requirement's `status` to `done`
@@ -221,15 +223,14 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
   - `clif-d req ls [prd.json]` — list requirements with their status; supports `--status=<value>` filter and `--abstraction=high|low` filter
   - `clif-d req dep add <REQ-ID> <DEP-ID> [prd.json]` — add a dependency edge from REQ-ID to DEP-ID
   - `clif-d req dep rm <REQ-ID> <DEP-ID> [prd.json]` — remove a dependency edge
-- [ ] **Implement `extend-low-level-requirements` skill** — keeps the "bow wave" of low-level requirement granularity just ahead of the implementation ship. Called after a round of implementation to add the next slice of clear-first-step low-level requirements to the PRD, informed by what's now known from the code and what's newly unblocked. Must preserve the bow-wave principle from `create-initial-prd`: only specify what's clear *right now*, never more.
-- [ ] **Implement `clif-d-health-check` skill** — aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
-- [ ] **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
-- [ ] **Implement `clif-d-help` skill (or reference file)** — a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
-- [ ] **Clarify assumptions in README.**  This project assumes claude code, assumes git, and likely assumes other things.  We should find those important assumptions and get them down in the readme docs.
-- [ ] **Make all docs better line-separated.**  Right now, all markdown (skill files, reference files, instruction files, etc) have a lot of content per line.  That makes line-by-line diffs hard to review.  We should make better use of newline separation (e.g. between sentences) to make reviewing and surgical editing better.
-- [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
-- [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
-- [x] **Clarify HITL/HOTL.** Rubric and classification table landed in the "Skill disposition: HITL vs HOTL" section above. Per-skill audit against the rubric (does each skill's interrogation discipline actually match its disposition?) is rolled into the skills-library review TODO above.
+- **Implement `extend-low-level-requirements` skill** — keeps the "bow wave" of low-level requirement granularity just ahead of the implementation ship. Called after a round of implementation to add the next slice of clear-first-step low-level requirements to the PRD, informed by what's now known from the code and what's newly unblocked. Must preserve the bow-wave principle from `create-initial-prd`: only specify what's clear *right now*, never more.
+- **Implement `clif-d-health-check` skill** — aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
+- **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
+- **Implement `clif-d-help` skill (or reference file)** — a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
+- **Clarify assumptions in README.**  This project assumes claude code, assumes git, and likely assumes other things.  We should find those important assumptions and get them down in the readme docs.
+- **Make all docs better line-separated.**  Right now, all markdown (skill files, reference files, instruction files, etc) have a lot of content per line.  That makes line-by-line diffs hard to review.  We should make better use of newline separation (e.g. between sentences) to make reviewing and surgical editing better.
+- **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored. Includes a per-skill audit against the HITL vs HOTL rubric above: does each skill's interrogation discipline match the discipline its disposition requires?
+- **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
 
 ## Potential Issues
 
