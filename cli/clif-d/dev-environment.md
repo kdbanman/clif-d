@@ -69,7 +69,7 @@ No Dockerfile, no devcontainer, no Makefile. The CLI is too small to justify tha
 ./cli/scripts/bootstrap.sh
 ```
 
-Run from the repo root. Every downstream artifact (rules files, README snippets, CI examples) quotes this string verbatim.
+Run from the repo root. Every downstream artifact (instruction files, README snippets, CI examples) quotes this string verbatim.
 
 ## 6. Idempotency and Failure Modes
 
@@ -115,15 +115,21 @@ Expected first-run output on a correctly bootstrapped machine in the current PRD
 [verify] 6 hard checks passed, 0 soft warnings.
 ```
 
-## 8. Agent Rules Files
+## 8. Agent Instruction Files
 
-One rules file at the repository root, terse and pointing at the CLIF-D artifacts rather than duplicating them.
+Claude Code ingests two kinds of agent-facing Markdown in a repo, and it is worth naming them:
 
-| File | Agent | Source |
-|------|-------|--------|
-| `CLAUDE.md` | Claude Code | Official Claude Code docs. Project-scoped, repo root. Already existed before this skill; a CLI-subproject section was merged in, not a full overwrite. |
+- **Instruction files** -- `CLAUDE.md`, no frontmatter. The repo-root copy is always in the agent's context; nested copies load via Claude Code's closest-file-wins walk-up when the agent touches a file under their directory. Used for broad, ambient guidance that should always (or almost always) be visible.
+- **Rule files** -- `.claude/rules/*.md`, each with a `globs:` frontmatter array. Loaded conditionally: the file re-enters the agent's context only when a glob-matching file is read or edited. Used for narrow, file-pattern-specific rules that should stay out of context otherwise. Not emitted by this skill; `compactify-artifacts` is the skill that writes them.
 
-Content:
+This CLI subproject uses two instruction files and zero rule files:
+
+| File | Kind | Loaded when... | Source |
+|------|------|----------------|--------|
+| `CLAUDE.md` (repo root) | Instruction file | Claude Code is working anywhere in the repo (always in context). | Official Claude Code docs. Project-scoped. Already existed before this skill; a CLI-subproject section was merged in, not a full overwrite. |
+| `bin/CLAUDE.md` | Instruction file (nested) | Claude Code reads or edits files under `bin/`. Claude Code walks up from the edited file and loads each `CLAUDE.md` it finds. | Nested instruction file for CLI-specific preventative rules -- see backpressure §4. |
+
+Content of the repo-root instruction file:
 
 - Bootstrap command: `./cli/scripts/bootstrap.sh`
 - Quality-check command: `cd cli && npm run check`
@@ -131,17 +137,7 @@ Content:
 - Pointers to `cli-prd.json`, `cli/clif-d/backpressure.md`, `cli/clif-d/dev-environment.md`, `cli-design-notes.md`, `cli-integration-plan.md`
 - Gotchas: `bin/clif-d` is zero-dep and CommonJS-style (CTX-001, CTX-002); `cli/` is dev-only; do not add runtime dependencies; do not upgrade Node past the pin without updating the PRD.
 
-### Scoped rules: nested per-directory files
-
-The top-level `CLAUDE.md` describes the whole repo and is always in the agent's context window. It must stay terse so unrelated work (skills, plugin manifest, marketplace) is not weighed down by CLI-specific implementation rules.
-
-For rules that only apply when an agent is editing `bin/clif-d`, this repo uses Claude Code's **closest-file-wins** nested convention:
-
-| File | Loaded when... |
-|------|----------------|
-| `bin/CLAUDE.md` | Claude Code reads or edits files under `bin/`. Claude Code walks up from the edited file and loads each `CLAUDE.md` it finds. |
-
-The nested file is a signpost -- it names the governing PRD context/architecture items (CTX-001 zero deps, CTX-002 single file, CTX-010 backpressure, CTX-012 internal modularity, ARCH-003 read-validate-write, ARCH-004 module-object structure, ARCH-005 testability seam) and points at `cli-prd.json` and `cli/clif-d/backpressure.md` for the authoritative prose. It does NOT copy PRD prose. Rationale: backpressure (the pre-commit gates) is corrective; scoped rules are preventative. Together they let an agent know *why* a gate exists before they hit it.
+The top-level `CLAUDE.md` must stay terse so unrelated work (skills, plugin manifest, marketplace) is not weighed down by CLI-specific implementation rules. The nested `bin/CLAUDE.md` is a signpost -- it names the governing PRD context/architecture items (CTX-001 zero deps, CTX-002 single file, CTX-010 backpressure, CTX-012 internal modularity, ARCH-003 read-validate-write, ARCH-004 module-object structure, ARCH-005 testability seam) and points at `cli-prd.json` and `cli/clif-d/backpressure.md` for the authoritative prose. It does NOT copy PRD prose. Rationale: backpressure (the pre-commit gates) is corrective; the nested instruction file is preventative. Together they let an agent know *why* a gate exists before they hit it.
 
 ## 9. Relaxations and Deferred Items
 

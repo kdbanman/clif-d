@@ -7,7 +7,7 @@ description: >
   that those tools are installed, version-pinned, and invokable from an agent's non-interactive subshell. Researches
   the project's ecosystem for the most reproducible bootstrap mechanism (containers, devcontainers, setup scripts with
   version-pinned installers), generates the setup artifacts, verifies every command from the architecture's
-  Technology Decisions table runs end-to-end, and wires in an agent rules file (CLAUDE.md) so that Claude Code
+  Technology Decisions table runs end-to-end, and wires in an agent instruction file (CLAUDE.md) so that Claude Code
   inherits clear, terse instructions about the environment. Produces clif-d/dev-environment.md plus the actual setup
   artifacts.
 ---
@@ -46,9 +46,11 @@ The bootstrap must be safe to run repeatedly, must not require human input (no `
 
 The architecture document's Technology Decisions table lists commands: the test framework, the linter, the package manager, the CLI entry point. Every single one must be invokable after bootstrap completes. The verification step is not optional - it is the proof that the environment actually matches the architecture.
 
-### Agent rules files are part of the environment
+### Agent instruction files are part of the environment
 
-A coding agent that does not know about `clif-d/` or the project's build commands will flail. The standard mechanism to tell it is a "rules file" -- `CLAUDE.md` for Claude Code. This is part of the bootstrap because it is how the environment makes itself known to the agent. Do not skip it.
+A coding agent that does not know about `clif-d/` or the project's build commands will flail. The standard mechanism to tell it is an "instruction file" -- `CLAUDE.md` for Claude Code, always loaded into the agent's context. This is part of the bootstrap because it is how the environment makes itself known to the agent. Do not skip it.
+
+Note: instruction files are distinct from **rule files**. Rule files live under `.claude/rules/*.md`, carry `globs:` frontmatter, and re-enter the agent's context only when a matching file is read or edited. They are out of scope for this skill; `compactify-artifacts` is the skill that creates them.
 
 ---
 
@@ -119,7 +121,7 @@ This skill generates a `CLAUDE.md` file for Claude Code. If one already exists, 
 
 ### 6. What the agent needs to know
 
-The rules file content should be terse and concrete. At minimum:
+The instruction file content should be terse and concrete. At minimum:
 
 - The bootstrap command.
 - The build, test, lint, and type-check commands (copied verbatim from the architecture's Technology Decisions).
@@ -180,8 +182,8 @@ How the bootstrap behaves when run a second time, when a dependency is already i
 **7. Verification**
 The list of commands from Technology Decisions and scaffolding requirements that must succeed after bootstrap. Include the verification script's location (e.g. `scripts/verify-env.sh` or a `make verify` target). Show sample expected output.
 
-**8. Agent Rules Files**
-Which rules files were generated, for which agents, at what paths. Summarize what each contains and why. Reference the official documentation source used to choose each file's location and format (URL + date checked - these conventions drift).
+**8. Agent Instruction Files**
+Which instruction files were generated and at what paths. Summarize what each contains and why. Reference the official Claude Code documentation source used to choose the file's location and format (URL + date checked - these conventions drift). If the bootstrap also establishes scoped **rule files** (`.claude/rules/*.md`), document them separately with their `globs:` scope -- these are out of scope for this skill but if they already exist in the repo, note their presence.
 
 **9. Relaxations and Deferred Items**
 Anything deliberately not pinned, not containerized, or not verified, with justification. Examples:
@@ -222,9 +224,9 @@ Once the design is confirmed, generate the actual artifacts.
 
 - **`scripts/verify-env.sh`** (or `make verify`) that runs every command from Technology Decisions and any scaffolding-requirement command, failing on the first non-zero exit. This is what the agent runs to confirm the environment is live.
 
-#### Agent rules file
+#### Agent instruction file
 
-Generate `CLAUDE.md` at the repo root for Claude Code (project-scoped), at the location Claude Code's **current official documentation** specifies. Verify before writing.
+Generate `CLAUDE.md` at the repo root for Claude Code (project-scoped), at the location Claude Code's **current official documentation** specifies. Verify before writing. This is an *instruction file* -- always loaded, no frontmatter. It is distinct from the *rule files* (`.claude/rules/*.md`) that `compactify-artifacts` may write later; those are glob-scoped and conditional.
 
 Content guidelines:
 
@@ -241,7 +243,7 @@ Content guidelines:
 - **Install globally without pinning.** No `brew install node` without a version. No `cargo install` without `--locked`. No `pip install` outside a managed environment.
 - **Require `sudo` silently.** If root is needed, the script must state so and the rationale must appear in the design document.
 - **Assume network access mid-build.** If a step needs the network, document it; do not silently fail on airgap.
-- **Write secrets into rules files or Dockerfiles.** Ever.
+- **Write secrets into instruction files or Dockerfiles.** Ever.
 
 ---
 
