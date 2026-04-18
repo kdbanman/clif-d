@@ -152,6 +152,9 @@ function parseFlags(args) {
   /** @type {string[]} */
   const positional = [];
 
+  // When adding a new short flag that takes a value (e.g. -x), include BOTH
+  // the long and short forms here. Tests using --key=value form will still pass
+  // if the short form is missing; cover the short form with its own test.
   const flagsWithValues = new Set([
     "--status",
     "-s",
