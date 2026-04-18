@@ -134,20 +134,18 @@ CLIF-D is opinionated about its runtime environment. Skills will misbehave or fa
 - **Claude Code.** Every skill is authored against Claude Code's skill, tool, and hook model. Skills assume access to the `AskUserQuestion`, `Glob`, `Grep`, `Read`, `Edit`, `Write`, and `Bash` tools. Other agent runtimes are not supported.
 - **Git, in the product repo.** Skills invoke `git` for history inspection, commit creation, branch management, and worktrees. `compactify-artifacts` deletes originals after archiving and relies on `git log` to preserve full text. Without git, deleted artifacts are unrecoverable and commit-SHA references in archive entries have no referent.
 - **POSIX-like shell.** Bootstrap scripts under `cli/scripts/` are bash with `set -euo pipefail`. Paths are assumed to be forward-slash. Windows users need WSL or Git Bash.
-- **Node.js 18 or newer.** The `bin/clif-d` CLI ships as a single-file Node script (`#!/usr/bin/env node`, zero runtime deps). Dev infra under `cli/` pins Node 18 via `cli/.nvmrc`. This is a hard CLI prerequisite even if the user's product is not written in JavaScript.
-- **Human in the loop for most skills.** Skills interrogate the user via structured `AskUserQuestion` calls and block waiting for decisions. Running them unattended will stall or produce low-signal output. See the HITL/HOTL item in the TODO list for the longer-term plan to clarify which skills are intended to run without human intervention.
+- **Node.js 18 or newer.** Already implied by the Claude Code assumption above, but called out because the `bin/clif-d` CLI ships as a single-file Node script (`#!/usr/bin/env node`, zero runtime deps) and dev infra under `cli/` pins Node 18 via `cli/.nvmrc`. The CLI is a hard prerequisite even if the user's product is not written in JavaScript.
 
 ### Expected
 
 - **Web access.** Research-phase skills (`create-product-concept`, `workshop-names`, `create-architecture`, `design-backpressure`) use web search and fetch to ground their output in current external references.
-- **One product per repo.** The PRD covers a single product; multi-product coordination is out of scope (see "Drawbacks and what the PRD is NOT for" above).
 - **Artifacts at `<product-repo>/clif-d/`.** The path is hard-coded into the skills; no configuration option relocates it. `.claude/rules/` as a sibling of `clif-d/` is similarly assumed for glob-scoped tactical rule files.
 
 ### Not assumed
 
 - **A specific product implementation language.** CLIF-D is language-agnostic. `create-architecture` picks the stack; `bootstrap-dev-environment` installs the matching toolchain. Language-specific examples inside skills are illustrative, not prescriptive.
-- **A specific forge (GitHub, GitLab, etc.).** Skills use local `git` only. PR workflow is not prescribed by the pipeline.
-- **API credentials in the product repo.** Claude Code supplies the model connection; skills never read Anthropic API keys directly.
+- **A specific product type or domain.** "CLI-first decomposition" is more flexible than the name suggests. Users are often surprised at the range of products - services, libraries, integration glue, even UI-adjacent tooling - that decompose cleanly into composable CLI steps.
+- **A specific version control host (GitHub, GitLab, etc.).** Skills use local `git` only. PR workflow is not prescribed by the pipeline.
 
 ## Deployment
 
