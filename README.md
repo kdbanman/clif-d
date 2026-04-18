@@ -42,6 +42,8 @@ create-product-concept
 
 Every CLIF-D skill is classified by **where uncertainty gets resolved**. HITL skills resolve it in-session by interrogating the user; HOTL skills consume resolutions that upstream artifacts have already made. This determines whether the skill interrogates or runs without intervention.
 
+"Upstream" and "downstream" throughout this document and the skill files refer to **position in the pipeline diagram above**. A skill's upstream artifacts are the ones produced by skills earlier in the pipeline (e.g. `plan-requirement`'s upstream is the concept, PRD, architecture, backpressure, dev-environment, and any preceding executed plans); its downstream consumers are the skills that read its output (e.g. `implement-plan` is downstream of `plan-requirement`). When a skill is told to "trace upstream" it means read those earlier artifacts before interrogating the user.
+
 - **HITL (human-in-the-loop) skills interrogate ruthlessly.** They resolve uncertainty that only the user can resolve -- product intent, brand taste, which lessons are durable, which trade-off to accept. They block progress until ambiguity is closed. The interrogation *is* the skill's main work.
 - **HOTL (human-out-of-the-loop) skills execute without interruption.** They do not resolve uncertainty themselves -- they consume the resolutions that upstream artifacts have already made. They trace upstream, research, and only stop when an upstream artifact proves wrong, silent, or self-contradictory on a load-bearing question. A well-run HOTL skill produces a complete artifact end-to-end without a single AskUserQuestion call.
 - **HITL-lite skills sit between.** They research autonomously, draft provisional decisions, and present the whole package for one confirmation gate per phase -- not a loop on every micro-decision.
@@ -57,7 +59,7 @@ The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HI
 | `create-initial-prd` | HITL | User workflows, system boundaries, priorities |
 | `create-architecture` | HITL-lite | Technology decisions (research-informed, single confirmation gate) |
 | `design-backpressure` | HITL-lite | Strictness trade-offs, suppression policy, hook architecture |
-| `bootstrap-dev-environment` | HOTL | Toolchain installation, hook wiring, verification (one HITL gate: pre-existing-suppression audit) |
+| `bootstrap-dev-environment` | HITL-lite | Toolchain installation, hook wiring, verification (research-informed provisional decisions; one HITL gate: pre-existing-suppression audit) |
 | `plan-requirement` | HOTL | Step decomposition, test ordering, codebase state |
 | `implement-plan` | HOTL | Red-Green-Refactor execution, quality checks |
 | `compactify-artifacts` | HITL | Which lessons are durable, where each one routes |
@@ -138,6 +140,15 @@ Artifacts are listed here in **order of authority**. When two artifacts disagree
 9. **`plans/archive/*.md`** -- *Compact historical map of what was implemented and how.* One terse entry per executed plan: requirement IDs, major commit SHAs, acceptance-criteria checklist, one-paragraph summary, pointers for git/PR deep dive. Not a comprehensive history -- a starting point for one.
 10. **`.claude/rules/*.md`** -- *Glob-scoped tactical rules, sibling to `clif-d/`.* Each file declares a `globs:` frontmatter array; the rule re-enters the agent's context only when a matching file is read or edited. Created or extended by `compactify-artifacts` for tactical, file-pattern-specific lessons that earned a permanent home but do not belong in a top-level design doc. See `cli/clif-d/plans/executed/plan-REQ-027.md` for the format precedent. Not authoritative in the same sense as the design documents above -- the design documents stay authoritative, and rule files are signposts that point to them.
 
+### Feedback loop: implementation informs design
+
+The pipeline diagram reads left-to-right, but design is not one-way. As requirements are implemented, `implement-plan` records per-plan lessons in `plans/lessons_learned/*.md`, and `compactify-artifacts` later distills those lessons into two kinds of durable change:
+
+- **Percolation into upstream design docs.** High-signal lessons that contradict, refine, or extend an earlier design decision get routed -- under explicit per-lesson user authorization -- into the relevant upstream document (items 1-5 above: concept, PRD, architecture, backpressure, dev-environment). This is how the architecture, backpressure, and other "upstream" artifacts evolve after the fact: not by being re-run from scratch, but by having specific, evidence-backed edits merged in when the code teaches us something the design got wrong or silent on.
+- **Tactical rule files.** Lessons that are file-pattern-specific rather than architectural land in `.claude/rules/*.md` (item 10 above).
+
+`compactify-artifacts` also flags upstream design documents that have drifted from what actually shipped, without necessarily amending them -- the flag surfaces the drift so the user can decide whether to amend, re-run an upstream skill, or accept the drift as the new truth. The practical effect: the design documents are authoritative at any given moment, but they are not frozen. The feedback loop keeps them honest.
+
 ### The PRD as a living document
 
 The PRD (`clif-d/prd.json`) is the most operationally important artifact and deserves special attention. It is a **living document** -- it grows and evolves throughout the project's life. High-level requirements are written early and change rarely. Low-level requirements are added continuously, as the "bow wave" of planning detail stays just ahead of the implementation ship.
@@ -196,7 +207,7 @@ CLIF-D is opinionated about its runtime environment. Skills will misbehave or fa
 ### Not assumed
 
 - **A specific product implementation language.** CLIF-D is language-agnostic. `create-architecture` picks the stack; `bootstrap-dev-environment` installs the matching toolchain. Language-specific examples inside skills are illustrative, not prescriptive.
-- **A specific product type or domain.** "CLI-first decomposition" is more flexible than the name suggests. Users are often surprised at the range of products - services, libraries, integration glue, even UI-adjacent tooling - that decompose cleanly into composable CLI steps.
+- **A specific product type or domain.** CLI-first decomposition is not the right organizing principle for *every* project -- some products genuinely do not decompose into composable CLI steps, and forcing them to is worse than picking a different methodology. But the range of products that *do* decompose this way is surprisingly wide: services, libraries, integration glue, even UI-adjacent tooling often fit cleanly when you look for the decomposition. Assume CLIF-D is worth trying before assuming it isn't.
 - **A specific version control host (GitHub, GitLab, etc.).** Skills use local `git` only. PR workflow is not prescribed by the pipeline.
 
 ## Deployment
