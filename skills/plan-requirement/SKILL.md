@@ -104,6 +104,20 @@ If a dependency requirement was recently implemented, its executed plan is the f
 
 Compare what the requirement needs (from the PRD + architecture) with what exists (from the codebase). The plan should only cover what's missing. If a dependency is already implemented and tested, the plan should note it as a given, not re-plan it.
 
+### 5. Identify high-level requirements realized
+
+Low-level requirements do not exist in isolation — each one realizes part of some high-level requirement. When you plan the implementation of a low-level requirement (or group of low-level requirements), decide which high-level requirements the plan **fully realizes** and which it **partially realizes**.
+
+For each high-level requirement the plan touches:
+
+- **Fully realized**: every acceptance-criterion sub-behavior implied by the high-level requirement is delivered by the low-level requirements in this plan (plus any already-done upstream work). At plan completion the high-level requirement should be marked `done` with the same `implementation_commit` SHA as the final low-level requirement in the plan (or a dedicated closing commit).
+- **Partially realized**: the plan makes progress toward the high-level requirement but does not finish it. If the high-level requirement is currently `not_started`, it should be transitioned to `in_progress` at the start of this plan's work so the PRD reflects reality. It stays `in_progress` until a future plan finishes it.
+- **Untouched**: no action.
+
+Record this mapping in the plan. The plan author does the upfront thinking so the implementer does not have to guess which high-level requirements to close.
+
+Without this step, high-level requirements drift silently out of sync with reality: low-level work closes through the `plan-requirement` → `implement-plan` cycle, while the high-level requirements they realize stay `not_started` forever. The only way to prevent this is to name the mapping in the plan and add explicit status-update tasks the implementer runs alongside the low-level closures.
+
 ---
 
 ## Ambiguity Resolution
@@ -182,7 +196,22 @@ What must be true before this plan can be executed:
 
 If a prerequisite is not met, state what needs to happen first.
 
-### 4. Implementation Steps
+### 4. High-level Requirements Realized
+
+List every high-level requirement this plan touches, with its realization category and the status transition(s) the implementer must perform. Example:
+
+```markdown
+| High-level REQ | Realization | Status transition |
+|----------------|-------------|-------------------|
+| REQ-025        | Fully       | not_started -> done at plan completion (same commit as final low-level closure) |
+| REQ-030        | Partially   | not_started -> in_progress at plan start; stays in_progress |
+```
+
+If the plan realizes no high-level requirements, write "None" and briefly justify why — every low-level requirement should normally ladder up to at least one high-level requirement.
+
+The transitions listed here drive the corresponding Implementation Steps below. Do not leave them to the implementer to infer.
+
+### 5. Implementation Steps
 
 The core of the plan. Each step follows this structure:
 
@@ -214,7 +243,15 @@ The core of the plan. Each step follows this structure:
 3. **Error handling is not deferred.** Each step that adds a success path should also add its corresponding error path in the same step or the immediately following step.
 4. **Refactoring gets its own steps.** If a step's implementation reveals a need to restructure, make that a separate step with its own tests.
 
-### 5. Acceptance Criteria Verification
+#### Status transition steps
+
+Every status transition named in §4 **High-level Requirements Realized** must appear as an explicit step (or be folded into an existing step's Verify block). Low-level requirement transitions are similarly explicit — do not rely on the implementer inferring which `clif-d req start`/`clif-d req done` commands to run.
+
+- **First step** for each low-level requirement and each partially-realized high-level requirement not already `in_progress`: transition to `in_progress` via `clif-d req start REQ-XXX`.
+- **Closing step** for each low-level requirement and each fully-realized high-level requirement: transition to `done` via `clif-d req done REQ-XXX --commit=<sha>` using the SHA of the commit that delivers the final acceptance criterion.
+- A single closing step may close multiple requirements when one commit delivers them all.
+
+### 6. Acceptance Criteria Verification
 
 A checklist mapping the requirement's acceptance criteria to specific tests:
 
@@ -227,7 +264,7 @@ A checklist mapping the requirement's acceptance criteria to specific tests:
 
 For high-level (prose) acceptance criteria, map them to the collection of tests that together verify the criterion.
 
-### 6. Files Created or Modified
+### 7. Files Created or Modified
 
 A summary list of every file the plan touches:
 
@@ -239,7 +276,7 @@ A summary list of every file the plan touches:
 | `src/cli/auth.rs` | Modify | 3 |
 ```
 
-### 7. Open Questions and Assumptions
+### 8. Open Questions and Assumptions
 
 Any assumptions made during planning that the implementer should be aware of. Flag anything where the plan made a judgment call that might need revisiting.
 
@@ -256,7 +293,7 @@ Once you've explored the codebase and resolved any ambiguities:
 
 1. **Name the output file** using the convention `clif-d/plans/active/plan-<requirement-ids>.md` (e.g., `clif-d/plans/active/plan-REQ-003.md`) in the product repository. Create the directory if it does not yet exist.
 2. **Write the plan** following the output structure above.
-3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section. Every architecture element referenced by the requirements should appear in the Context Summary.
+3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section. Every architecture element referenced by the requirements should appear in the Context Summary. Every high-level requirement in §4 should have at least one status-transition step in §5.
 4. **Verify completeness**: every file mentioned in Implementation Steps should appear in the Files Created or Modified summary. Every test mentioned should have a corresponding implementation step.
 5. **Review step granularity**: each step should be completable and verifiable in isolation. If a step depends on uncommitted work from a previous step, that's fine -- but if a step can't be tested without completing the *next* step, the plan needs restructuring.
 6. **Commit the plan.** The plan file is a project artifact and should be committed when complete. Use a clear commit message with a `Requirement:` trailer for each targeted requirement so the plan is discoverable via `git log --grep`. Example subject: `plans: Add implementation plan for REQ-003`. The body should briefly state what the plan covers and name the requirement IDs.

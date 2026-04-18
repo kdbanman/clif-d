@@ -54,6 +54,7 @@ export const MINIMAL_PRD = {
       description: "Desc",
       acceptance_criteria: "Done when done",
       abstraction_level: "high",
+      status: "not_started",
       priority: 1,
     },
     {

@@ -28,6 +28,7 @@ const NEXT_PRD = {
       description: "D",
       acceptance_criteria: { given: "G", when: "W", then: "T" },
       abstraction_level: "low",
+      status: "not_started",
       priority: 1,
       dependencies: ["REQ-001"],
     },
@@ -37,6 +38,7 @@ const NEXT_PRD = {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
       priority: 2,
     },
   ],
@@ -116,18 +118,6 @@ describe("req next", () => {
     const result = run(["req", "next"], { cwd: dir });
     const req = JSON.parse(result.stdout);
     assert.equal(req.id, "REQ-003");
-  });
-
-  it("treats status absent as not_started (eligible)", () => {
-    const prd = structuredClone(NEXT_PRD);
-    delete prd.requirements[2].status;
-    delete prd.requirements[2].priority;
-    delete prd.requirements[1].dependencies;
-    const dir = withFixture(prd);
-    const result = run(["req", "next"], { cwd: dir });
-    assert.equal(result.exitCode, 0);
-    const req = JSON.parse(result.stdout);
-    assert.equal(req.id, "REQ-002");
   });
 
   it("exits 1 with a diagnostic when no requirement is eligible", () => {

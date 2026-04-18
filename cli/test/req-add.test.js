@@ -13,6 +13,7 @@ describe("req add", () => {
       description: "Something new",
       acceptance_criteria: "Done when done",
       abstraction_level: "high",
+      status: "not_started",
     };
     const result = run(["req", "add"], {
       cwd: dir,
@@ -38,6 +39,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "low",
+      status: "not_started",
     };
     const result = run(["req", "add"], {
       cwd: dir,
@@ -54,6 +56,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     };
     const result = run(["req", "add"], {
       cwd: dir,
@@ -75,6 +78,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "medium",
+      status: "not_started",
     };
     const result = run(["req", "add"], {
       cwd: dir,
@@ -92,6 +96,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     };
     const result = run(["req", "add"], {
       cwd: dir,
@@ -108,6 +113,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     };
     const result = run(["req", "add"], {
       cwd: dir,
@@ -124,6 +130,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: { given: "G", when: "W" },
       abstraction_level: "low",
+      status: "not_started",
     };
     const result = run(["req", "add"], {
       cwd: dir,
@@ -146,6 +153,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
       dependencies: ["REQ-999"],
     };
     const result = run(["req", "add"], {
@@ -163,6 +171,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
       context_refs: ["CTX-999"],
     };
     const result = run(["req", "add"], {
@@ -180,6 +189,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
       dependencies: ["REQ-003"],
     };
     const result = run(["req", "add"], {
@@ -199,6 +209,7 @@ describe("req add", () => {
       description: "D",
       acceptance_criteria: "Done",
       abstraction_level: "high",
+      status: "not_started",
     };
     const result = run(["req", "add", prdPath], {
       input: JSON.stringify(body),

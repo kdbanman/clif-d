@@ -348,11 +348,12 @@ function writePrd(prdPath, prd) {
 /**
  * Status-transition predicates. Only `done` is terminal; every other
  * transition is allowed (including idempotent self-transitions and
- * unblocking via start).
+ * unblocking via start). Status is a required field on every requirement,
+ * so callers always have a concrete value to pass in.
  */
 const Lifecycle = Object.freeze({
   /**
-   * @param {string | undefined} currentStatus
+   * @param {string} currentStatus
    * @returns {TransitionResult}
    */
   canStart(currentStatus) {
@@ -362,7 +363,7 @@ const Lifecycle = Object.freeze({
   },
 
   /**
-   * @param {string | undefined} currentStatus
+   * @param {string} currentStatus
    * @returns {TransitionResult}
    */
   canComplete(currentStatus) {
@@ -372,7 +373,7 @@ const Lifecycle = Object.freeze({
   },
 
   /**
-   * @param {string | undefined} currentStatus
+   * @param {string} currentStatus
    * @returns {TransitionResult}
    */
   canBlock(currentStatus) {
@@ -415,6 +416,7 @@ const REQUIRED_REQ_FIELDS = [
   "description",
   "acceptance_criteria",
   "abstraction_level",
+  "status",
 ];
 
 /**
@@ -717,10 +719,7 @@ const Filters = Object.freeze({
    * @returns {Array<Record<string, unknown>>}
    */
   byStatus(reqs, statuses) {
-    return reqs.filter((r) => {
-      const status = /** @type {string} */ (r.status ?? "not_started");
-      return statuses.has(status);
-    });
+    return reqs.filter((r) => statuses.has(/** @type {string} */ (r.status)));
   },
 
   /**
@@ -763,13 +762,12 @@ const Sort = Object.freeze({
 
 /**
  * Field-selection helpers. Projection preserves schema field order and fills
- * defaults for status/dependencies when absent.
+ * a default empty array for `dependencies` when absent (the only requirement
+ * field that is genuinely optional in the schema and projected as an array).
  */
 const Projection = Object.freeze({
   /**
    * Project an item onto the given fields, preserving the given schema order.
-   * Requirement-specific defaults (status, dependencies) are applied when
-   * the order array is SCHEMA_FIELD_ORDER.
    * @param {Record<string, unknown>} item
    * @param {readonly string[]} fields
    * @param {readonly string[]} [schemaOrder]
@@ -784,9 +782,7 @@ const Projection = Object.freeze({
       if (!fieldSet.has(key)) {
         continue;
       }
-      if (key === "status") {
-        result[key] = item[key] ?? "not_started";
-      } else if (key === "dependencies") {
+      if (key === "dependencies") {
         result[key] = item[key] ?? [];
       } else if (key in item) {
         result[key] = item[key];
@@ -892,8 +888,8 @@ function reqShow(prd, flags) {
 }
 
 /**
- * Build a full requirement object in canonical schema order, filling
- * defaults for status and dependencies.
+ * Build a full requirement object in canonical schema order, filling a
+ * default empty array for `dependencies` when absent.
  * @param {Record<string, unknown>} req
  * @returns {Record<string, unknown>}
  */
@@ -976,8 +972,7 @@ function reqNext(prd) {
   }
 
   const eligible = reqs.filter((r) => {
-    const status = r.status ?? "not_started";
-    if (status !== "not_started") {
+    if (r.status !== "not_started") {
       return false;
     }
     const deps = /** @type {string[] | undefined} */ (r.dependencies) ?? [];
@@ -1014,7 +1009,7 @@ function reqStart(prdPath, prd, flags) {
     return;
   }
 
-  const current = /** @type {string} */ (req.status ?? "not_started");
+  const current = /** @type {string} */ (req.status);
   const check = Lifecycle.canStart(current);
   if (!check.ok) {
     stderr.write(`Error: Cannot start ${reqId}: ${check.reason}.\n`);
@@ -1062,7 +1057,7 @@ function reqDone(prdPath, prd, flags) {
     return;
   }
 
-  const current = /** @type {string} */ (req.status ?? "not_started");
+  const current = /** @type {string} */ (req.status);
   const check = Lifecycle.canComplete(current);
   if (!check.ok) {
     stderr.write(`Error: Requirement ${reqId} is ${check.reason}.\n`);
@@ -1094,7 +1089,7 @@ function reqBlock(prdPath, prd, flags) {
     return;
   }
 
-  const current = /** @type {string} */ (req.status ?? "not_started");
+  const current = /** @type {string} */ (req.status);
   const check = Lifecycle.canBlock(current);
   if (!check.ok) {
     stderr.write(`Error: Cannot block ${reqId}: ${check.reason}.\n`);
@@ -1131,7 +1126,6 @@ function reqAdd(prdPath, prd) {
   if (candidate.id === undefined) {
     candidate.id = nextReqId(requirements);
   }
-
   const shapeErrors = validateRequirementShape(candidate, {
     requireAllFields: true,
   });
@@ -1816,7 +1810,14 @@ function validate(prd) {
   checkEnums(requirements, contextItems, archItems, issues);
   checkRequiredFields(
     requirements,
-    ["id", "title", "description", "acceptance_criteria", "abstraction_level"],
+    [
+      "id",
+      "title",
+      "description",
+      "acceptance_criteria",
+      "abstraction_level",
+      "status",
+    ],
     "requirement",
     issues,
   );
@@ -1946,7 +1947,7 @@ function checkStatusCommitConsistency(requirements, issues) {
       issues.push({
         level: "warning",
         id,
-        message: `implementation_commit is set but status is '${status ?? "not_started"}', not 'done'`,
+        message: `implementation_commit is set but status is '${String(status)}', not 'done'`,
       });
     }
   }

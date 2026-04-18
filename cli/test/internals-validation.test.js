@@ -37,6 +37,7 @@ describe("Validation.all", () => {
           description: "d",
           acceptance_criteria: "ac",
           abstraction_level: "high",
+          status: "not_started",
         },
       ],
     });
@@ -72,6 +73,7 @@ describe("Validation.all", () => {
           description: "d",
           acceptance_criteria: "ac",
           abstraction_level: "high",
+          status: "not_started",
           dependencies: ["REQ-002"],
         },
         {
@@ -97,6 +99,7 @@ describe("Validation.all", () => {
           description: "d",
           acceptance_criteria: "ac",
           abstraction_level: "high",
+          status: "not_started",
           dependencies: ["REQ-999"],
         },
       ],
@@ -130,5 +133,27 @@ describe("Validation.all", () => {
     assert.ok(
       issues.some((i) => /implementation_commit/.test(i.message) && i.level === "error"),
     );
+  });
+
+  it("flags missing status as a required-field error", () => {
+    const prd = build({
+      requirements: [
+        {
+          id: "REQ-001",
+          title: "t",
+          description: "d",
+          acceptance_criteria: "ac",
+          abstraction_level: "high",
+        },
+      ],
+    });
+    const issues = internals.Validation.all(prd);
+    const issue = issues.find((i) => /Missing required.*status/.test(i.message));
+    assert.ok(
+      issue,
+      `expected missing-status error; got ${JSON.stringify(issues)}`,
+    );
+    assert.equal(issue.level, "error");
+    assert.equal(issue.id, "REQ-001");
   });
 });
