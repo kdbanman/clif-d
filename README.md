@@ -163,14 +163,6 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 ## TODO
 
 - [ ] **Add `references/` to `design-backpressure`** — opinionated reference material on agentic quality backpressure principles
-- [ ] **Implement `clif-d` CLI for PRD CRUD operations** — a command-line tool for reading and mutating PRD JSON files without hand-editing. Key commands:
-  - `clif-d req next [prd.json]` — print the highest-priority `not_started` requirement whose dependencies are all `done`
-  - `clif-d req start <REQ-ID> [prd.json]` — set a requirement's `status` to `in_progress`
-  - `clif-d req done <REQ-ID> [prd.json]` — set a requirement's `status` to `done`
-  - `clif-d req block <REQ-ID> [prd.json]` — set a requirement's `status` to `blocked`
-  - `clif-d req ls [prd.json]` — list requirements with their status; supports `--status=<value>` filter and `--abstraction=high|low` filter
-  - `clif-d req dep add <REQ-ID> <DEP-ID> [prd.json]` — add a dependency edge from REQ-ID to DEP-ID
-  - `clif-d req dep rm <REQ-ID> <DEP-ID> [prd.json]` — remove a dependency edge
 - [ ] **Implement `extend-low-level-requirements` skill** — keeps the "bow wave" of low-level requirement granularity just ahead of the implementation ship. Called after a round of implementation to add the next slice of clear-first-step low-level requirements to the PRD, informed by what's now known from the code and what's newly unblocked. Must preserve the bow-wave principle from `create-initial-prd`: only specify what's clear *right now*, never more.
 - [ ] **Implement `clif-d-health-check` skill** — aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
 - [ ] **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
