@@ -131,18 +131,42 @@ This repo is a Claude Code plugin and marketplace. Skills are namespaced as `cli
 
 ### Install
 
+Run these in a Claude Code session:
+
 ```
-# Add the marketplace (once)
+# Add the marketplace (once per machine)
 /plugin marketplace add kdbanman/clif-d
 
-# Install the plugin
+# Install the plugin from that marketplace
 /plugin install clif-d@clif-d
 
-# Update when new versions are pushed
+# Pull the latest published version
 /plugin marketplace update
 ```
 
-The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalog) and `skills/` (skill definitions). The old git-hooks sync approach (`sync-skills.sh`) is retired.
+In `clif-d@clif-d`, the first `clif-d` is the plugin name and the second is the marketplace name -- both are defined in `.claude-plugin/`. After install:
+
+- Skills are invokable as `clif-d:<skill-name>` (e.g. `clif-d:create-initial-prd`).
+- The `clif-d` CLI lands on the Bash tool's `PATH` and is callable by bare name from any agent session while the plugin is enabled.
+
+The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalog), `skills/` (skill definitions), and `bin/` (the `clif-d` CLI, auto-discovered and added to `PATH`). The old git-hooks sync approach (`sync-skills.sh`) is retired.
+
+### Ship a new version
+
+This repo is its own marketplace: the default branch on GitHub *is* the published version. There is no registry, no release tag, and no `npm publish` step. Merging to `main` publishes.
+
+1. **Bump both manifests.** Update `version` in `.claude-plugin/plugin.json` AND the matching `plugins[].version` entry in `.claude-plugin/marketplace.json`. They must agree -- `cli/scripts/verify-plugin-payload.sh` enforces this.
+2. **Verify the payload.** Run `./cli/scripts/verify-plugin-payload.sh`. Confirms manifests parse, versions agree, `bin/clif-d` is executable with the right shebang, and the `bin/` directory contains only the expected files (everything in `bin/` ships on the user's `PATH`).
+3. **If the CLI changed, run the full gate.** `cd cli && npm run check` runs prettier, eslint, jscpd, tsc, and `node --test`. The husky pre-commit hook runs this automatically on every commit that touches the CLI.
+4. **Call out breakage in the commit message.** There is no official breaking-change signal for Claude Code plugins -- users pick up updates pull-style via `/plugin marketplace update` and cannot be interrogated at install time. See "Current constraints" below. Any change to `prd.json` schema, CLI flags, skill inputs/outputs, or artifact layout should be explicit in the commit message (and eventually a CHANGELOG).
+5. **Merge to `main`.** Opening a PR from your feature branch and merging it publishes the new version. No additional release step.
+6. **Users update** with `/plugin marketplace update` in their session (or auto-update if they have it enabled).
+
+Semver guidance for the version bump:
+
+- **Patch** -- bug fix in a skill or the CLI with no interface change.
+- **Minor** -- new skill, new CLI subcommand, new optional field in `prd.json`, or any other additive change.
+- **Major** -- backwards-incompatible change to the `prd.json` schema, a CLI flag's meaning, a skill's inputs/outputs, or the `clif-d/` artifact layout.
 
 ## Current constraints
 
