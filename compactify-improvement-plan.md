@@ -4,14 +4,14 @@
 
 ## Context
 
-The `compactify-artifacts` skill today reads every file in `clif-d/plans/executed/` and `clif-d/plans/lessons_learned/` in one pass, interrogates the user one lesson at a time as free-form chat, and routes durable lessons to a single append-only `clif-d/lessons.md` log. The README TODO (`/home/user/clif-d/README.md` lines 164-172) flags four problems with this:
+The `compactify-artifacts` skill today reads every file in `clif-d/plans/executed/` and `clif-d/plans/lessons_learned/` in one pass, interrogates the user one lesson at a time as free-form chat, and routes durable lessons to a single append-only durable-lessons log. The README TODO (`/home/user/clif-d/README.md` lines 164-172) flags four problems with this:
 
 1. Trying to compactify everything at once is unwieldy.
 2. Commit SHAs need to be load-bearing, and raw originals should be deleted (mostly already true, needs reinforcement).
-3. The output destination is vague; it should resolve to one of two places — high-level design docs or glob-scoped `.claude/rules/*.md` files — rather than a catch-all `lessons.md`.
+3. The output destination is vague; it should resolve to one of two places — high-level design docs or glob-scoped `.claude/rules/*.md` files — rather than a single catch-all log.
 4. Raw lesson files are low signal-to-noise. The skill should aggressively pre-filter before interrogating the user, and when it does interrogate, it should use a structured question tool (AskUserQuestion) with enough context that a non-coding technical EM could adjudicate.
 
-The intended outcome: a skill that runs more often on smaller slices, silently drops most noise, escalates only high-signal candidates with durable-lesson context, and routes survivors into the two canonical destinations. The retired `lessons.md` artifact ripples through the README's layout tree, artifact-lifecycle list, and skills-table description.
+The intended outcome: a skill that runs more often on smaller slices, silently drops most noise, escalates only high-signal candidates with durable-lesson context, and routes survivors into the two canonical destinations. Retiring the old durable-lessons log ripples through the README's layout tree, artifact-lifecycle list, and skills-table description, and across the rest of the repo wherever it is mentioned.
 
 ## Files to modify
 
@@ -48,7 +48,7 @@ Replace the current §1-§5 with this sequence:
 5. **Candidate interrogation** — for each surviving candidate, issue one AskUserQuestion with structured payload:
    - **Context**: what happened, written so a technical engineering manager could adjudicate without opening any file. Two to four sentences. Name the plan (REQ-ID) and any relevant module names, but no code snippets unless irreducible.
    - **Why this is a candidate**: which durability bar it meets and why it is likely to save meaningful time or prevent a recurring class of mistake. One or two sentences.
-   - **Why it might not be**: the strongest counter-case (e.g., "might be too project-specific", "overlaps with rule X already in backpressure"). One sentence.
+   - **Why it might not be**: the strongest counter-case (e.g., "the underlying pattern only appeared once and may not recur", "duplicates an existing rule already in `backpressure.md` §X or `architecture.md` §Y"). One sentence.
    - **Suggested destination** (proposed by the skill, confirmed by the user's answer):
      - A specific section of `clif-d/architecture.md`, `clif-d/backpressure.md`, `clif-d/dev-environment.md`, or `clif-d/prd.json` (name the exact heading), OR
      - A new or existing `.claude/rules/<topic>.md` file with a proposed `globs:` frontmatter pattern.
@@ -60,13 +60,11 @@ Replace the current §1-§5 with this sequence:
 
 Three outputs (was three; shape changes):
 
-- **Output 1 — Compact archive entries** in `clif-d/plans/archive/plan-<req-ids>.md`. Mostly unchanged from today. Reinforce that SHAs are mandatory and verified with `git cat-file -e`. Remove the "Lessons promoted from this plan" back-pointer that referenced `lessons.md`; replace with pointers to the specific design-doc sections or `.claude/rules/<topic>.md` files the plan's lessons were routed to.
-- **Output 2 — Routed lessons** (replaces the old `lessons.md` output). For each user-approved candidate:
+- **Output 1 — Compact archive entries** in `clif-d/plans/archive/plan-<req-ids>.md`. Mostly unchanged from today. Reinforce that SHAs are mandatory and verified with `git cat-file -e`. Remove the "Lessons promoted from this plan" back-pointer to the old durable-lessons log; replace with pointers to the specific design-doc sections or `.claude/rules/<topic>.md` files the plan's lessons were routed to.
+- **Output 2 — Routed lessons**. For each user-approved candidate:
   - If destination is a design doc: edit the named section directly. Write the durable phrasing decoupled from the specific incident.
   - If destination is `.claude/rules/<topic>.md`: create (with `globs:` frontmatter) or append to the file in the product repo. Include a short "why" so a future reader hitting that glob understands why the rule exists. Note that `.claude/rules/` is the harness-convention scoped-rule location referenced in `README.md` line 167; existing precedent in the plugin repo is `cli/clif-d/plans/executed/plan-REQ-027.md`.
 - **Output 3 — Findings** (chat + commit message only). Same spirit as today: stale upstream docs, implied new requirements (often new backpressure rules), recommended downstream skill to run. No silent amendments.
-
-Explicitly state that `clif-d/lessons.md` is retired. If the file exists in the user's repo from prior runs, the skill does not write to it and does not delete it (user decides). Add a migration note at the top of the skill: on first post-upgrade run, flag the existing `lessons.md` file and recommend the user manually route its entries into the new destinations (one-time cleanup, outside this skill's scope).
 
 ### 4. Generation process
 
@@ -91,7 +89,7 @@ Minor updates to existing numbered steps:
 - `/home/user/clif-d/skills/compactify-artifacts/SKILL.md` — current skill (full rewrite of §Philosophy, §Interrogation, §Output, minor edits to §Generation process).
 - `/home/user/clif-d/skills/implement-plan/SKILL.md` lines 167-176 — source of truth for what the skill consumes (what `implement-plan` writes to executed/ and lessons_learned/).
 - `/home/user/clif-d/skills/plan-requirement/SKILL.md` — tone/structure reference (peer skill).
-- `/home/user/clif-d/skills/design-backpressure/SKILL.md` — to name specific backpressure-catchable categories that should auto-discard.
+- `/home/user/clif-d/skills/design-backpressure/SKILL.md` — light skim only, just enough to capture the essence of backpressure-catchable issues (e.g., lint violations, type errors, formatter output) for one or two illustrative auto-discard examples in the new philosophy section.
 - `/home/user/clif-d/cli/clif-d/plans/executed/plan-REQ-027.md` lines 128-145 — existing precedent for `.claude/rules/<name>.md` file format and glob frontmatter.
 - `/home/user/clif-d/README.md` — sections noted above.
 - `/home/user/clif-d/CLAUDE.md` — style constraints: ASCII only, no emojis, no em dashes, match sibling skill tone.
@@ -101,7 +99,7 @@ Minor updates to existing numbered steps:
 This is a plugin repo with no build/test suite; verification is reading for consistency.
 
 1. Read the rewritten `SKILL.md` end to end. Check that philosophy, interrogation, output, and generation-process sections match the order and tone of `implement-plan/SKILL.md` and `plan-requirement/SKILL.md`.
-2. Confirm every mention of `lessons.md` is removed from both the skill and the README.
+2. Confirm every mention of `lessons.md` (the retired top-level log file -- not `lessons-REQ-NNN.md` files in `plans/lessons_learned/`) is removed from the entire repo. Verified via `Grep "lessons\.md"` returning zero matches. Today the matches are concentrated in `README.md` lines 17, 57, 70, 85 and across `skills/compactify-artifacts/SKILL.md`; no stray references exist elsewhere in the repo (checked against `cli/`, other skills, and `.claude-plugin/`).
 3. Confirm every mention of `.claude/rules/*.md` matches the precedent in `cli/clif-d/plans/executed/plan-REQ-027.md` (frontmatter shape, directory location in the product repo).
 4. Confirm no `\u2014` (em dash) characters and no non-ASCII / emoji content: `grep -nP '[^\x00-\x7F]' skills/compactify-artifacts/SKILL.md README.md` should return nothing.
 5. Confirm the pipeline diagram in README still reads coherently after the caption edit.
