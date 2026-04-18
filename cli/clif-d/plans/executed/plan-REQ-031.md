@@ -6,7 +6,8 @@
 **Preceding plans:** none -- this is a cleanup task with no code dependencies.
 
 **Date:** 2026-04-16
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** 4d305c1
 
 ## 1. Objective
 

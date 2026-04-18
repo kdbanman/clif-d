@@ -1134,11 +1134,12 @@
       "priority": 1,
       "dependencies": [],
       "abstraction_level": "low",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-011"
       ],
-      "architecture_refs": []
+      "architecture_refs": [],
+      "implementation_commit": "4d305c1"
     }
   ]
 }
