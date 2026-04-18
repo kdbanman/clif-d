@@ -56,4 +56,4 @@ The xUnit Test Patterns perspective adds a useful framing: the goals of test aut
 
 ---
 
-*These references support the implement-plan skill. They focus on writing sound tests during implementation. For guidance on choosing test types and proportions (testing strategy), see the plan-requirement or create-architecture skills. For guidance on enforcing test quality as automated gates, see the design-backpressure skill.*
+*These references support the implement-plan skill. They focus on writing sound tests during implementation. For guidance on choosing test types and proportions (testing strategy), see the plan-requirement or create-architecture skills. For guidance on designing test-quality gates, see the design-backpressure skill; for how those gates are wired into the toolchain, see bootstrap-dev-environment.*

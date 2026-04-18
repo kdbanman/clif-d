@@ -261,7 +261,7 @@ This skill's references directory contains detailed, language-agnostic guidance.
 - **Integration tests**: [Integration test guide](references/testing-integration.md) -- scope, worked examples, pitfalls, checklist
 - **Scenarios**: [Overview](references/testing-overview.md) -- "what kind of test do I need?" quick-reference table
 
-These references focus on *writing* tests during Red-Green-Refactor execution. They assume the plan already specifies which types of tests to write and where -- that's the plan-requirement skill's job. They also assume quality guardrails (linting, type checking, test enforcement) are already in place -- that's the design-backpressure skill's job.
+These references focus on *writing* tests during Red-Green-Refactor execution. They assume the plan already specifies which types of tests to write and where -- that's the plan-requirement skill's job. They also assume quality guardrails (linting, type checking, test enforcement) are already designed and installed -- that's the combined responsibility of `design-backpressure` (what the guardrails are) and `bootstrap-dev-environment` (making them real and invokable).
 
 ### Git
 

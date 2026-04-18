@@ -10,8 +10,8 @@ CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for struc
 | `workshop-names` | Structured naming workshop based on Lexicon Branding's Diamond Framework and SMILE/SCRATCH evaluation — produces 100+ candidates filtered to 5–10 contextual finalists |
 | `create-initial-prd` | Generates a JSON PRD from a concept document, following CLIF-D: complete high-level requirements and a partial set of clear first-step low-level requirements, each with CLI specs |
 | `create-architecture` | Takes a PRD and produces a detailed architecture document down to C4 code level — concrete technology decisions, module decomposition, interfaces, data flow, testing architecture |
-| `bootstrap-dev-environment` | Turns the architecture's toolchain decisions into a reproducible, agent-executable environment — containerization or version-pinned setup script, verification that every Technology Decisions command runs, and an agent instruction file (CLAUDE.md) so Claude Code inherits environment context |
-| `design-backpressure` | Researches and implements quality guardrails — aggressive linting, maximal type enforcement, pre-commit hooks — as hard local gates that block low-quality code before it enters the repo |
+| `design-backpressure` | Researches and designs quality guardrails — aggressive linting, maximal type enforcement, pre-commit hooks — as hard local gates that block low-quality code before it enters the repo. Produces the backpressure design document; the implementation is handed off to `bootstrap-dev-environment` |
+| `bootstrap-dev-environment` | Turns the architecture's toolchain decisions and the backpressure design into a reproducible, agent-executable environment — containerization or version-pinned setup script, the actual linter/type-check/hook configuration that realizes the backpressure design (including the suppression scanner and pre-existing-suppression audit), verification that every Technology Decisions command and hook stage runs, and an agent instruction file (CLAUDE.md) so Claude Code inherits environment context |
 | `plan-requirement` | Takes PRD requirement IDs, resolves the full dependency graph, explores the codebase, and produces a self-contained implementation plan (Markdown) with TDD step ordering |
 | `implement-plan` | Executes an implementation plan step-by-step with strict Red-Green-Refactor discipline, running all quality checks after every step |
 | `compactify-artifacts` | Compacts a small chunk of executed plans and per-plan lessons per run into terse archive entries; silently discards low-signal lessons and routes high-signal survivors -- per explicit user authorization -- into either an upstream design doc edit or a glob-scoped `.claude/rules/*.md` file in the product repo; deletes the chunk's originals (git history preserves them) and flags upstream design docs that have drifted from what shipped |
@@ -27,9 +27,9 @@ create-product-concept
                         │
                         └──▶ create-architecture
                                     │
-                                    └──▶ bootstrap-dev-environment
+                                    └──▶ design-backpressure
                                                 │
-                                                └──▶ design-backpressure
+                                                └──▶ bootstrap-dev-environment
                                                             │
                                                             └──▶ plan-requirement  (repeats per requirement)
                                                                         │
@@ -52,8 +52,8 @@ All CLIF-D artifacts for a given product live in a single `clif-d/` directory at
     architecture.md         # create-architecture
     architecture/           # create-architecture (diagram files, optional)
       *.mmd
-    dev-environment.md      # bootstrap-dev-environment (design record + setup instructions)
     backpressure.md         # design-backpressure (design record + practitioner reference)
+    dev-environment.md      # bootstrap-dev-environment (design record + setup instructions + backpressure implementation map)
     plans/
       active/               # plan-requirement writes here
         plan-REQ-NNN.md
@@ -69,7 +69,7 @@ All CLIF-D artifacts for a given product live in a single `clif-d/` directory at
   <source code, tests, configs...>
 ```
 
-All design documents (concept, PRD, architecture, dev-environment, backpressure) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (setup commands, how to run checks, suppression policy). Strategic lessons distilled by `compactify-artifacts` are merged back into these design documents under explicit user authorization; tactical, file-pattern-specific lessons land in `.claude/rules/<topic>.md` files (sibling to `clif-d/`) so they re-enter the agent's context only when matching files are touched.
+All design documents (concept, PRD, architecture, backpressure, dev-environment) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (how to run checks, suppression policy); the dev-environment document records how those guardrails were actually installed and wired to the toolchain. Strategic lessons distilled by `compactify-artifacts` are merged back into these design documents under explicit user authorization; tactical, file-pattern-specific lessons land in `.claude/rules/<topic>.md` files (sibling to `clif-d/`) so they re-enter the agent's context only when matching files are touched.
 
 ### Artifact precedence and lifecycle
 
@@ -78,8 +78,8 @@ Artifacts are listed here in **order of authority**. When two artifacts disagree
 1. **`concept.md`** — *Why this product exists.* Written once, changes rarely. Updated only when the product's fundamental purpose shifts.
 2. **`prd.json`** — *What the product does.* **Living document.** Grows continuously as implementation progresses and low-level requirements are added (the "bow wave"). Represents the current agreed-upon behavior of the system.
 3. **`architecture.md`** — *How the product is structured.* Updated when structural decisions change. New scaffolding requirements are added to `prd.json` when the architecture document is generated.
-4. **`dev-environment.md`** — *How the product is built and tested on a developer or agent machine.* Updated when toolchain versions, containerization, or agent rules-file conventions change. Every change should be a deliberate, documented decision — relaxations especially.
-5. **`backpressure.md`** — *What quality standards the product enforces.* Updated when guardrails change. Every change should be a deliberate, documented decision — relaxations especially.
+4. **`backpressure.md`** — *What quality standards the product enforces.* Updated when guardrails change. Every change should be a deliberate, documented decision — relaxations especially. Authoritative for rule choices; `dev-environment.md` below implements those choices and must yield to this document on any conflict about what a rule *should* be.
+5. **`dev-environment.md`** — *How the product is built and tested on a developer or agent machine, and how the backpressure guardrails are actually installed.* Updated when toolchain versions, containerization, agent rules-file conventions, or the concrete guardrail wiring changes. Every change should be a deliberate, documented decision — relaxations especially.
 6. **`plans/active/*.md`** — *How specific requirements will be implemented.* Short-lived. Each plan targets a set of requirements and is consumed by `implement-plan`. After implementation is complete, plans are moved to `plans/executed/` by `implement-plan`.
 7. **`plans/executed/*.md`** — *Completed plans with implementation commit SHAs.* Full step-by-step detail is preserved. These accumulate until `compactify-artifacts` distills them into `plans/archive/` and deletes the originals (git history preserves them).
 8. **`plans/lessons_learned/*.md`** — *Per-plan post-implementation lessons.* Written by `implement-plan`. Short-lived; consumed by `compactify-artifacts` one chunk at a time. Most lesson content is silently discarded by an aggressive pre-filter; high-signal survivors are presented to the user via structured AskUserQuestion calls and routed -- on per-lesson authorization -- into either an upstream design doc (items 1-5 above) or a glob-scoped `.claude/rules/*.md` file (item 10 below).
@@ -178,7 +178,6 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 - [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
 - [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
 - [ ] **Clarify HITL/HOTL.** Get clear on which skills should be ruthlessly identifying uncertainty, contradiction, and ambiguity, and interrogating the user to clarify it all. (HITL.)  And similarly get clear on which skills should be running without human intervention. (HOTL.)  The philosophy is that if we are clear enough with the HITL former skills, the latter actually have a hope of being HOTL.
-- [ ] **Remove backpressure _implementation_ from the backpressure _design_ skill.**  Probably don't need to make backpressure implementation a specific skill, just leave it to dev environment setup skill.  So make backpressure implementation part of the dev env skill.  It makes sense to feed the backpressure design into the dev environment skill.  That also means swapping the current order in the overall workflow.
 
 ## Potential Issues
 
