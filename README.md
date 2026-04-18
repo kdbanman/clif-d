@@ -14,7 +14,7 @@ CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for struc
 | `design-backpressure` | Researches and implements quality guardrails — aggressive linting, maximal type enforcement, pre-commit hooks — as hard local gates that block low-quality code before it enters the repo |
 | `plan-requirement` | Takes PRD requirement IDs, resolves the full dependency graph, explores the codebase, and produces a self-contained implementation plan (Markdown) with TDD step ordering |
 | `implement-plan` | Executes an implementation plan step-by-step with strict Red-Green-Refactor discipline, running all quality checks after every step |
-| `compactify-artifacts` | Distills accumulated executed plans and per-plan lessons into terse archive entries plus a single durable `lessons.md` log; deletes the originals (git history preserves them) and flags upstream design docs that have drifted from what shipped |
+| `compactify-artifacts` | Compacts a small chunk of executed plans and per-plan lessons per run into terse archive entries; silently discards low-signal lessons and routes high-signal survivors -- per explicit user authorization -- into either an upstream design doc edit or a glob-scoped `.claude/rules/*.md` file in the product repo; deletes the chunk's originals (git history preserves them) and flags upstream design docs that have drifted from what shipped |
 
 ## Pipeline
 
@@ -35,7 +35,7 @@ create-product-concept
                                                                         │
                                                                         └──▶ implement-plan  (repeats per plan)
                                                                                     │
-                                                                                    └──▶ compactify-artifacts  (periodic; clears executed/ and lessons_learned/)
+                                                                                    └──▶ compactify-artifacts  (periodic; compacts a chunk of executed/ and lessons_learned/ each run)
 ```
 
 ## The `clif-d/` directory
@@ -54,20 +54,22 @@ All CLIF-D artifacts for a given product live in a single `clif-d/` directory at
       *.mmd
     dev-environment.md      # bootstrap-dev-environment (design record + setup instructions)
     backpressure.md         # design-backpressure (design record + practitioner reference)
-    lessons.md              # compactify-artifacts (durable lessons log, append-only)
     plans/
       active/               # plan-requirement writes here
         plan-REQ-NNN.md
-      executed/             # implement-plan moves completed plans here; compactify-artifacts clears
+      executed/             # implement-plan moves completed plans here; compactify-artifacts clears a chunk per run
         plan-REQ-NNN.md
-      lessons_learned/      # implement-plan writes post-implementation lessons here; compactify-artifacts clears
+      lessons_learned/      # implement-plan writes post-implementation lessons here; compactify-artifacts clears a chunk per run
         lessons-REQ-NNN.md
       archive/              # compactify-artifacts writes compact archive entries here
         plan-REQ-NNN.md
+  .claude/
+    rules/                  # compactify-artifacts may write glob-scoped rule files here for tactical lessons
+      <topic>.md
   <source code, tests, configs...>
 ```
 
-All design documents (concept, PRD, architecture, dev-environment, backpressure) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (setup commands, how to run checks, suppression policy). The `lessons.md` log sits alongside them as a separate, append-only memory artifact -- not a design document, but durable across the project's life.
+All design documents (concept, PRD, architecture, dev-environment, backpressure) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (setup commands, how to run checks, suppression policy). Strategic lessons distilled by `compactify-artifacts` are merged back into these design documents under explicit user authorization; tactical, file-pattern-specific lessons land in `.claude/rules/<topic>.md` files (sibling to `clif-d/`) so they re-enter the agent's context only when matching files are touched.
 
 ### Artifact precedence and lifecycle
 
@@ -80,9 +82,9 @@ Artifacts are listed here in **order of authority**. When two artifacts disagree
 5. **`backpressure.md`** — *What quality standards the product enforces.* Updated when guardrails change. Every change should be a deliberate, documented decision — relaxations especially.
 6. **`plans/active/*.md`** — *How specific requirements will be implemented.* Short-lived. Each plan targets a set of requirements and is consumed by `implement-plan`. After implementation is complete, plans are moved to `plans/executed/` by `implement-plan`.
 7. **`plans/executed/*.md`** — *Completed plans with implementation commit SHAs.* Full step-by-step detail is preserved. These accumulate until `compactify-artifacts` distills them into `plans/archive/` and deletes the originals (git history preserves them).
-8. **`plans/lessons_learned/*.md`** — *Per-plan post-implementation lessons.* Written by `implement-plan`. Short-lived; consumed by `compactify-artifacts`, which interrogates the user about which lessons are durable and discards the rest.
+8. **`plans/lessons_learned/*.md`** — *Per-plan post-implementation lessons.* Written by `implement-plan`. Short-lived; consumed by `compactify-artifacts` one chunk at a time. Most lesson content is silently discarded by an aggressive pre-filter; high-signal survivors are presented to the user via structured AskUserQuestion calls and routed -- on per-lesson authorization -- into either an upstream design doc (items 1-5 above) or a glob-scoped `.claude/rules/*.md` file (item 10 below).
 9. **`plans/archive/*.md`** — *Compact historical map of what was implemented and how.* One terse entry per executed plan: requirement IDs, major commit SHAs, acceptance-criteria checklist, one-paragraph summary, pointers for git/PR deep dive. Not a comprehensive history -- a starting point for one.
-10. **`lessons.md`** — *Durable lessons learned across the project.* Append-only. Populated by `compactify-artifacts` from `plans/lessons_learned/` files, gated by user interrogation against a high bar (recurring pitfall, regression-prone pattern, skill-instruction gap, or reversed decision). Not authoritative in the same sense as the design documents above -- it is accumulated wisdom, not specification.
+10. **`.claude/rules/*.md`** — *Glob-scoped tactical rules, sibling to `clif-d/`.* Each file declares a `globs:` frontmatter array; the rule re-enters the agent's context only when a matching file is read or edited. Created or extended by `compactify-artifacts` for tactical, file-pattern-specific lessons that earned a permanent home but do not belong in a top-level design doc. See `cli/clif-d/plans/executed/plan-REQ-027.md` for the format precedent. Not authoritative in the same sense as the design documents above -- the design documents stay authoritative, and rule files are signposts that point to them.
 
 ### The PRD as a living document
 
@@ -177,15 +179,6 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 - [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
 - [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
 - [ ] **Clarify HITL/HOTL.** Get clear on which skills should be ruthlessly identifying uncertainty, contradiction, and ambiguity, and interrogating the user to clarify it all. (HITL.)  And similarly get clear on which skills should be running without human intervention. (HOTL.)  The philosophy is that if we are clear enough with the HITL former skills, the latter actually have a hope of being HOTL.
-- [ ] **`compactify-artifacts` needs improvements to manage scope, clarify skill output, and appropriately interrogate the user.**
-  - The skill shouldn't try to compactify all plans at once.  Instead, the skill should look through all (or a subset) of the executed plans and corresponding lessons_learned/ files, and it should decide what group of plans is a reasonable chunk to compactify, leaving the rest for a future run of the skill.
-  -  Compactified plans should refer to their implementation commit by SHA.  Raw plan and lesson docs should be deleted after compactification.
-  -  The skill isn't currently clear or explicit where the skill's results/output should go, currently.  Its output should end up in one of two places.  1. High level lessons should be worked into architecture, backpressure, PRD, and other high level documents.  2. Lower level, concrete lessons should be worked into a .claude/rules/ file, glob matched to where it's relevant.
-  -  The raw lesson files being compactified usually have a low signal to noise ratio, so it's possible many raw "lessons" will be discarded without ever presenting them to the user. The user should only be presented with candidates that truly have durable potential to reduce significant mistake likelihood.  Things that would be caught by the backpressure system aren't candidates - let the backpressure system catch them.  When the skill has identified candidate lessons to interrogate the user, it should:
-    - Present each candidate lesson with the tool for asking the user questions.
-    - Present each candidate lesson to the user with enough context that it could be understood (without digging through the code) by a technical engineering manager
-    - Include information about why it may (or may not) be a good candidate for a durable lesson that will save significant time or mistakes.
-    - Suggestions about where the lesson should end up: Which high level document? or as a rule file glob matched to which patterns?
 
 ## Potential Issues
 
