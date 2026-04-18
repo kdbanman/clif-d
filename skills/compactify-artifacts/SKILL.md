@@ -130,11 +130,13 @@ Tally the discards by category and report the count to the chat (e.g., "discarde
 
 ### 5. Candidate interrogation
 
-For each surviving candidate, issue **one** AskUserQuestion call with these structured fields:
+For each surviving candidate, issue **one** AskUserQuestion call. Render the question body as labeled bullets so the user can scan it at a glance: each of the four fields below must appear in the user-visible question text with its bold label (`**Context:**`, `**Case for recording:**`, `**Case against recording:**`, `**Suggested destination:**`) and the argumentation inside the bullet. Do not merge the case and the counter-case into a single paragraph -- the contrast is the point.
+
+Structured fields:
 
 - **Context**: what happened, written so a technical engineering manager could adjudicate without opening any file. Two to four sentences. Name the plan (REQ-ID) and any relevant module names; quote code only when irreducible.
-- **Why this is a candidate**: which durability bar it meets and why recording it is likely to save meaningful future time or prevent a recurring class of mistake. One or two sentences.
-- **Why it might not be**: the strongest counter-case (e.g., "the underlying pattern only appeared once and may not recur", "duplicates the spirit of `backpressure.md` section X", "could be addressed by a stronger lint rule rather than a process lesson"). One sentence.
+- **Case for recording**: which durability bar it meets and why recording it is likely to save meaningful future time or prevent a recurring class of mistake. One or two sentences.
+- **Case against recording**: the strongest counter-case (e.g., "the underlying pattern only appeared once and may not recur", "duplicates the spirit of `backpressure.md` section X", "could be addressed by a stronger lint rule rather than a process lesson"). One sentence.
 - **Suggested destination**, proposed by the skill:
   - A specific section of `clif-d/architecture.md`, `clif-d/backpressure.md`, `clif-d/dev-environment.md`, `clif-d/concept.md`, or `clif-d/prd.json` (name the exact heading or requirement ID), OR
   - A new or existing `.claude/rules/<topic>.md` file with a proposed `globs:` pattern that scopes which file edits should re-surface the rule.
