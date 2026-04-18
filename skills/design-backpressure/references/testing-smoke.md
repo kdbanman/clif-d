@@ -2,7 +2,7 @@
 
 ## What They Are
 
-A smoke test is a small, fast suite of tests that verifies the most basic, critical functionality of a system is working. The name comes from hardware testing — when you power on a new circuit board, the first test is whether it catches fire (produces smoke). If it does, you don't bother with further testing.
+A smoke test is a small, fast suite of tests that verifies the most basic, critical functionality of a system is working. The name comes from hardware testing -- when you power on a new circuit board, the first test is whether it catches fire (produces smoke). If it does, you don't bother with further testing.
 
 Smoke tests answer one question: "Is this build/deployment so broken that further testing is pointless?"
 
@@ -22,7 +22,7 @@ Use smoke tests:
 
 - **After every build** as the first automated check. If smoke tests fail, skip the rest of the test suite.
 - **After every deployment** to a new environment (staging, production) to verify the deployment succeeded.
-- **As a health check** for a running system — a lightweight probe that monitoring systems can run continuously.
+- **As a health check** for a running system -- a lightweight probe that monitoring systems can run continuously.
 - **As a gating check** before running a more expensive test suite. If smoke tests fail, there's no point running integration or E2E tests.
 
 ## Scope and Boundaries
@@ -48,13 +48,13 @@ The defining characteristic is not scope but *purpose and speed*: smoke tests ex
 
 Smoke tests are the purest expression of the backpressure philosophy: a fast, hard gate that catches catastrophic failures before any further effort is wasted. When designing enforcement infrastructure, consider where smoke tests fit in the gate sequence:
 
-- **Pre-push or early CI:** Run smoke tests before the full test suite. If smoke fails, abort — there is no point running hundreds of tests against a fundamentally broken build.
+- **Pre-push or early CI:** Run smoke tests before the full test suite. If smoke fails, abort -- there is no point running hundreds of tests against a fundamentally broken build.
 - **Post-deployment:** Run smoke tests immediately after deploying to any environment. A deployment that fails smoke is rolled back before anyone notices.
 - **Separate from the main suite:** Smoke tests should be runnable independently via directory separation or markers (e.g., `tests/smoke/` or a `@smoke` marker). See [testing-enforcement.md](./testing-enforcement.md) for guidance on partitioning by type.
 
 ## Type-Specific Pitfalls
 
-**Scope creep.** The most common failure mode. A smoke suite that grows to 100+ tests is no longer a smoke suite — it's a slow integration suite labeled "smoke." Resist the urge to add "just one more" test. If a test isn't checking for a catastrophic, ship-blocking failure, it doesn't belong in smoke.
+**Scope creep.** The most common failure mode. A smoke suite that grows to 100+ tests is no longer a smoke suite -- it's a slow integration suite labeled "smoke." Resist the urge to add "just one more" test. If a test isn't checking for a catastrophic, ship-blocking failure, it doesn't belong in smoke.
 
 **False confidence from passing smoke tests.** Smoke tests passing does not mean the system works correctly. It means the system isn't dead on arrival. Teams that treat a passing smoke suite as sufficient validation will ship bugs. Smoke tests are a necessary first check, not a sufficient final one.
 
@@ -66,7 +66,7 @@ When writing or reviewing a smoke test, verify:
 
 - [ ] **Catastrophic failure only:** The test checks for a failure that would make the system fundamentally unusable, not a subtle bug.
 - [ ] **Fast:** The test completes in seconds. The whole suite should run in under 2 minutes.
-- [ ] **Simple:** The test is trivially easy to understand — no complex setup, no nuanced assertions. No logic in tests.
+- [ ] **Simple:** The test is trivially easy to understand -- no complex setup, no nuanced assertions. No logic in tests.
 - [ ] **Independent:** The test does not depend on other smoke tests having run first.
 - [ ] **Critical path only:** The test covers functionality that, if broken, blocks all users or all further testing.
 - [ ] **Suite size:** The total smoke suite remains small (5-15 tests). If it's larger, prune non-critical tests.

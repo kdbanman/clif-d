@@ -11,7 +11,7 @@ This document covers the structural and operational aspects of a test suite: how
 
 ## 1. File and Directory Structure
 
-There are two dominant conventions for where test files live relative to production code. Neither is universally better — choose one and be consistent within a project.
+There are two dominant conventions for where test files live relative to production code. Neither is universally better -- choose one and be consistent within a project.
 
 **Co-located tests (test files alongside source files):**
 
@@ -57,7 +57,7 @@ tests/
     ...
 ```
 
-This allows each category to be run independently — unit tests on every commit, integration tests in CI, E2E tests on deployment. It also makes it clear what kind of test you're looking at when reading the code.
+This allows each category to be run independently -- unit tests on every commit, integration tests in CI, E2E tests on deployment. It also makes it clear what kind of test you're looking at when reading the code.
 
 If your framework supports tags or markers (pytest markers, JUnit tags, RSpec tags), use them in addition to or instead of directory separation. Either way, the ability to run "just the unit tests" or "just the smoke tests" is essential.
 
@@ -87,20 +87,20 @@ Examples:
 - `parseConfig_missingRequiredField_throwsValidationError`
 - `searchIndex_emptyQuery_returnsAllResults`
 
-This pattern makes test names self-documenting — when a test fails, the name tells you what broke without reading the test body.
+This pattern makes test names self-documenting -- when a test fails, the name tells you what broke without reading the test body.
 
 Avoid:
 - `testProcessTransaction` (which behavior? which scenario?)
 - `test1`, `test2` (meaningless)
-- `testBug1234` (tell the reader what the bug was, not its ticket number — add the ticket number in a comment if needed)
+- `testBug1234` (tell the reader what the bug was, not its ticket number -- add the ticket number in a comment if needed)
 
 ### Test Suite / Test Class Naming
 
 Group tests into classes or suites that correspond to the unit or feature being tested:
 
-- `UserServiceTest` — all unit tests for the UserService
-- `CheckoutFlowIntegrationTest` — integration tests for the checkout workflow
-- `LoginSmokeTest` — smoke tests for login functionality
+- `UserServiceTest` -- all unit tests for the UserService
+- `CheckoutFlowIntegrationTest` -- integration tests for the checkout workflow
+- `LoginSmokeTest` -- smoke tests for login functionality
 
 ---
 
@@ -108,7 +108,7 @@ Group tests into classes or suites that correspond to the unit or feature being 
 
 **Every test must be independent.** A test must produce the same result regardless of which other tests have run before it, what order tests run in, or whether tests run in parallel.
 
-Violations of this principle — "Interacting Tests" in Meszaros's terminology — are one of the most insidious sources of flakiness. They create failures that only appear in specific CI runs, are impossible to reproduce locally, and waste enormous amounts of debugging time.
+Violations of this principle -- "Interacting Tests" in Meszaros's terminology -- are one of the most insidious sources of flakiness. They create failures that only appear in specific CI runs, are impossible to reproduce locally, and waste enormous amounts of debugging time.
 
 Achieving independence requires:
 
@@ -121,7 +121,7 @@ Achieving independence requires:
 
 ## 4. Test Fixture Management
 
-A **fixture** is the state needed for a test to run — objects, data, configuration, external services. Fixture management is a strategic choice that significantly impacts test speed, reliability, and maintainability.
+A **fixture** is the state needed for a test to run -- objects, data, configuration, external services. Fixture management is a strategic choice that significantly impacts test speed, reliability, and maintainability.
 
 ### Fresh Fixture (preferred default)
 
@@ -161,13 +161,13 @@ Coverage is a **useful negative indicator**: if a module has 20% line coverage, 
 
 ### Guidelines for Using Coverage
 
-**Use coverage to find gaps, not to declare victory.** Run coverage reports periodically and examine uncovered areas. Ask: "Is this uncovered code high-risk? Should it have tests?" Sometimes the answer is no — trivial getters, generated code, or dead code may not warrant tests.
+**Use coverage to find gaps, not to declare victory.** Run coverage reports periodically and examine uncovered areas. Ask: "Is this uncovered code high-risk? Should it have tests?" Sometimes the answer is no -- trivial getters, generated code, or dead code may not warrant tests.
 
-**Set per-component floors, not project-wide ceilings.** A data processing pipeline with complex transformation logic might warrant 90%+ coverage. A thin API adapter might be well-served at 60%. Setting a single project-wide target (e.g., "80% coverage") incentivizes gaming — engineers write meaningless tests for easy-to-cover code while ignoring hard-to-test, high-risk code.
+**Set per-component floors, not project-wide ceilings.** A data processing pipeline with complex transformation logic might warrant 90%+ coverage. A thin API adapter might be well-served at 60%. Setting a single project-wide target (e.g., "80% coverage") incentivizes gaming -- engineers write meaningless tests for easy-to-cover code while ignoring hard-to-test, high-risk code.
 
 **Watch for falling coverage, not just low coverage.** If a module's coverage drops significantly between commits, it means new code was added without tests. This is a more actionable signal than absolute coverage numbers.
 
-**Never game coverage.** Tests that execute code without meaningful assertions are worse than no tests — they create false confidence. If a coverage tool counts a test as "covering" a function, but the test never checks the function's output, the coverage number is a lie.
+**Never game coverage.** Tests that execute code without meaningful assertions are worse than no tests -- they create false confidence. If a coverage tool counts a test as "covering" a function, but the test never checks the function's output, the coverage number is a lie.
 
 ### Mutation Testing (a more rigorous alternative)
 
@@ -177,12 +177,12 @@ Mutation testing introduces small changes (mutations) to your production code an
 
 ## 6. Maintaining Tests Over Time
 
-Test code is real code. It needs maintenance, refactoring, and care — not just the production code it tests.
+Test code is real code. It needs maintenance, refactoring, and care -- not just the production code it tests.
 
 ### When to Refactor Tests
 
 - **When you find an Obscure Test:** If a test is hard to understand, refactor it for clarity before it causes more confusion. Extract helper methods, inline Mystery Guests, remove irrelevant setup.
-- **When you find duplication across many tests:** Extract common patterns into well-named utility functions or builders. But don't over-extract — each test should remain readable in isolation (DAMP over DRY).
+- **When you find duplication across many tests:** Extract common patterns into well-named utility functions or builders. But don't over-extract -- each test should remain readable in isolation (DAMP over DRY).
 - **When tests are fragile:** If tests break on unrelated changes, they are coupled to implementation details. Refactor to test via public APIs and assert on state, not interactions.
 - **When a test class grows too large:** If a test file has hundreds of tests, it's probably testing too many behaviors in one place. Split by behavior or sub-feature.
 
@@ -198,14 +198,14 @@ Tests can and should be deleted when they no longer provide value:
 ### Preventing Test Rot
 
 - **Review test code with the same rigor as production code.** If code review skips the test files, test quality will degrade over time.
-- **Run the full test suite regularly.** Tests that are never run are tests that silently break. If certain tests are too slow to run in CI, consider moving them to a nightly or weekly run — but ensure they run.
+- **Run the full test suite regularly.** Tests that are never run are tests that silently break. If certain tests are too slow to run in CI, consider moving them to a nightly or weekly run -- but ensure they run.
 - **Track test health metrics.** Flake rate, test run duration, and test count growth over time can all indicate emerging problems before they become crises.
 
 ---
 
 ## 7. Dealing with Flaky Tests
 
-A flaky test is one that passes and fails nondeterministically without any change to the code under test. Flaky tests are one of the most damaging problems a test suite can have — they erode trust in the entire suite, waste debugging time, and train engineers to ignore test failures.
+A flaky test is one that passes and fails nondeterministically without any change to the code under test. Flaky tests are one of the most damaging problems a test suite can have -- they erode trust in the entire suite, waste debugging time, and train engineers to ignore test failures.
 
 ### Common Causes
 
@@ -217,7 +217,7 @@ A flaky test is one that passes and fails nondeterministically without any chang
 
 ### Strategies
 
-**Quarantine, don't disable.** When a test is identified as flaky, move it to a separate quarantine suite that runs separately from the main suite. This prevents it from blocking other engineers while keeping it visible for fixing. A disabled test is invisible — it will stay disabled forever.
+**Quarantine, don't disable.** When a test is identified as flaky, move it to a separate quarantine suite that runs separately from the main suite. This prevents it from blocking other engineers while keeping it visible for fixing. A disabled test is invisible -- it will stay disabled forever.
 
 **Fix the root cause, not the symptom.** Adding retries or increasing timeouts papers over flakiness without fixing it. Diagnose whether the issue is shared state, timing, or external dependencies, and fix the actual problem.
 
@@ -240,7 +240,7 @@ As a codebase grows, test suite execution time naturally increases. If the suite
 - **E2E tests:** Seconds to low minutes per test. The full E2E suite should run in under 30 minutes.
 - **Smoke tests:** The complete smoke suite should run in under 2 minutes.
 
-These are rough guidelines — adjust for your project's size and constraints. See [./testing-types.md](./testing-types.md) for detailed guidance on each type's characteristics and appropriate use.
+These are rough guidelines -- adjust for your project's size and constraints. See [./testing-types.md](./testing-types.md) for detailed guidance on each type's characteristics and appropriate use.
 
 ### When the Suite Gets Slow
 

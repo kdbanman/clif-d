@@ -1,20 +1,19 @@
 ---
 name: design-backpressure
 description: >
-  Design quality guardrails for a codebase — aggressive linting, maximal type enforcement, mandatory test passing, and
-  pre-commit hooks that enforce all of the above as hard local gates. Use this skill when the user has an architecture
-  document (from the create-architecture skill or equivalent) and wants to decide what quality backpressure will be
-  enforced before the dev environment is bootstrapped. Researches the most aggressive viable styleguide and linter
-  configuration for the project's language, domain, and libraries, decides the strictest type-checking mode, specifies
-  test enforcement, and specifies the pre-commit hook architecture so that no code enters the repository without
-  passing all gates. Produces clif-d/backpressure.md. Does NOT generate configuration files, install hooks, or run the
-  tooling — that is bootstrap-dev-environment's job, and it reads this document as input. The goal of this skill is a
-  design document precise enough that the dev-environment bootstrap can implement it without further design decisions.
+  Design quality guardrails for a codebase -- aggressive linting, maximal type enforcement, mandatory test passing,
+  and pre-commit hooks that enforce all of the above as hard local gates. Use when the user has an architecture
+  document (from create-architecture or equivalent) and wants to decide what backpressure will be enforced before the
+  dev environment is bootstrapped. Researches the most aggressive viable styleguide and linter configuration for the
+  project's language, domain, and libraries, decides the strictest type-checking mode, specifies test enforcement,
+  and specifies the pre-commit hook architecture so no code enters the repository without passing all gates. Produces
+  clif-d/backpressure.md. Does NOT generate configuration files, install hooks, or run tooling -- that is
+  bootstrap-dev-environment's job, and it reads this document as input.
 ---
 
 # Design Quality Backpressure
 
-You are helping the user design **quality backpressure** — hard, automated guardrails that enforce code quality locally before code can be committed. This is especially important for agentic (LLM-driven) implementation workflows, where the agent needs clear, fast signals about whether its output meets quality standards.
+You are helping the user design **quality backpressure** -- hard, automated guardrails that enforce code quality locally before code can be committed. This is especially important for agentic (LLM-driven) implementation workflows, where the agent needs clear, fast signals about whether its output meets quality standards.
 
 The metaphor is backpressure: these guardrails create resistance that pushes back against low-quality code, forcing the implementation process (human or agentic) to meet standards before moving forward.
 
@@ -26,7 +25,7 @@ This skill produces the **design record** only. The configuration files, hook wi
 
 ### Hard gates, not suggestions
 
-Every guardrail must be a **hard gate** — a check that runs automatically and blocks progress (commit, push, or CI) on failure. Advisory warnings, optional lints, and "recommended" checks are not backpressure. If it doesn't block, it doesn't count.
+Every guardrail must be a **hard gate** -- a check that runs automatically and blocks progress (commit, push, or CI) on failure. Advisory warnings, optional lints, and "recommended" checks are not backpressure. If it doesn't block, it doesn't count.
 
 ### Maximal strictness as the starting point
 
@@ -86,7 +85,7 @@ Start by reading the architecture document (or PRD, or codebase) and summarizing
 
 For the project's language, research:
 
-- **Linting**: What is the most aggressive styleguide and linter configuration available? Not the "recommended" preset — the strictest one that a serious team would use. For example:
+- **Linting**: What is the most aggressive styleguide and linter configuration available? Not the "recommended" preset -- the strictest one that a serious team would use. For example:
   - TypeScript/JavaScript: `eslint` with `eslint-config-strict` or a custom config building on `@typescript-eslint/strict-type-checked` plus `unicorn/recommended` plus `import/recommended`
   - Python: `ruff` with `ALL` rules enabled, selectively disabling only what's genuinely inapplicable
   - Rust: `clippy` with `#![deny(clippy::all, clippy::pedantic, clippy::nursery)]`
@@ -98,7 +97,7 @@ For the project's language, research:
   - Rust: already strict by default, but add `#![deny(warnings, missing_docs)]`
 
 - **Formatting**: What is the standard, zero-config formatter?
-  - Prettier, Black, rustfmt, gofmt — whatever the ecosystem standard is. No configuration debates. Use the default style.
+  - Prettier, Black, rustfmt, gofmt -- whatever the ecosystem standard is. No configuration debates. Use the default style.
 
 - **Domain-specific lints**: Are there lints specific to the libraries or domain?
   - React: `eslint-plugin-react-hooks`, accessibility lints
@@ -305,10 +304,10 @@ Before handing off, confirm:
 
 ## Testing References
 
-This skill's references directory contains guidance on the *enforcement infrastructure* around testing — what to run where, how fast, coverage strategy, and deployment verification. Consult them when designing the hook architecture and deciding what test enforcement gates to configure.
+This skill's references directory contains guidance on the *enforcement infrastructure* around testing -- what to run where, how fast, coverage strategy, and deployment verification. Consult them when designing the hook architecture and deciding what test enforcement gates to configure.
 
-- **Enforcement**: [Testing enforcement](references/testing-enforcement.md) — speed guidelines by test type, pre-commit vs. pre-push vs. CI partitioning, flakiness management, test suite performance
-- **Coverage**: [Coverage strategy](references/testing-coverage.md) — what coverage metrics mean, per-component floors, mutation testing, coverage as a gate
-- **Smoke tests**: [Smoke test guide](references/testing-smoke.md) — build/deployment verification gates, scope, and the "is this build dead on arrival?" check
+- **Enforcement**: [Testing enforcement](references/testing-enforcement.md) -- speed guidelines by test type, pre-commit vs. pre-push vs. CI partitioning, flakiness management, test suite performance
+- **Coverage**: [Coverage strategy](references/testing-coverage.md) -- what coverage metrics mean, per-component floors, mutation testing, coverage as a gate
+- **Smoke tests**: [Smoke test guide](references/testing-smoke.md) -- build/deployment verification gates, scope, and the "is this build dead on arrival?" check
 
 These references focus on *enforcing* test quality as automated gates. This skill does not write tests and does not install the enforcement infrastructure -- it designs the enforcement contract that `bootstrap-dev-environment` implements. Tests themselves are planned by the plan-requirement skill and written by the implement-plan skill. The backpressure system trusts that those skills produce well-structured tests; its job is to specify -- and the dev-environment bootstrap's job is to enforce -- that those tests are executed reliably at the right stages.

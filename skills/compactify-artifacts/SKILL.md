@@ -1,18 +1,18 @@
 ---
 name: compactify-artifacts
 description: >
-  Compact a chunk of accumulated CLIF-D execution artifacts -- finished implementation plans and
-  per-plan lessons-learned files -- into terse archive entries and route any durable lessons to
-  their proper home. Use this skill when `clif-d/plans/executed/` or `clif-d/plans/lessons_learned/`
-  are getting onerous and the noise is starting to obscure signal. Each run picks a small,
-  coherent slice of plans (not the whole pile), reads each plan and its matching lessons file,
-  consults git history for the major commits, silently discards low-signal lessons, escalates
-  high-signal candidates to the user one at a time with structured options, writes one compact
-  archive entry per plan to `clif-d/plans/archive/`, edits the upstream design doc or writes a
-  glob-scoped `.claude/rules/*.md` file for each user-approved lesson, flags drift in upstream
-  design docs and lessons that imply new requirements (without silently amending them), then
-  deletes the originals in the chunk. Untouched plans remain for a future run. Active plans are
-  never touched.
+  Compact a chunk of accumulated CLIF-D execution artifacts (finished implementation plans and
+  per-plan lessons-learned files) into terse archive entries and route durable lessons to their
+  proper home. Use when `clif-d/plans/executed/` or `clif-d/plans/lessons_learned/` are getting
+  onerous and noise is obscuring signal. Each run picks a small, coherent slice (not the whole
+  pile), reads each plan and its matching lessons file, consults git history for major commits,
+  silently discards low-signal lessons, escalates high-signal candidates to the user one at a
+  time with structured options, writes one compact archive entry per plan to
+  `clif-d/plans/archive/`, edits the upstream design doc or writes a glob-scoped
+  `.claude/rules/*.md` file for each user-approved lesson, flags drift in upstream docs and
+  lessons that imply new requirements (without silently amending them), then deletes the
+  originals in the chunk. Untouched plans remain for a future run. Active plans are never
+  touched.
 ---
 
 # Compactify Artifacts

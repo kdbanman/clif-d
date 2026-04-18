@@ -15,7 +15,7 @@ Tests that are too slow to run at a given gate will be skipped at that gate. Spe
 | E2E | Seconds to low minutes | Under 30 minutes | Full system, real (or near-real) dependencies. |
 | Smoke | Seconds each | Under 2 minutes total | 5-15 tests covering only catastrophic failures. See [testing-smoke.md](./testing-smoke.md). |
 
-These are rough guidelines. Adjust for project size — but treat violations as a signal that tests are at the wrong level, not that the budget needs expanding.
+These are rough guidelines. Adjust for project size -- but treat violations as a signal that tests are at the wrong level, not that the budget needs expanding.
 
 ---
 
@@ -28,13 +28,13 @@ The backpressure system operates at three enforcement points. Each has a time bu
 1. **Format** changed files (auto-fix, re-stage).
 2. **Lint** changed files (fail on violation, no auto-fix).
 3. **Type-check** (often requires full-project analysis, not just changed files).
-4. **Unit tests** — the full unit suite if it completes in seconds, or tests affected by changes if scoping tooling exists.
+4. **Unit tests** -- the full unit suite if it completes in seconds, or tests affected by changes if scoping tooling exists.
 
-If the unit suite exceeds the seconds budget, it belongs in pre-push. Do not compromise the pre-commit gate's speed — a slow pre-commit hook trains developers (and agents) to bypass it.
+If the unit suite exceeds the seconds budget, it belongs in pre-push. Do not compromise the pre-commit gate's speed -- a slow pre-commit hook trains developers (and agents) to bypass it.
 
 ### Pre-push (must complete in under a minute)
 
-1. **Full test suite** — unit + integration.
+1. **Full test suite** -- unit + integration.
 2. **Smoke tests** if they are not already part of CI deployment verification.
 
 Pre-push is the last local gate. Everything that can run locally in under a minute belongs here.
@@ -58,7 +58,7 @@ A test suite that grows slow enough to miss its gate budget is a suite that stop
 ### Diagnosing slowness
 
 - **Profile the suite.** Find the slowest tests. Common culprits: unnecessary I/O, redundant fixture setup, tests running at too broad a scope.
-- **Check classification.** A test that hits a real database but only validates business logic is an integration test wearing a unit test's name. Reclassify it — or better, rewrite it as a true unit test with a fake.
+- **Check classification.** A test that hits a real database but only validates business logic is an integration test wearing a unit test's name. Reclassify it -- or better, rewrite it as a true unit test with a fake.
 
 ### Remediation
 
@@ -70,7 +70,7 @@ A test suite that grows slow enough to miss its gate budget is a suite that stop
 
 ## Test Independence as an Enforcement Concern
 
-Test independence is not just a quality-of-tests concern — it is a prerequisite for reliable enforcement. Gates that produce nondeterministic results (pass on one run, fail on the next) destroy trust in the enforcement system. Engineers and agents learn to retry-and-ignore rather than fix.
+Test independence is not just a quality-of-tests concern -- it is a prerequisite for reliable enforcement. Gates that produce nondeterministic results (pass on one run, fail on the next) destroy trust in the enforcement system. Engineers and agents learn to retry-and-ignore rather than fix.
 
 Independent tests require:
 
@@ -79,21 +79,21 @@ Independent tests require:
 - **No assumed ordering.** Tests must produce the same result regardless of execution order. This is also a prerequisite for parallelization.
 - **Idempotent execution.** Running a test twice in a row must produce the same result.
 
-When evaluating a project's test infrastructure for backpressure readiness, check that tests can run in any order and in parallel. If they cannot, that is a structural problem to flag — the enforcement gates will be unreliable until it is fixed.
+When evaluating a project's test infrastructure for backpressure readiness, check that tests can run in any order and in parallel. If they cannot, that is a structural problem to flag -- the enforcement gates will be unreliable until it is fixed.
 
 ---
 
 ## Dealing with Flaky Tests
 
-Flaky tests — tests that pass and fail nondeterministically without code changes — are the single greatest threat to gate reliability. A flaky test in a pre-commit gate trains everyone to distrust the gate. A gate that is distrusted is a gate that gets bypassed.
+Flaky tests -- tests that pass and fail nondeterministically without code changes -- are the single greatest threat to gate reliability. A flaky test in a pre-commit gate trains everyone to distrust the gate. A gate that is distrusted is a gate that gets bypassed.
 
 ### Common causes
 
 - **Shared mutable state** between tests (database rows, files, global variables).
 - **Timing dependencies** (network latency, thread scheduling, sleep-based waits).
-- **Order dependence** — tests that only pass when run after specific other tests.
-- **External service dependencies** — tests calling real services that are sometimes slow or unavailable.
-- **Resource leaks** — tests that do not clean up, causing later tests to fail as resources exhaust.
+- **Order dependence** -- tests that only pass when run after specific other tests.
+- **External service dependencies** -- tests calling real services that are sometimes slow or unavailable.
+- **Resource leaks** -- tests that do not clean up, causing later tests to fail as resources exhaust.
 
 ### Strategy
 
@@ -105,7 +105,7 @@ Flaky tests — tests that pass and fail nondeterministically without code chang
 
 **Replace real external calls with fakes or stubs.** If a test is flaky because of an external service, the reduced fidelity of a test double is worth the gain in gate reliability.
 
-**Track flake rates.** Monitor which tests fail most often and prioritize fixing them. A test that flakes once a week is an annoyance. A test that flakes once per CI run is an emergency — it means the gate is effectively non-functional for that check.
+**Track flake rates.** Monitor which tests fail most often and prioritize fixing them. A test that flakes once a week is an annoyance. A test that flakes once per CI run is an emergency -- it means the gate is effectively non-functional for that check.
 
 ### The backpressure designer's responsibility
 
@@ -114,4 +114,4 @@ When designing enforcement gates, establish policy for flaky test handling:
 1. Define a flake rate threshold that triggers quarantine (e.g., any test that fails nondeterministically more than once in a week).
 2. Establish a quarantine location (separate directory or marker) that runs outside the gate path.
 3. Require root cause analysis for quarantined tests, not just "skip and move on."
-4. Track quarantine size — a growing quarantine is a signal that the test infrastructure has systemic problems.
+4. Track quarantine size -- a growing quarantine is a signal that the test infrastructure has systemic problems.

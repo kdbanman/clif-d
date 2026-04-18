@@ -1,18 +1,15 @@
 ---
 name: bootstrap-dev-environment
 description: >
-  Bridge the gap between a macOS developer's shell and a reproducible, agent-executable development environment for a
-  CLIF-D project, and implement the quality guardrails that the backpressure design specifies. Use this skill after
-  create-architecture and design-backpressure, when the architecture document specifies a toolchain (language, package
-  manager, test framework, build commands) and the backpressure document specifies the quality guardrails, but nothing
-  has verified that those tools are installed, version-pinned, and invokable from an agent's non-interactive subshell,
-  and nothing has actually wired up the hooks, linters, type checker, or suppression scanner. Researches the project's
-  ecosystem for the most reproducible bootstrap mechanism (containers, devcontainers, setup scripts with
-  version-pinned installers), generates the setup artifacts, generates the configuration files and hook scripts that
-  realize the backpressure design, runs the pre-existing-suppression audit, verifies every command from the
-  architecture's Technology Decisions table and the backpressure document's hook stages runs end-to-end, and wires in
-  an agent instruction file (CLAUDE.md) so that Claude Code inherits clear, terse instructions about the environment.
-  Produces clif-d/dev-environment.md plus the actual setup artifacts and guardrail implementation.
+  Bootstrap a reproducible, agent-executable development environment for a CLIF-D project, and wire in the quality
+  guardrails from the backpressure design. Use after create-architecture and design-backpressure, when the toolchain
+  and guardrails are specified but nothing has verified the tools are installed, version-pinned, and invokable from
+  an agent subshell, and nothing has wired up the hooks, linters, type checker, or suppression scanner. Researches
+  the ecosystem for the most reproducible bootstrap mechanism (containers, devcontainers, version-pinned setup
+  scripts), generates setup artifacts and the configs and hook scripts that realize the backpressure design, runs
+  the pre-existing-suppression audit, verifies every Technology Decisions command and hook stage runs end-to-end,
+  and writes a CLAUDE.md so Claude Code inherits environment context. Produces clif-d/dev-environment.md plus the
+  setup artifacts and guardrail implementation.
 ---
 
 # Bootstrap Dev Environment

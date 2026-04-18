@@ -10,7 +10,7 @@ A summary of CLI design conventions relevant to CLIF-D product requirements, dra
 - **1**: General error (catchall for unspecified failures).
 - **2**: Usage error (invalid arguments, missing required flags).
 - Map additional non-zero codes to the most important failure modes for better diagnostics in scripts.
-- Exit codes are how scripts determine success or failure — accuracy is critical.
+- Exit codes are how scripts determine success or failure -- accuracy is critical.
 
 ---
 
@@ -20,7 +20,7 @@ A summary of CLI design conventions relevant to CLIF-D product requirements, dra
 
 - Order matters: `cp source destination`.
 - Multiple arguments are fine for homogeneous inputs (`rm file1.txt file2.txt`, enabling globbing like `rm *.txt`).
-- If a command needs two or more arguments for *different* purposes, prefer flags instead — flags are self-documenting and order-independent.
+- If a command needs two or more arguments for *different* purposes, prefer flags instead -- flags are self-documenting and order-independent.
 
 ### Flags (named options)
 
@@ -32,7 +32,7 @@ A summary of CLI design conventions relevant to CLIF-D product requirements, dra
 
 ### Standard flag names
 
-Use these when they fit — users expect them:
+Use these when they fit -- users expect them:
 
 | Flag | Meaning |
 |------|---------|
@@ -50,7 +50,7 @@ Use these when they fit — users expect them:
 
 ### Defaults
 
-- Make defaults sensible for the majority of users — most won't customize.
+- Make defaults sensible for the majority of users -- most won't customize.
 - Never *require* interactive prompts; always provide a flag or argument alternative.
 - Refuse prompts when stdin is not an interactive terminal (piped data).
 
@@ -89,12 +89,12 @@ Intercept expected errors and rewrite them as actionable guidance:
 ### Signal-to-noise
 
 - Group repeated errors under explanatory headers instead of printing identical lines.
-- Put the most critical information last — that's where the eye rests after scrolling.
+- Put the most critical information last -- that's where the eye rests after scrolling.
 - Use red text sparingly and intentionally for genuine errors.
 
 ### Unexpected errors
 
-- Provide debug/traceback information, but not by default — gate behind `--debug` or write to a log file.
+- Provide debug/traceback information, but not by default -- gate behind `--debug` or write to a log file.
 - Include instructions for submitting bug reports.
 - Don't print raw stack traces or exception dumps to users.
 
@@ -140,16 +140,16 @@ Detect whether stdout/stderr connects to an interactive terminal and adjust:
 
 ### When to show help
 
-- Full help on `-h` or `--help` (ignore other flags when help is requested — allow appending `-h` to anything).
+- Full help on `-h` or `--help` (ignore other flags when help is requested -- allow appending `-h` to anything).
 - Concise help when run with no arguments (if arguments are required).
-- Never hang silently waiting for piped input on an interactive terminal — show help or a message immediately.
+- Never hang silently waiting for piped input on an interactive terminal -- show help or a message immediately.
 
 ### Full help should include
 
 1. Clear description of what the program does
 2. Usage/syntax line
 3. Explanation of important flags (most common first)
-4. Examples — especially common complex uses (users prefer examples over other docs)
+4. Examples -- especially common complex uses (users prefer examples over other docs)
 5. Link to full documentation
 6. Link to support / issue tracker
 
@@ -157,7 +157,7 @@ Detect whether stdout/stderr connects to an interactive terminal and adjust:
 
 - Group related commands together.
 - For multi-command tools, support `tool help`, `tool help subcommand`, and `tool subcommand --help`.
-- Lead with examples — they're the most-read part of help text.
+- Lead with examples -- they're the most-read part of help text.
 
 ---
 
@@ -222,8 +222,8 @@ Follow the [XDG Base Directory Specification](https://specifications.freedesktop
 
 - Use the same flag names across all subcommands for consistency.
 - Use consistent verb/noun ordering: pick `tool noun verb` or `tool verb noun` and stick with it.
-- Don't allow arbitrary prefix abbreviations of subcommand names — they break when new commands are added.
-- Don't create catch-all default subcommands — they prevent ever adding that name as an explicit subcommand.
+- Don't allow arbitrary prefix abbreviations of subcommand names -- they break when new commands are added.
+- Don't create catch-all default subcommands -- they prevent ever adding that name as an explicit subcommand.
 
 ---
 
@@ -238,7 +238,7 @@ Follow the [XDG Base Directory Specification](https://specifications.freedesktop
 
 ## Naming
 
-- Use a simple, memorable word — not generic terms like `convert` or `download`.
+- Use a simple, memorable word -- not generic terms like `convert` or `download`.
 - Lowercase letters and dashes only.
 - Keep it short (users type it constantly).
 - Consider typing ergonomics.
