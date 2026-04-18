@@ -38,6 +38,56 @@ create-product-concept
                                                                                     └──▶ compactify-artifacts  (periodic; compacts a chunk of executed/ and lessons_learned/ each run)
 ```
 
+## Skill disposition: HITL vs HOTL
+
+Every CLIF-D skill is classified by **what kind of uncertainty it resolves**. This determines whether it interrogates the user or runs without intervention.
+
+- **HITL (human-in-the-loop) skills interrogate ruthlessly.** They resolve uncertainty that only the user can resolve -- product intent, brand taste, which lessons are durable, which trade-off to accept. They block progress until ambiguity is closed. The interrogation *is* the skill's main work.
+- **HOTL (human-out-of-the-loop) skills execute without interruption.** They resolve uncertainty that upstream artifacts already answer. They trace upstream, research, and only stop when an upstream artifact proves wrong, silent, or self-contradictory on a load-bearing question. A well-run HOTL skill produces a complete artifact end-to-end without a single AskUserQuestion call.
+- **HITL-lite skills sit between.** They research autonomously, draft provisional decisions, and present the whole package for one confirmation gate per phase -- not a loop on every micro-decision.
+
+The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HITL skills do their job.** If a PRD is vague, `plan-requirement` degrades into interrogation. If an architecture is incomplete, `implement-plan` stalls. The rubric is symbiotic: HITL skills pay the attention cost up front so HOTL skills do not have to pay it in a loop.
+
+### Classification
+
+| Skill | Disposition | Resolves |
+|---|---|---|
+| `create-product-concept` | HITL | Product intent, functionality gap, scope |
+| `workshop-names` | HITL | Brand positioning, taste, polarization tolerance |
+| `create-initial-prd` | HITL | User workflows, system boundaries, priorities |
+| `create-architecture` | HITL-lite | Technology decisions (research-informed, single confirmation gate) |
+| `design-backpressure` | HITL-lite | Strictness trade-offs, suppression policy, hook architecture |
+| `bootstrap-dev-environment` | HOTL | Toolchain installation, hook wiring, verification (one HITL gate: pre-existing-suppression audit) |
+| `plan-requirement` | HOTL | Step decomposition, test ordering, codebase state |
+| `implement-plan` | HOTL | Red-Green-Refactor execution, quality checks |
+| `compactify-artifacts` | HITL (per-lesson) | Which lessons are durable, where each one routes |
+
+`compactify-artifacts` is a special case: it silently discards most lesson noise via aggressive pre-filter, then escalates high-signal survivors to the user one at a time via AskUserQuestion. Every routed lesson requires explicit per-lesson authorization -- no silent amendments to design docs.
+
+### Interrogation discipline
+
+**HITL skills MUST:**
+
+- Ask load-bearing questions first -- the ones whose answers determine what else needs to be asked or researched.
+- Interrogate in rounds, not exhaustive dumps.
+- Summarize understanding and wait for confirmation before generating output.
+- Use web research to ground answers that *can* be researched; do not use research to replace questions only the user can answer.
+
+**HOTL skills MUST:**
+
+- Trace upstream documents before asking the user anything. Most ambiguity is already resolved in the PRD, architecture, backpressure, dev-environment, or preceding plans.
+- Escalate only when the upstream graph is silent, contradictory, or impossible on a load-bearing question.
+- Prefer a documented assumption over a blocking question, and surface the assumption in the output (e.g. the plan's Open Questions section).
+- Treat any AskUserQuestion call as a signal that an upstream artifact may be inadequate -- flag it back to the user.
+
+**HITL-lite skills MUST:**
+
+- Do the research pass before the confirmation pass.
+- Present provisional decisions, not open-ended questions. "I would pin Python to 3.12.7 because X; does that work?" beats "What Python version should we use?"
+- Use a single confirmation gate per phase, not a per-decision loop.
+
+Every AskUserQuestion call is a tax on user attention. HITL skills spend that tax to earn clarity; HOTL skills hoard it.
+
 ## The `clif-d/` directory
 
 All CLIF-D artifacts for a given product live in a single `clif-d/` directory at the root of the product repository. This directory is version-controlled alongside the code.
@@ -179,7 +229,7 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 - [ ] **Make all docs better line-separated.**  Right now, all markdown (skill files, reference files, instruction files, etc) have a lot of content per line.  That makes line-by-line diffs hard to review.  We should make better use of newline separation (e.g. between sentences) to make reviewing and surgical editing better.
 - [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
 - [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
-- [ ] **Clarify HITL/HOTL.** Get clear on which skills should be ruthlessly identifying uncertainty, contradiction, and ambiguity, and interrogating the user to clarify it all. (HITL.)  And similarly get clear on which skills should be running without human intervention. (HOTL.)  The philosophy is that if we are clear enough with the HITL former skills, the latter actually have a hope of being HOTL.
+- [x] **Clarify HITL/HOTL.** Rubric and classification table landed in the "Skill disposition: HITL vs HOTL" section above. Per-skill audit against the rubric (does each skill's interrogation discipline actually match its disposition?) is rolled into the skills-library review TODO above.
 
 ## Potential Issues
 
