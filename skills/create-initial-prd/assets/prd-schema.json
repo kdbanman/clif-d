@@ -3,11 +3,16 @@
   "title": "Product Requirements Document (PRD)",
   "description": "A flat, behavior-focused product requirements document structured for CLI-First Decomposition (CLIF-D). Requirements are not hierarchical — high-level and low-level requirements coexist as peers, differentiated by abstraction_level, and linked via explicit dependency and context references. This schema is self-documenting: every field includes a description explaining its purpose, type expectations, and usage guidance.",
   "type": "object",
-  "required": ["$schema", "product_name", "concept_summary", "context", "architecture", "requirements"],
+  "required": ["$schema", "clifd_version", "product_name", "concept_summary", "context", "architecture", "requirements"],
   "properties": {
     "$schema": {
       "type": "string",
       "description": "Relative path to this schema file from the PRD file. Serves two purposes: (1) enables machine validation of the PRD, and (2) makes the PRD self-documenting by pointing the reader to full field definitions."
+    },
+    "clifd_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+      "description": "Semver version of the CLIF-D plugin that authored or most-recently-updated this PRD. Read from the plugin manifest's `version` field (.claude-plugin/plugin.json) at the time the PRD is written. Recorded here because Claude Code plugins have no lifecycle hooks that can migrate files in the user's product repo on install or update (see the project README's 'Current constraints' section). Future migration tooling uses this field to detect when a PRD was authored against an older schema and needs to be upgraded."
     },
     "product_name": {
       "type": "string",

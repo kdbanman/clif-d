@@ -25,11 +25,13 @@ Do not confuse them when editing skills. When a skill says "the `clif-d/` direct
 
 # CLI subproject (`bin/clif-d` + `cli/`)
 
-This repo also contains the `clif-d` CLI -- a zero-dependency Node.js tool that skills invoke to read and mutate `prd.json`. It is an independent subproject with its own PRD and quality gates.
+The `clif-d` CLI is a core, user-facing part of this plugin -- not auxiliary tooling. Skills invoke `bin/clif-d` at runtime to CRUD `prd.json` deterministically and token-efficiently. It ships with the plugin, lands on the Bash tool's PATH for any installed user, and is a zero-dependency Node.js single file. The `cli/` directory next to it is build/test infra (ESLint, Prettier, TypeScript `checkJs`, husky, `node:test`) that supports the CLI's quality gates but never ships.
 
-**Key paths:**
-- `bin/clif-d` -- the shipped CLI (single file, zero runtime deps, `#!/usr/bin/env node`). Never add `require`/`import` of any npm package here.
-- `cli/` -- dev tooling only: ESLint, Prettier, TypeScript (`checkJs`), husky, `node:test`. Never published.
+**What ships vs. what doesn't:**
+- `bin/clif-d` -- **ships to users.** The runtime CLI: single file, zero runtime deps, `#!/usr/bin/env node`. Never add `require`/`import` of any npm package here.
+- `cli/` -- **never ships.** Dev infra only: linters, type-checker, test runner, husky, scripts. Lives in this repo so that the CLI has its own quality gates without polluting the rest of the plugin.
+
+**Other key paths:**
 - `cli-prd.json` -- PRD for the CLI (repo root).
 - `cli-design-notes.md`, `cli-integration-plan.md` -- design rationale and per-skill integration plan for the CLI.
 - `cli/clif-d/backpressure.md` -- quality backpressure design (what guardrails, why, how to suppress).
