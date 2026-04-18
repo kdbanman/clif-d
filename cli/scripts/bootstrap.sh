@@ -54,8 +54,19 @@ log "npm $(npm --version) -- ok"
 # git-ignored, so it is absent in fresh worktrees. Copy from the primary worktree
 # when available to avoid a slow npm ci re-run.
 cd "${CLI_DIR}"
-if [[ -d "${CLI_DIR}/node_modules" ]]; then
-    log "node_modules already present -- skipping"
+# Freshness check: npm writes node_modules/.package-lock.json on every install,
+# mirroring the top-level package-lock.json. If the top-level lockfile is newer
+# (or the marker is absent), node_modules is stale relative to declared deps.
+NM_MARKER="${CLI_DIR}/node_modules/.package-lock.json"
+LOCKFILE="${CLI_DIR}/package-lock.json"
+node_modules_is_fresh() {
+    [[ -d "${CLI_DIR}/node_modules" ]] || return 1
+    [[ -f "${NM_MARKER}" ]] || return 1
+    [[ -f "${LOCKFILE}" ]] || return 0  # no lockfile to compare against
+    [[ ! "${LOCKFILE}" -nt "${NM_MARKER}" ]]
+}
+if node_modules_is_fresh; then
+    log "node_modules present and in sync with package-lock.json -- skipping"
 elif [[ -f "${REPO_ROOT}/.git" ]]; then
     # Linked worktree: .git is a file, not a directory. Copy node_modules from the
     # primary worktree to avoid a slow npm ci re-run.
