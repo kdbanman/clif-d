@@ -142,6 +142,22 @@ This repo is a Claude Code plugin and marketplace. Skills are namespaced as `cli
 
 The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalog) and `skills/` (skill definitions). The old git-hooks sync approach (`sync-skills.sh`) is retired.
 
+## Current constraints
+
+Claude Code's plugin system lacks lifecycle hooks we would normally use for artifact change management:
+
+- **No postinstall / postupdate hooks on the user's repo.** A plugin update cannot ship code that migrates files in the user's product repository automatically.
+- **No declarative breaking-change signaling.** `plugin.json` carries a semver `version`, but there is no official mechanism to mark a release as breaking or to prompt users before an update applies.
+- **Pull-based updates.** Users pick up changes via `/plugin marketplace update` or marketplace auto-update, not at a moment when they can be interrogated about migration.
+
+**How CLIF-D copes:**
+
+- Artifact schemas stay plugin-owned. The PRD schema lives at `skills/create-initial-prd/assets/prd-schema.json` inside the plugin, not copied into the user's repo, so the skills and CLI that consume it remain the single source of truth for the contract. (The `clif-d schema copy` command can pull a snapshot into the user's repo for local IDE tooling, but that copy is not authoritative.)
+- Each versioned artifact records the plugin version that wrote it. `prd.json` carries a top-level `clifd_version` field set from `.claude-plugin/plugin.json` at authoring time. Future migration tooling can compare that against the currently-installed plugin version to detect when a PRD predates a schema change.
+- Breaking changes are documented, not automated. Schema-breaking releases are called out in commit messages (and eventually a CHANGELOG); users or agents invoke migrations explicitly.
+
+When you change a schema or artifact layout in this plugin, you are implicitly asking every user to migrate. Design the change accordingly.
+
 ## TODO
 
 - [ ] **Initial PRD skill should copy the PRD schema to project directory** - right now the skill seems to result in a prd.json file with a $schema field pointing into the .claude directory, which seems awkward.  It should just be a product artifact, I think?

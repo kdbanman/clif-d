@@ -1,5 +1,6 @@
 {
   "$schema": "skills/create-initial-prd/assets/prd-schema.json",
+  "clifd_version": "1.0.0",
   "product_name": "clif-d",
   "concept_summary": {
     "description": "A zero-dependency Node.js CLI tool shipped inside the CLIF-D Claude Code plugin (via the bin/ directory) for deterministic, token-efficient CRUD operations on PRD JSON files. Every CLIF-D skill that touches prd.json currently asks Claude to parse and rewrite JSON directly -- expensive in tokens, fragile against malformed edits, and nondeterministic. The clif-d CLI replaces those freehand JSON manipulations with validated, atomic, scriptable commands. The tool is newly practical because Claude Code plugins officially support shipping executables in bin/ (added to the Bash tool's PATH), and Node.js 18+ is guaranteed in every Claude Code environment.",
