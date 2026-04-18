@@ -1126,14 +1126,6 @@ function reqAdd(prdPath, prd) {
   if (candidate.id === undefined) {
     candidate.id = nextReqId(requirements);
   }
-  // A newly-added requirement is by definition not_started; default the field
-  // so callers do not have to supply it just to satisfy schema validation.
-  // Mid-lifecycle values (in_progress, done, blocked) must still be set
-  // explicitly via the dedicated req start/done/block commands.
-  if (candidate.status === undefined) {
-    candidate.status = "not_started";
-  }
-
   const shapeErrors = validateRequirementShape(candidate, {
     requireAllFields: true,
   });
