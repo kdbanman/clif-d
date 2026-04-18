@@ -1140,6 +1140,40 @@
       ],
       "architecture_refs": [],
       "implementation_commit": "4d305c1"
+    },
+    {
+      "id": "REQ-032",
+      "description": "The CLIF-D skills under skills/ were authored before the clif-d CLI existed. They still instruct Claude to read, parse, and mutate clif-d/prd.json via raw file operations -- expensive in tokens, fragile against malformed edits, and sidestepping the structural validation built into every CLI mutation. The CLI is now feature-complete for every operation a skill performs on the PRD: req lifecycle (ls/show/next/start/done/block), req content mutation (add/edit), dependency graph (dep add/rm/graph), context and architecture item CRUD (ctx/arch ls/show/add/edit), schema distribution (schema copy), and structural validation (validate). Every raw PRD directive in skill text should be replaced with a concrete CLI invocation, with the replace-semantics gotcha on `req edit` called out explicitly. Scope: the six skills that touch prd.json -- create-initial-prd, create-architecture, design-backpressure, bootstrap-dev-environment, plan-requirement, implement-plan. Out of scope: create-product-concept and workshop-names (no PRD interaction); plan-file mv from active/ to executed/ (no CLI planned, stays a shell op); free-form Markdown artifacts (concept.md, architecture.md, backpressure.md, dev-environment.md, plan files, lessons-learned files -- stay as raw Write).",
+      "title": "Migrate CLIF-D skills from raw PRD edits to clif-d CLI commands",
+      "acceptance_criteria": {
+        "given": "Skills under skills/ currently contain directives to read, parse, and mutate clif-d/prd.json via raw Read/Edit/Write operations, and the clif-d CLI is feature-complete for every such operation.",
+        "when": "The migration is complete.",
+        "then": "No skill under skills/ contains a directive to hand-edit clif-d/prd.json. implement-plan uses `clif-d req done <REQ-ID> --commit=<sha>` (not raw JSON edits) and also calls `clif-d req start <REQ-ID>` at the top of its flow as an idempotent safety net, ending its PRD work with `clif-d validate`. plan-requirement uses `clif-d req next`, `clif-d req show`, `clif-d req ls --status=done`, and `clif-d req dep graph --root=<ID>` for PRD reads, and transitions the target requirement to in_progress via `clif-d req start` as its final action. create-architecture uses `clif-d arch add` for ARCH items, `clif-d req add` for new scaffolding requirements (embedding dependencies in the payload when known at creation), `clif-d req edit` for architecture_refs backfill on existing requirements, and `clif-d validate` as a final step. bootstrap-dev-environment and design-backpressure each use `clif-d ctx add` for their respective constraint context item and `clif-d req edit` to backfill context_refs, ending with `clif-d validate`. create-initial-prd runs `clif-d validate` after generating the PRD and uses `clif-d schema copy` to resolve the $schema path TODO. Every skill that uses `req edit` documents the replace-semantics gotcha (arrays are replaced wholesale; callers must read-then-write). create-product-concept and workshop-names remain unchanged. Plan-file mv from active/ to executed/ remains a shell op. `clif-d validate cli-prd.json` still exits 0."
+      },
+      "priority": 2,
+      "dependencies": [
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012",
+        "REQ-014",
+        "REQ-015",
+        "REQ-016",
+        "REQ-017",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-022"
+      ],
+      "abstraction_level": "low",
+      "status": "not_started",
+      "context_refs": [
+        "CTX-004",
+        "CTX-006",
+        "CTX-010"
+      ],
+      "architecture_refs": []
     }
   ]
 }
