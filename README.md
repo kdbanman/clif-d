@@ -125,6 +125,28 @@ These use cases require **external, synchronized systems** — issue trackers (L
 - **No path surprises.** Every CLIF-D skill knows the layout; no search or configuration is needed to find the PRD or architecture document.
 - **Separation from implementation.** Keeping design artifacts in a single subdirectory makes it easy to exclude them from search, build processes, or deployment artifacts if desired.
 
+## Assumptions
+
+CLIF-D is opinionated about its runtime environment. Skills will misbehave or fail silently if any of the following is missing.
+
+### Required
+
+- **Claude Code.** Every skill is authored against Claude Code's skill, tool, and hook model. Skills assume access to the `AskUserQuestion`, `Glob`, `Grep`, `Read`, `Edit`, `Write`, and `Bash` tools. Other agent runtimes are not supported.
+- **Git, in the product repo.** Skills invoke `git` for history inspection, commit creation, branch management, and worktrees. `compactify-artifacts` deletes originals after archiving and relies on `git log` to preserve full text. Without git, deleted artifacts are unrecoverable and commit-SHA references in archive entries have no referent.
+- **POSIX-like shell.** Bootstrap scripts under `cli/scripts/` are bash with `set -euo pipefail`. Paths are assumed to be forward-slash. Windows users need WSL or Git Bash.
+- **Node.js 18 or newer.** Already implied by the Claude Code assumption above, but called out because the `bin/clif-d` CLI ships as a single-file Node script (`#!/usr/bin/env node`, zero runtime deps) and dev infra under `cli/` pins Node 18 via `cli/.nvmrc`. The CLI is a hard prerequisite even if the user's product is not written in JavaScript.
+
+### Expected
+
+- **Web access.** Research-phase skills (`create-product-concept`, `workshop-names`, `create-architecture`, `design-backpressure`) use web search and fetch to ground their output in current external references.
+- **Artifacts at `<product-repo>/clif-d/`.** The path is hard-coded into the skills; no configuration option relocates it. `.claude/rules/` as a sibling of `clif-d/` is similarly assumed for glob-scoped tactical rule files.
+
+### Not assumed
+
+- **A specific product implementation language.** CLIF-D is language-agnostic. `create-architecture` picks the stack; `bootstrap-dev-environment` installs the matching toolchain. Language-specific examples inside skills are illustrative, not prescriptive.
+- **A specific product type or domain.** "CLI-first decomposition" is more flexible than the name suggests. Users are often surprised at the range of products - services, libraries, integration glue, even UI-adjacent tooling - that decompose cleanly into composable CLI steps.
+- **A specific version control host (GitHub, GitLab, etc.).** Skills use local `git` only. PR workflow is not prescribed by the pipeline.
+
 ## Deployment
 
 This repo is a Claude Code plugin and marketplace. Skills are namespaced as `clif-d:<skill-name>` once installed.
@@ -175,7 +197,6 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 - [ ] **Implement `clif-d-health-check` skill** — aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
 - [ ] **Implement `align-claude-md` skill** — ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements — specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
 - [ ] **Implement `clif-d-help` skill (or reference file)** — a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
-- [ ] **Clarify assumptions in README.**  This project assumes claude code, assumes git, and likely assumes other things.  We should find those important assumptions and get them down in the readme docs.
 - [ ] **Make all docs better line-separated.**  Right now, all markdown (skill files, reference files, instruction files, etc) have a lot of content per line.  That makes line-by-line diffs hard to review.  We should make better use of newline separation (e.g. between sentences) to make reviewing and surgical editing better.
 - [ ] **Review skills library against Anthropic best practices** — audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
 - [ ] **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
