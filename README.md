@@ -10,7 +10,7 @@ CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for struc
 | `workshop-names` | Structured naming workshop based on Lexicon Branding's Diamond Framework and SMILE/SCRATCH evaluation — produces 100+ candidates filtered to 5–10 contextual finalists |
 | `create-initial-prd` | Generates a JSON PRD from a concept document, following CLIF-D: complete high-level requirements and a partial set of clear first-step low-level requirements, each with CLI specs |
 | `create-architecture` | Takes a PRD and produces a detailed architecture document down to C4 code level — concrete technology decisions, module decomposition, interfaces, data flow, testing architecture |
-| `bootstrap-dev-environment` | Turns the architecture's toolchain decisions into a reproducible, agent-executable environment — containerization or version-pinned setup script, verification that every Technology Decisions command runs, and agent rules files (CLAUDE.md, AGENTS.md, etc.) so coding agents inherit environment context |
+| `bootstrap-dev-environment` | Turns the architecture's toolchain decisions into a reproducible, agent-executable environment — containerization or version-pinned setup script, verification that every Technology Decisions command runs, and an agent rules file (CLAUDE.md) so Claude Code inherits environment context |
 | `design-backpressure` | Researches and implements quality guardrails — aggressive linting, maximal type enforcement, pre-commit hooks — as hard local gates that block low-quality code before it enters the repo |
 | `plan-requirement` | Takes PRD requirement IDs, resolves the full dependency graph, explores the codebase, and produces a self-contained implementation plan (Markdown) with TDD step ordering |
 | `implement-plan` | Executes an implementation plan step-by-step with strict Red-Green-Refactor discipline, running all quality checks after every step |
@@ -162,7 +162,6 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 
 ## TODO
 
-- [ ] **Initial PRD skill should copy the PRD schema to project directory** - right now the skill seems to result in a prd.json file with a $schema field pointing into the .claude directory, which seems awkward.  It should just be a product artifact, I think?
 - [ ] **Add `references/` to `design-backpressure`** — opinionated reference material on agentic quality backpressure principles
 - [ ] **Implement `clif-d` CLI for PRD CRUD operations** — a command-line tool for reading and mutating PRD JSON files without hand-editing. Key commands:
   - `clif-d req next [prd.json]` — print the highest-priority `not_started` requirement whose dependencies are all `done`
@@ -183,7 +182,5 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 ## Potential Issues
 
 - the plan-requirement skill and the implement-plan skill have a hard time figuring out what has already been implemented.  Solution ideas: Once the PRD CLI is implemented, both skills should use it to investigate what is already done.  Use the CLI to find prerequisite requirement IDs and context from the PRDs.  (Prerequisite as in requirement dependencies.)  Use the git detailed log and other git CLI commands to look at most recent work to see if anything relevant is in there.  (In general, this plugin project needs more explicit guidance on how to use git, because it's a beautiful log of changes, and can even be used to investigate changes at arbitrary detail and depth.)
-- Never use \u2014 in any skill.  Only hyphens
-- Never use any complex UTF or emojis.  ASCII only.
 - The current workflow with PRD JSON files may not coordinate well across worktrees.  The PRD file in the main worktree has no way to know when requirements are in progress in other worktrees.  When Claude Code spawns a new worktree-based session, the agent in that worktree modifies its own local copy of the PRD JSON on its own branch -- the main worktree and its checked-out branch never see those changes until the branch merges back.  This is a fundamental limitation of a git-versioned PRD: each worktree has its own copy, and there is no cross-worktree synchronization.  Possible mitigations: a Claude Code hook that writes worktree status to a shared location outside the repo (e.g. a dotfile, a local SQLite database, or even a file in `~/.claude/`), a pre-plan or post-plan hook that updates a lightweight coordination file on the main branch, or accepting the limitation and relying on branch-merge discipline plus the `clif-d req` CLI to reconcile status after merge.  Worth investigating whether Claude Code plugin hooks can bridge this gap.
 

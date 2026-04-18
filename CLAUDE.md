@@ -18,8 +18,8 @@ Do not confuse them when editing skills. When a skill says "the `clif-d/` direct
 
 # Editing skills
 
-- **Read a sibling `SKILL.md` before writing or substantially editing one.** The existing skills share a recognizable structure (philosophy → interrogation → output structure → generation process) and tone (opinionated, terse, concrete). Match it.
-- **No emojis.**
+- **Read a sibling `SKILL.md` before writing or substantially editing one.** The existing skills share a recognizable structure (philosophy -> interrogation -> output structure -> generation process) and tone (opinionated, terse, concrete). Match it.
+- **ASCII only.** No emojis, no complex UTF. Never use `\u2014` (em-dash) in any skill or design document -- use hyphens.
 - **Skills are self-contained.** A user invoking one skill should not need to read another skill's text to understand it. Cross-skill knowledge lives in the README, not in skills referencing each other's internals.
 - **Interface changes ripple.** When you change a skill's inputs, outputs, artifact paths, or position in the pipeline, check the pipeline diagram in @README.md and update upstream/downstream skills that depend on the change.
 
