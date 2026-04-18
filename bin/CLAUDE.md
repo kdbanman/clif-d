@@ -23,5 +23,5 @@ Backpressure (pre-commit gates) is corrective. The list below is preventative --
 ## Quick reminders
 
 - Do not edit `cli/clif-d.js` -- it is a symlink to `bin/clif-d`. Edit the original.
-- Do not modify the top-level `CLAUDE.md`/`AGENTS.md`/`GEMINI.md` for CLI-specific rules. Add to this file (and its `bin/AGENTS.md`/`bin/GEMINI.md` peers) instead.
+- Do not modify the top-level `CLAUDE.md` for CLI-specific rules. Add to this file instead.
 - Pre-commit hook is wired by husky via `cli/package.json`'s `prepare` script. If a gate fails, `cd cli && npm run check` reproduces the failure.

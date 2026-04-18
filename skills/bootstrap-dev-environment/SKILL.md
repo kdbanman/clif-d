@@ -7,14 +7,14 @@ description: >
   that those tools are installed, version-pinned, and invokable from an agent's non-interactive subshell. Researches
   the project's ecosystem for the most reproducible bootstrap mechanism (containers, devcontainers, setup scripts with
   version-pinned installers), generates the setup artifacts, verifies every command from the architecture's
-  Technology Decisions table runs end-to-end, and wires in agent rules files (CLAUDE.md, AGENTS.md, etc.) so that
-  whichever coding agent the user runs inherits clear, terse instructions about the environment. Produces
-  clif-d/dev-environment.md plus the actual setup artifacts.
+  Technology Decisions table runs end-to-end, and wires in an agent instruction file (CLAUDE.md) so that Claude Code
+  inherits clear, terse instructions about the environment. Produces clif-d/dev-environment.md plus the actual setup
+  artifacts.
 ---
 
 # Bootstrap Dev Environment
 
-You are helping the user make their project's development environment **reproducible and agent-accessible**. The architecture document has already decided the toolchain. Your job is to turn those decisions into a concrete, version-pinned, idempotent setup that works for three audiences simultaneously: the user on their local machine, any coding agent (Claude Code, Gemini CLI, OpenCode, Cline, etc.) invoked on that machine, and a cloud agent runtime that starts from a near-empty container.
+You are helping the user make their project's development environment **reproducible and agent-accessible**. The architecture document has already decided the toolchain. Your job is to turn those decisions into a concrete, version-pinned, idempotent setup that works for three audiences simultaneously: the user on their local machine, a Claude Code agent invoked on that machine, and a cloud agent runtime that starts from a near-empty container.
 
 ---
 
@@ -46,9 +46,11 @@ The bootstrap must be safe to run repeatedly, must not require human input (no `
 
 The architecture document's Technology Decisions table lists commands: the test framework, the linter, the package manager, the CLI entry point. Every single one must be invokable after bootstrap completes. The verification step is not optional - it is the proof that the environment actually matches the architecture.
 
-### Agent rules files are part of the environment
+### Agent instruction files are part of the environment
 
-A coding agent that does not know about `clif-d/` or the project's build commands will flail. The standard mechanism to tell it is a "rules file" - `CLAUDE.md` for Claude Code, `AGENTS.md` for several others, `.cursorrules`, `.windsurfrules`, etc. These are part of the bootstrap because they are how the environment makes itself known to the agent. Do not skip them.
+A coding agent that does not know about `clif-d/` or the project's build commands will flail. The standard mechanism to tell it is an "instruction file" -- `CLAUDE.md` for Claude Code, always loaded into the agent's context. This is part of the bootstrap because it is how the environment makes itself known to the agent. Do not skip it.
+
+Note: instruction files are distinct from **rule files**. Rule files live under `.claude/rules/*.md`, carry `globs:` frontmatter, and re-enter the agent's context only when a matching file is read or edited. They are out of scope for this skill; `compactify-artifacts` is the skill that creates them.
 
 ---
 
@@ -111,24 +113,15 @@ What single command will the user (and any agent) run to set everything up? Conv
 - `./scripts/bootstrap.sh`
 - Devcontainer "reopen in container" (IDE-driven, but there should still be a CLI equivalent for headless agents)
 
-Pick one and commit to it. The command must appear in the architecture document, in `CLAUDE.md` / `AGENTS.md`, and in the dev-environment design document - identically.
+Pick one and commit to it. The command must appear in the architecture document, in `CLAUDE.md`, and in the dev-environment design document - identically.
 
-### 5. Agent and editor context
+### 5. Agent context
 
-Ask the user explicitly: **which coding agents and editors will be used on this project?** Examples:
-
-- Claude Code (`CLAUDE.md`, `.claude/` directory)
-- Gemini CLI (`GEMINI.md` or the agent's documented convention)
-- OpenCode, Cline, Continue, Aider (each has its own convention - research the current state, do not guess)
-- Cursor (`.cursorrules` or the newer `cursor.rules` format - research)
-- Windsurf (`.windsurfrules`)
-- The generic `AGENTS.md` convention (multi-agent)
-
-For each agent the user names, research the **current** official guidance on rules file location, format, and scope before generating anything. Do not rely on cached knowledge - these conventions move.
+This skill generates a `CLAUDE.md` file for Claude Code. If one already exists, merge rather than overwrite -- the user may have hand-authored content. Research the **current** official guidance on `CLAUDE.md` location, format, and scope before generating. Do not rely on cached knowledge -- conventions move.
 
 ### 6. What the agent needs to know
 
-The rules file content should be terse and concrete. At minimum:
+The instruction file content should be terse and concrete. At minimum:
 
 - The bootstrap command.
 - The build, test, lint, and type-check commands (copied verbatim from the architecture's Technology Decisions).
@@ -143,9 +136,9 @@ List every command from the architecture's Technology Decisions table and the PR
 ### Interrogation protocol
 
 - **Do not ask all questions at once.** Most answers come from the architecture document. Only ask when the document is silent or ambiguous.
-- **Use web research aggressively** for installer conventions, pinning mechanisms, and especially agent rules file formats - these change frequently.
+- **Use web research aggressively** for installer conventions, pinning mechanisms, and especially the `CLAUDE.md` format - these change frequently.
 - **Make provisional decisions and present them for confirmation.** "I'd containerize with a devcontainer based on the official Python 3.12 image, install `uv` via the pinned installer script, and run `uv sync --frozen` as the bootstrap command - does that work?" beats "How should we install Python?"
-- **Present the full plan before generating.** Containerization choice, pinned versions, bootstrap command, agent rules files to generate, verification commands. Wait for confirmation.
+- **Present the full plan before generating.** Containerization choice, pinned versions, bootstrap command, the `CLAUDE.md` to generate, verification commands. Wait for confirmation.
 
 ---
 
@@ -189,8 +182,8 @@ How the bootstrap behaves when run a second time, when a dependency is already i
 **7. Verification**
 The list of commands from Technology Decisions and scaffolding requirements that must succeed after bootstrap. Include the verification script's location (e.g. `scripts/verify-env.sh` or a `make verify` target). Show sample expected output.
 
-**8. Agent Rules Files**
-Which rules files were generated, for which agents, at what paths. Summarize what each contains and why. Reference the official documentation source used to choose each file's location and format (URL + date checked - these conventions drift).
+**8. Agent Instruction Files**
+Which instruction files were generated and at what paths. Summarize what each contains and why. Reference the official Claude Code documentation source used to choose the file's location and format (URL + date checked - these conventions drift). If the bootstrap also establishes scoped **rule files** (`.claude/rules/*.md`), document them separately with their `globs:` scope -- these are out of scope for this skill but if they already exist in the repo, note their presence.
 
 **9. Relaxations and Deferred Items**
 Anything deliberately not pinned, not containerized, or not verified, with justification. Examples:
@@ -231,17 +224,11 @@ Once the design is confirmed, generate the actual artifacts.
 
 - **`scripts/verify-env.sh`** (or `make verify`) that runs every command from Technology Decisions and any scaffolding-requirement command, failing on the first non-zero exit. This is what the agent runs to confirm the environment is live.
 
-#### Agent rules files
+#### Agent instruction file
 
-For each agent the user named, generate its rules file at the location that agent's **current official documentation** specifies. Typical candidates (verify before using):
+Generate `CLAUDE.md` at the repo root for Claude Code (project-scoped), at the location Claude Code's **current official documentation** specifies. Verify before writing. This is an *instruction file* -- always loaded, no frontmatter. It is distinct from the *rule files* (`.claude/rules/*.md`) that `compactify-artifacts` may write later; those are glob-scoped and conditional.
 
-- `CLAUDE.md` at the repo root for Claude Code (project-scoped).
-- `AGENTS.md` at the repo root for the multi-agent convention.
-- `.cursorrules` or `cursor.rules` for Cursor (check which is current).
-- `.windsurfrules` for Windsurf.
-- Others as the user named them.
-
-Content guidelines (apply to every rules file, adapted to the agent's expected format):
+Content guidelines:
 
 - Terse. A few hundred lines maximum. Links to `clif-d/` artifacts rather than duplicating them.
 - State the bootstrap command, build command, test command, lint command, type-check command. Verbatim from the Technology Decisions table.
@@ -256,7 +243,7 @@ Content guidelines (apply to every rules file, adapted to the agent's expected f
 - **Install globally without pinning.** No `brew install node` without a version. No `cargo install` without `--locked`. No `pip install` outside a managed environment.
 - **Require `sudo` silently.** If root is needed, the script must state so and the rationale must appear in the design document.
 - **Assume network access mid-build.** If a step needs the network, document it; do not silently fail on airgap.
-- **Write secrets into rules files or Dockerfiles.** Ever.
+- **Write secrets into instruction files or Dockerfiles.** Ever.
 
 ---
 
@@ -268,14 +255,14 @@ Once the user confirms the plan:
 2. **Wait for user confirmation** on the design document before generating setup artifacts. Design decisions are cheaper to revise than Dockerfiles.
 3. **Generate the containerization artifacts** (`Dockerfile`, `.devcontainer/devcontainer.json`, etc.) **or** the script artifacts (`scripts/bootstrap.sh`, `Makefile` targets) - whichever the design chose.
 4. **Generate the verification script** (`scripts/verify-env.sh` or `make verify`) covering every Technology Decisions command and every scaffolding-requirement command.
-5. **Generate the agent rules files** for each agent the user named, at the location each agent's current documentation specifies. Merge with existing files rather than overwriting.
+5. **Generate or update `CLAUDE.md`** at the repo root. Merge with any existing content rather than overwriting.
 6. **Run the bootstrap end-to-end** from a fresh subshell in the product repo. If containerized, build the image and open a shell inside. If script-based, invoke the script in a subshell that does not inherit the user's interactive shell hooks (`env -i bash --noprofile --norc` or equivalent). This is the agent's-eye view.
 7. **Run the verification script** and confirm every command exits cleanly. If anything fails, fix the bootstrap and repeat - do not ship a verification script that does not pass.
 8. **Backfill PRD references.** The dev environment is a shared constraint that affects all implementation. Update `clif-d/prd.json`:
    - Add a context item (type `constraint`) for the dev environment approach if none exists, stating the bootstrap command and containerization choice.
    - Add the dev-environment context item's ID to the `context_refs` of every requirement that will be implemented inside this environment (typically all of them).
    - This closes the referencing gap: the dev-environment document traces back to PRD items (§10), and now PRD items trace forward to the dev-environment constraint.
-9. **Report** what was generated: design document path, setup artifact paths, agent rules file paths, verification result, PRD updates. Recommend the next step: run `design-backpressure`.
+9. **Report** what was generated: design document path, setup artifact paths, `CLAUDE.md` path, verification result, PRD updates. Recommend the next step: run `design-backpressure`.
 
 ---
 

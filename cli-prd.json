@@ -86,7 +86,7 @@
       "id": "CTX-011",
       "title": "Development environment bootstrap",
       "type": "constraint",
-      "description": "The CLI's development environment (dev tooling, pinned Node version, quality-check commands, pre-commit hook) is bootstrapped by a single idempotent, non-interactive script at cli/scripts/bootstrap.sh. The script assumes Node.js 18+ (CTX-001) is on PATH, runs 'npm ci' in cli/ against the checked-in lockfile, and registers the husky pre-commit hook. A companion script at cli/scripts/verify-env.sh runs every guardrail command from CTX-010 plus a 'bin/clif-d --help' sanity check. The Node version pin is recorded in cli/.nvmrc as the major version '18', matching the Claude Code plugin guarantee. The authoritative record of bootstrap design, pinning rationale, failure modes, and agent rules files (CLAUDE.md, AGENTS.md, GEMINI.md) is cli/clif-d/dev-environment.md. No Dockerfile, devcontainer, or Makefile: the CLI is small enough that a pinned lockfile plus a shell script provides full reproducibility without that overhead.",
+      "description": "The CLI's development environment (dev tooling, pinned Node version, quality-check commands, pre-commit hook) is bootstrapped by a single idempotent, non-interactive script at cli/scripts/bootstrap.sh. The script assumes Node.js 18+ (CTX-001) is on PATH, runs 'npm ci' in cli/ against the checked-in lockfile, and registers the husky pre-commit hook. A companion script at cli/scripts/verify-env.sh runs every guardrail command from CTX-010 plus a 'bin/clif-d --help' sanity check. The Node version pin is recorded in cli/.nvmrc as the major version '18', matching the Claude Code plugin guarantee. The authoritative record of bootstrap design, pinning rationale, failure modes, and the agent instruction file (CLAUDE.md) is cli/clif-d/dev-environment.md. No Dockerfile, devcontainer, or Makefile: the CLI is small enough that a pinned lockfile plus a shell script provides full reproducibility without that overhead.",
       "reference_link": "cli/clif-d/dev-environment.md"
     }
   ],
@@ -1134,11 +1134,12 @@
       "priority": 1,
       "dependencies": [],
       "abstraction_level": "low",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-011"
       ],
-      "architecture_refs": []
+      "architecture_refs": [],
+      "implementation_commit": "4d305c1"
     }
   ]
 }
