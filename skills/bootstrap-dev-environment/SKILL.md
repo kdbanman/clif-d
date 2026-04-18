@@ -2,19 +2,24 @@
 name: bootstrap-dev-environment
 description: >
   Bridge the gap between a macOS developer's shell and a reproducible, agent-executable development environment for a
-  CLIF-D project. Use this skill after create-architecture and before design-backpressure, when the architecture
-  document specifies a toolchain (language, package manager, test framework, build commands) but nothing has verified
-  that those tools are installed, version-pinned, and invokable from an agent's non-interactive subshell. Researches
-  the project's ecosystem for the most reproducible bootstrap mechanism (containers, devcontainers, setup scripts with
-  version-pinned installers), generates the setup artifacts, verifies every command from the architecture's
-  Technology Decisions table runs end-to-end, and wires in an agent instruction file (CLAUDE.md) so that Claude Code
-  inherits clear, terse instructions about the environment. Produces clif-d/dev-environment.md plus the actual setup
-  artifacts.
+  CLIF-D project, and implement the quality guardrails that the backpressure design specifies. Use this skill after
+  create-architecture and design-backpressure, when the architecture document specifies a toolchain (language, package
+  manager, test framework, build commands) and the backpressure document specifies the quality guardrails, but nothing
+  has verified that those tools are installed, version-pinned, and invokable from an agent's non-interactive subshell,
+  and nothing has actually wired up the hooks, linters, type checker, or suppression scanner. Researches the project's
+  ecosystem for the most reproducible bootstrap mechanism (containers, devcontainers, setup scripts with
+  version-pinned installers), generates the setup artifacts, generates the configuration files and hook scripts that
+  realize the backpressure design, runs the pre-existing-suppression audit, verifies every command from the
+  architecture's Technology Decisions table and the backpressure document's hook stages runs end-to-end, and wires in
+  an agent instruction file (CLAUDE.md) so that Claude Code inherits clear, terse instructions about the environment.
+  Produces clif-d/dev-environment.md plus the actual setup artifacts and guardrail implementation.
 ---
 
 # Bootstrap Dev Environment
 
-You are helping the user make their project's development environment **reproducible and agent-accessible**. The architecture document has already decided the toolchain. Your job is to turn those decisions into a concrete, version-pinned, idempotent setup that works for three audiences simultaneously: the user on their local machine, a Claude Code agent invoked on that machine, and a cloud agent runtime that starts from a near-empty container.
+You are helping the user make their project's development environment **reproducible and agent-accessible**, and you are **implementing the quality backpressure** that `design-backpressure` specified. The architecture document has already decided the toolchain; the backpressure document has already decided the quality standards and hook architecture. Your job is to turn those decisions into a concrete, version-pinned, idempotent setup -- including the actual linter configs, hook scripts, suppression scanner, and pre-existing-suppression audit -- that works for three audiences simultaneously: the user on their local machine, a Claude Code agent invoked on that machine, and a cloud agent runtime that starts from a near-empty container.
+
+The division of labor is strict: `design-backpressure` decides *what* guardrails exist and how strict they are; this skill makes them *real*. If the bootstrap uncovers a design problem (a tool does not exist at the pinned version, a hook framework is incompatible with the containerization choice), return to `clif-d/backpressure.md` and amend it -- do not work around it in a config file.
 
 ---
 
@@ -46,6 +51,10 @@ The bootstrap must be safe to run repeatedly, must not require human input (no `
 
 The architecture document's Technology Decisions table lists commands: the test framework, the linter, the package manager, the CLI entry point. Every single one must be invokable after bootstrap completes. The verification step is not optional - it is the proof that the environment actually matches the architecture.
 
+### Implement what the backpressure design promises
+
+The backpressure document lists guardrails: every linter rule set, every type-checker mode, every pre-commit step, the suppression scanner's pattern set, the hook framework, the exact setup command. Every single one must exist after bootstrap completes and must be wired into the hook mechanism. A guardrail that is designed but not installed is worse than no guardrail at all: it signals a commitment the repo is not actually keeping. End-to-end verification includes a negative test -- attempt to introduce a suppression directive into a scratch file and confirm the scanner blocks the commit with the expected message -- so the guardrail is proven live, not merely configured.
+
 ### Agent instruction files are part of the environment
 
 A coding agent that does not know about `clif-d/` or the project's build commands will flail. The standard mechanism to tell it is an "instruction file" -- `CLAUDE.md` for Claude Code, always loaded into the agent's context. This is part of the bootstrap because it is how the environment makes itself known to the agent. Do not skip it.
@@ -58,11 +67,14 @@ Note: instruction files are distinct from **rule files**. Rule files live under 
 
 This skill expects:
 
-1. **An architecture document** at `clif-d/architecture.md` in the product repository. Read its Technology Decisions, Repository Structure, and Testing Architecture sections in full - they are your primary input.
-2. **The CLIF-D PRD** at `clif-d/prd.json`. The scaffolding requirements appended by `create-architecture` reveal which build and test commands must be invokable.
-3. **Any existing setup artifacts** in the repo (`Dockerfile`, `devcontainer.json`, `Makefile`, `scripts/`, lockfiles). Read before overwriting.
+1. **An architecture document** at `clif-d/architecture.md` in the product repository. Read its Technology Decisions, Repository Structure, and Testing Architecture sections in full - they are your primary input for the environment itself.
+2. **A backpressure design document** at `clif-d/backpressure.md` (from `design-backpressure`). Read every section. The Guardrail Decisions table, the Relaxations table, the Hook Architecture section, and the suppression-scanner specification are your primary input for the guardrail implementation. Every tool, rule, pattern, and command you install or wire must come from this document.
+3. **The CLIF-D PRD** at `clif-d/prd.json`. The scaffolding requirements appended by `create-architecture` reveal which build and test commands must be invokable. The backpressure context item recorded by `design-backpressure` is the constraint you are making real.
+4. **Any existing setup artifacts** in the repo (`Dockerfile`, `devcontainer.json`, `Makefile`, `scripts/`, lockfiles, linter configs, `.husky/`, pre-commit configs). Read before overwriting.
 
 If no architecture document exists, stop and tell the user to run `create-architecture` first. This skill is not equipped to invent technology decisions - it implements them.
+
+If no backpressure document exists, stop and tell the user to run `design-backpressure` first. This skill is not equipped to invent quality-guardrail decisions either -- it implements them. (If the user is explicitly deferring backpressure, they can say so; in that case run the bootstrap for the environment only and explicitly note in the dev-environment document that guardrail implementation is deferred and a later invocation of this skill must complete it.)
 
 ---
 
@@ -70,7 +82,7 @@ If no architecture document exists, stop and tell the user to run `create-archit
 
 **Your job is to arrive at a concrete, reproducible bootstrap mechanism and a verified working environment.** Do not generate artifacts until you are ready. Interrogate first.
 
-Start by summarizing what the architecture has decided: language, runtime version, package manager, test framework, linter, type checker, any system-level dependencies (databases, browsers, native libraries). Then work through the dimensions below.
+Start by summarizing what the architecture has decided (language, runtime version, package manager, test framework, linter, type checker, any system-level dependencies) **and** what the backpressure document has decided (rule sets, type-check mode, hook framework, hook-stage command order, suppression-scanner spec, pre-existing-suppression policy, setup command name). Then work through the dimensions below.
 
 ### 1. Target audiences for the environment
 
@@ -131,7 +143,22 @@ The instruction file content should be terse and concrete. At minimum:
 
 ### 7. Verification plan
 
-List every command from the architecture's Technology Decisions table and the PRD's scaffolding requirements. After bootstrap, each must run from a fresh subshell and exit cleanly (or with an expected exit code, for a trivial test). This list becomes the verification script.
+List every command from the architecture's Technology Decisions table and the PRD's scaffolding requirements. After bootstrap, each must run from a fresh subshell and exit cleanly (or with an expected exit code, for a trivial test). This list becomes the verification script. Add every hook-stage command from `clif-d/backpressure.md` to the same list -- the bootstrap must prove those run too, including a negative test of the suppression scanner.
+
+### 8. Guardrail implementation plan
+
+Translate each Guardrail Decision row in `clif-d/backpressure.md` into a concrete implementation task:
+
+- **Tool installation.** Does the tool install via the language's package manager (devDependency), via a system package, via a pinned installer script, or as part of a container image? Pick the mechanism most consistent with the rest of the bootstrap.
+- **Configuration file.** What filename? Where does it live? If the backpressure document did not name a path, pick the ecosystem-conventional one and note that choice in the dev-environment document (not in the backpressure document -- do not silently edit the design).
+- **Rule set loading.** Translate the backpressure document's rule choices into the tool's actual config syntax. If the translation reveals an impossibility (a named rule does not exist in that version), stop and return to `design-backpressure` rather than substituting a different rule.
+- **Hook framework.** The backpressure document chose one (husky, pre-commit.com, lefthook, Makefile-wrapped hooks, etc.). Identify its install command and confirm that command works inside the chosen bootstrap mechanism.
+- **Suppression scanner.** Generate the scanner script per the backpressure spec: same language, same pattern set, same allowlist format, same failure message. Include its self-tests.
+- **Pre-existing-suppression audit.** Run the scanner over the whole tree once during setup. Surface every hit to the user for delete-or-relax decisions before declaring the bootstrap complete. Never silently grandfather.
+
+### 9. PRD coordination
+
+`design-backpressure` has already added a `constraint`-type context item for the backpressure approach and backfilled `context_refs`. Confirm it exists before you start. If it does not, that is a signal that `design-backpressure` was skipped or did not finish -- do not paper over this by writing it yourself; return to `design-backpressure`.
 
 ### Interrogation protocol
 
@@ -180,23 +207,37 @@ The single command a user or agent runs. State it once here, verbatim, so every 
 How the bootstrap behaves when run a second time, when a dependency is already installed, when network access is absent, when a pinned version has been manually overridden. Document expected behavior.
 
 **7. Verification**
-The list of commands from Technology Decisions and scaffolding requirements that must succeed after bootstrap. Include the verification script's location (e.g. `scripts/verify-env.sh` or a `make verify` target). Show sample expected output.
+The list of commands from Technology Decisions, scaffolding requirements, and every hook-stage command from `clif-d/backpressure.md` that must succeed after bootstrap. Include the verification script's location (e.g. `scripts/verify-env.sh` or a `make verify` target) and the suppression-scanner negative test. Show sample expected output.
 
 **8. Agent Instruction Files**
 Which instruction files were generated and at what paths. Summarize what each contains and why. Reference the official Claude Code documentation source used to choose the file's location and format (URL + date checked - these conventions drift). If the bootstrap also establishes scoped **rule files** (`.claude/rules/*.md`), document them separately with their `globs:` scope -- these are out of scope for this skill but if they already exist in the repo, note their presence.
 
-**9. Relaxations and Deferred Items**
-Anything deliberately not pinned, not containerized, or not verified, with justification. Examples:
+**9. Backpressure Implementation**
+
+A subsection per guardrail from `clif-d/backpressure.md`, mapping the design decision to the concrete artifact that realizes it:
+
+| Guardrail (from backpressure.md) | Config File | Install Mechanism | Hook Stage |
+|----------------------------------|-------------|-------------------|------------|
+| Linting -- ruff ALL rules        | `ruff.toml` | devDependency via `uv add --dev`  | pre-commit |
+| Suppression scanner              | `scripts/no-suppressions.sh` + allowlist | checked in, run by husky | pre-commit (first step) |
+| ...                              | ...         | ...               | ...        |
+
+State the pre-existing-suppression audit result (clean, or the list of surfaced suppressions and how each was resolved). If any guardrail from the backpressure document was *not* implemented, say so explicitly in §10 (Relaxations) with a rationale and a plan to close the gap. An unimplemented guardrail is a broken commitment, not a feature.
+
+**10. Relaxations and Deferred Items**
+Anything deliberately not pinned, not containerized, not verified, or not implemented from the backpressure design, with justification. Examples:
 - "Node version is pinned via `.nvmrc` but not enforced at bootstrap time - the user requested this to match their existing workflow."
 - "GPU drivers are assumed present; bootstrap does not install them."
+- "Coverage enforcement is deferred to CI per backpressure.md §6; local pre-commit runs `node --test` without coverage."
 Empty is good - it means the bootstrap is fully specified.
 
-**10. PRD and Architecture Traceability**
+**11. PRD and Architecture Traceability**
 
-| Bootstrap Decision | PRD/Architecture References |
-|--------------------|-----------------------------|
+| Bootstrap Decision | PRD/Architecture/Backpressure References |
+|--------------------|------------------------------------------|
 | Python 3.12.7 pin | ARCH-002 (runtime), CTX-004 (version constraint) |
 | Devcontainer image | ARCH-001 (deployment target) |
+| Husky + lint-staged wiring | backpressure.md §6 (Hook Architecture), CTX-NNN (backpressure constraint) |
 | ... | ... |
 
 ---
@@ -220,9 +261,39 @@ Once the design is confirmed, generate the actual artifacts.
   - Is idempotent: a second run should be a fast no-op on an already-configured machine.
   - Prints clear status as it goes; on failure, prints an actionable error and exits non-zero.
 
+#### Backpressure implementation artifacts
+
+Generate the files that realize the backpressure design. Every artifact comes from `clif-d/backpressure.md` -- do not invent rules, versions, or hook stages here.
+
+- **Linter, formatter, type-checker, and any other tool configs** at the paths named in the backpressure document (or ecosystem-conventional paths if the design did not specify). Encode every rule choice and every relaxation from the Guardrail Decisions and Relaxations tables verbatim.
+- **Hook framework wiring** per the backpressure document's chosen framework. Examples: a `.husky/` directory plus `cli/package.json` `prepare` script for husky; a `.pre-commit-config.yaml` plus `pre-commit install` invocation in the bootstrap; a `Makefile` target plus hook-install script for Makefile-wrapped hooks. The install mechanism must be idempotent and must run as part of the bootstrap -- never as a manual follow-up step.
+- **Suppression scanner** at the path and in the language named in the backpressure document. Copy the pattern set exactly. Seed the allowlist with only the minimum entries -- typically `clif-d/backpressure.md` itself -- each with a one-line justification in the backpressure document's Relaxations section. Include the scanner's self-tests per the design.
+- **Pre-existing-suppression audit.** Run the scanner over the whole working tree once during bootstrap. Surface every hit to the user via the AskUserQuestion tool or an equivalent interactive choice: delete the suppression, or add a rule-level Relaxation with written rationale to `clif-d/backpressure.md` §4. Do not silently grandfather. The audit is part of the bootstrap, not an afterthought -- an unaudited repo can ship with old suppressions invisible to the new gate.
+
+The hooks should:
+
+1. **Scan for suppression directives** (meta-backpressure) first, so the failure message is unambiguous.
+2. **Format** changed files (auto-fix, stage the formatted result).
+3. **Lint** changed files (no auto-fix - fail and show errors).
+4. **Type-check** (may need to check the full project, not just changed files).
+5. **Run tests** affected by changes (or all unit tests if scoping is impractical).
+6. **Block the commit** if any step fails with a non-zero exit code.
+7. **Print clear, actionable error messages** - the developer (or agent) should know exactly what to fix.
+
+If the backpressure document's Hook Architecture differs from this sequence, follow the backpressure document -- it is authoritative for hook ordering.
+
+The hooks must NOT:
+
+- **Auto-fix lint violations silently.** Formatting is auto-fixed (it's mechanical). Lint violations are reported, not auto-fixed -- the developer needs to understand and address the issue.
+- **Run slow checks.** Anything taking more than ~10 seconds belongs in pre-push or CI.
+- **Require network access.** All pre-commit checks must work offline.
+- **Modify unstaged files.** Only operate on staged changes (use `lint-staged` or equivalent).
+
+If the backpressure design conflicts with any of these, resolve the conflict in `clif-d/backpressure.md` first, not in the config.
+
 #### Verification artifact
 
-- **`scripts/verify-env.sh`** (or `make verify`) that runs every command from Technology Decisions and any scaffolding-requirement command, failing on the first non-zero exit. This is what the agent runs to confirm the environment is live.
+- **`scripts/verify-env.sh`** (or `make verify`) that runs every command from Technology Decisions, every scaffolding-requirement command, and every pre-commit/pre-push hook stage from the backpressure document, failing on the first non-zero exit. This is what the agent runs to confirm the environment is live. Include a negative test for the suppression scanner: the script creates a scratch file containing a suppression pragma, stages it, attempts a commit, and asserts the commit is blocked with the expected message. Leave the working tree clean when finished.
 
 #### Agent instruction file
 
@@ -231,9 +302,9 @@ Generate `CLAUDE.md` at the repo root for Claude Code (project-scoped), at the l
 Content guidelines:
 
 - Terse. A few hundred lines maximum. Links to `clif-d/` artifacts rather than duplicating them.
-- State the bootstrap command, build command, test command, lint command, type-check command. Verbatim from the Technology Decisions table.
-- Point at `clif-d/prd.json`, `clif-d/architecture.md`, `clif-d/backpressure.md`, `clif-d/dev-environment.md` and name what each is for in one line each.
-- Name the gotchas: non-interactive subshell caveats, PATH expectations, which tools are pinned and must not be upgraded casually.
+- State the bootstrap command, build command, test command, lint command, type-check command, and the pre-commit hook invocation. Verbatim from the Technology Decisions table and the backpressure document's Hook Architecture section.
+- Point at `clif-d/prd.json`, `clif-d/architecture.md`, `clif-d/backpressure.md`, `clif-d/dev-environment.md` and name what each is for in one line each. Note that `clif-d/backpressure.md` is the authoritative source for rule changes and relaxations -- never edit a lint config without also amending that document.
+- Name the gotchas: non-interactive subshell caveats, PATH expectations, which tools are pinned and must not be upgraded casually, and the "no inline suppressions" rule (point at `clif-d/backpressure.md` §5).
 - No emojis. ASCII only.
 - If a `CLAUDE.md` already exists, **merge** rather than overwrite - the user may have hand-authored content.
 
@@ -251,25 +322,30 @@ Content guidelines:
 
 Once the user confirms the plan:
 
-1. **Generate the design document** at `clif-d/dev-environment.md`. Create `clif-d/` if it does not yet exist (it should, from earlier pipeline stages).
+1. **Generate the design document** at `clif-d/dev-environment.md`. Create `clif-d/` if it does not yet exist (it should, from earlier pipeline stages). Include the Backpressure Implementation section (§9) mapping every guardrail from `clif-d/backpressure.md` to its concrete artifact.
 2. **Wait for user confirmation** on the design document before generating setup artifacts. Design decisions are cheaper to revise than Dockerfiles.
 3. **Generate the containerization artifacts** (`Dockerfile`, `.devcontainer/devcontainer.json`, etc.) **or** the script artifacts (`scripts/bootstrap.sh`, `Makefile` targets) - whichever the design chose.
-4. **Generate the verification script** (`scripts/verify-env.sh` or `make verify`) covering every Technology Decisions command and every scaffolding-requirement command.
-5. **Generate or update `CLAUDE.md`** at the repo root. Merge with any existing content rather than overwriting.
-6. **Run the bootstrap end-to-end** from a fresh subshell in the product repo. If containerized, build the image and open a shell inside. If script-based, invoke the script in a subshell that does not inherit the user's interactive shell hooks (`env -i bash --noprofile --norc` or equivalent). This is the agent's-eye view.
-7. **Run the verification script** and confirm every command exits cleanly. If anything fails, fix the bootstrap and repeat - do not ship a verification script that does not pass.
-8. **Backfill PRD references.** The dev environment is a shared constraint that affects all implementation. Update `clif-d/prd.json`:
-   - Add a context item (type `constraint`) for the dev environment approach if none exists, stating the bootstrap command and containerization choice.
-   - Add the dev-environment context item's ID to the `context_refs` of every requirement that will be implemented inside this environment (typically all of them).
-   - This closes the referencing gap: the dev-environment document traces back to PRD items (§10), and now PRD items trace forward to the dev-environment constraint.
-9. **Report** what was generated: design document path, setup artifact paths, `CLAUDE.md` path, verification result, PRD updates. Recommend the next step: run `design-backpressure`.
+4. **Generate the backpressure implementation artifacts** per §9 and the backpressure document: tool configs, hook-framework wiring, the suppression scanner and its allowlist, and the hook scripts that invoke them in the order the backpressure document prescribes. Seed the suppression scanner allowlist with only the minimum entries and make sure each has a justification in `clif-d/backpressure.md` §4.
+5. **Generate the verification script** (`scripts/verify-env.sh` or `make verify`) covering every Technology Decisions command, every scaffolding-requirement command, every backpressure hook-stage command, and a negative test for the suppression scanner.
+6. **Generate or update `CLAUDE.md`** at the repo root. Merge with any existing content rather than overwriting. Include pointers to `clif-d/backpressure.md` and the "no inline suppressions" rule.
+7. **Run the bootstrap end-to-end** from a fresh subshell in the product repo. If containerized, build the image and open a shell inside. If script-based, invoke the script in a subshell that does not inherit the user's interactive shell hooks (`env -i bash --noprofile --norc` or equivalent). This is the agent's-eye view. This step must also install the hooks -- confirm a fresh clone could run one command and end up with hooks active.
+8. **Run the pre-existing-suppression audit.** Run the suppression scanner over the whole working tree. For every hit, interactively ask the user whether to delete the suppression (preferred) or add a `§4` Relaxation with a written rationale in `clif-d/backpressure.md`. Do not proceed until the tree is clean of un-audited suppressions. Never silently grandfather.
+9. **Run the verification script** and confirm every command exits cleanly and the suppression-scanner negative test blocks the expected commit with the expected message. If anything fails, fix the bootstrap or amend the backpressure design (not the config), and repeat - do not ship a verification script that does not pass.
+10. **Backfill PRD references.** The dev environment is a shared constraint that affects all implementation. Update `clif-d/prd.json`:
+    - Add a context item (type `constraint`) for the dev environment approach if none exists, stating the bootstrap command and containerization choice.
+    - Add the dev-environment context item's ID to the `context_refs` of every requirement that will be implemented inside this environment (typically all of them).
+    - This closes the referencing gap: the dev-environment document traces back to PRD items (§11), and now PRD items trace forward to the dev-environment constraint.
+    - Do not re-create the backpressure context item -- `design-backpressure` already added it. Confirm it is present.
+11. **Report** what was generated: design document path, setup artifact paths, backpressure config paths, suppression scanner path, `CLAUDE.md` path, verification result (including the scanner negative test), audit result, PRD updates. Recommend the next step: run `plan-requirement` on the earliest scaffolding requirement.
 
 ---
 
-## Handoff to design-backpressure
+## Handoff to plan-requirement
 
-`design-backpressure` assumes it can run the linter, type checker, and test framework. This skill is what guarantees that assumption. Before handing off, confirm that:
+`plan-requirement` and `implement-plan` assume they can run the linter, type checker, test framework, and commit through the pre-commit hooks. This skill is what guarantees those assumptions. Before handing off, confirm that:
 
-- Every tool `design-backpressure` will configure (linter, type checker, test framework, formatter) is invokable from a fresh subshell.
-- The pre-commit hook mechanism the project will use (husky, pre-commit framework, Makefile hooks) is installable from the bootstrap - or will be installed by `design-backpressure` itself as a documented extension.
+- Every tool named in the architecture's Technology Decisions and the backpressure document's Guardrail Decisions is invokable from a fresh subshell.
+- The pre-commit hooks are installed and blocking: `git commit` on a staged lint violation, type error, failing test, or suppression directive must fail cleanly with an actionable message.
+- The suppression scanner self-tests pass, and the whole-tree audit has been run and resolved.
 - The bootstrap command is fast enough that a developer re-running it after pulling upstream is not painful. If it is slow, document why in §6 (Idempotency and Failure Modes).
+- `CLAUDE.md` states the bootstrap, build, test, lint, and type-check commands verbatim, and points at every `clif-d/` artifact.

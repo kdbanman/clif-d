@@ -1,6 +1,6 @@
 # Testing Enforcement Infrastructure
 
-> **Context:** This reference supports the `design-backpressure` skill, which designs the enforcement infrastructure for testing — the gates that ensure tests are run and pass before code enters the repository. It does NOT write the tests themselves. Tests are planned by the `plan-requirement` skill and written by the `implement-plan` skill. The backpressure system trusts that those skills produce well-structured tests; its job is to ensure those tests are *executed reliably* as hard gates.
+> **Context:** This reference supports the `design-backpressure` skill, which designs the enforcement infrastructure for testing -- the gates that ensure tests are run and pass before code enters the repository. It does NOT write the tests themselves or install the gates. Tests are planned by the `plan-requirement` skill and written by the `implement-plan` skill; the gates are installed and wired to the toolchain by `bootstrap-dev-environment`. The backpressure system trusts that the other skills produce well-structured tests and a working environment; its job is to specify how and where those tests are *executed reliably* as hard gates.
 
 ---
 

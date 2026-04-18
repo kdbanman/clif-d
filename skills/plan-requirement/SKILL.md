@@ -57,14 +57,17 @@ Read all inputs before beginning.
 
 ### Backpressure gate
 
-Before planning implementation, **verify that quality guardrails are in place**. Check for:
-- A `clif-d/backpressure.md` or equivalent quality documentation in the product repo
-- Pre-commit hook configuration (`.pre-commit-config.yaml`, `.husky/`, git hooks, etc.)
+Before planning implementation, **verify that quality guardrails are both designed and installed**. Check for:
+- A `clif-d/backpressure.md` or equivalent quality documentation in the product repo (designed by `design-backpressure`)
+- A `clif-d/dev-environment.md` with a Backpressure Implementation section confirming the guardrails are wired to the toolchain (implemented by `bootstrap-dev-environment`)
+- Pre-commit hook configuration on disk (`.pre-commit-config.yaml`, `.husky/`, git hooks, etc.)
 - Linter configuration appropriate to the project's language
 - Type-checker configuration in its strictest viable mode
 - A working test runner
 
-If these are missing or incomplete, **warn the user explicitly** before proceeding: "Quality backpressure is not yet configured. Implementation plans assume that guardrails exist to catch regressions and enforce standards at every step. Without them, the TDD cycle in the plan has no enforcement mechanism. Consider running the `design-backpressure` skill first."
+If the **design** is missing or incomplete, warn the user: "Quality backpressure is not yet designed. Implementation plans assume that guardrails exist to catch regressions and enforce standards at every step. Consider running the `design-backpressure` skill first."
+
+If the design is present but the **implementation** is missing (no hooks installed, no lint configs, no suppression scanner), warn the user: "Quality backpressure is designed in `clif-d/backpressure.md` but not yet installed. Run `bootstrap-dev-environment` to wire the guardrails into the toolchain before planning."
 
 You may proceed after the warning if the user chooses to — this is a gate, not a wall. But the warning must be given.
 
