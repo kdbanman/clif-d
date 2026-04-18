@@ -257,7 +257,7 @@ Report to the user:
 - That `clif-d/architecture.md` has been written
 - How many scaffolding requirements were appended to the PRD (with their IDs and titles)
 - How many existing requirements had `architecture_refs` backfilled
-- The recommended next step: run `design-backpressure`, then `plan-requirement` on the scaffolding requirements
+- The recommended next step: run `design-backpressure` (to decide quality guardrails), then `bootstrap-dev-environment` (to provision the toolchain and implement those guardrails), then `plan-requirement` on the scaffolding requirements
 
 ---
 
@@ -269,4 +269,4 @@ This skill's references directory contains guidance on *designing* a testing arc
 - **Test types**: [Testing types overview](references/testing-types.md) — what each type is, when to use it, scope boundaries, relationships between types
 - **Organization**: [Test organization and maintenance](references/testing-organization.md) — file structure, naming conventions, coverage strategy, performance guidelines, flakiness management
 
-These references focus on *structural* decisions about testing. The architecture document specifies the testing infrastructure; downstream skills consume it. The plan-requirement skill uses the testing architecture to decide which tests to plan for each requirement. The implement-plan skill uses it to know where tests live and what frameworks to use. The design-backpressure skill uses it to wire up enforcement gates. This skill sets the foundation that all three depend on.
+These references focus on *structural* decisions about testing. The architecture document specifies the testing infrastructure; downstream skills consume it. The plan-requirement skill uses the testing architecture to decide which tests to plan for each requirement. The implement-plan skill uses it to know where tests live and what frameworks to use. The design-backpressure skill uses it to decide the enforcement gates; the bootstrap-dev-environment skill wires those gates into the toolchain. This skill sets the foundation that all of them depend on.
