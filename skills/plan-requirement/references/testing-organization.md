@@ -11,7 +11,7 @@ This document covers the structural aspects of a test suite that matter at plann
 
 ## 1. File and Directory Structure
 
-There are two dominant conventions for where test files live relative to production code. Neither is universally better — choose one and be consistent within a project.
+There are two dominant conventions for where test files live relative to production code. Neither is universally better -- choose one and be consistent within a project.
 
 **Co-located tests (test files alongside source files):**
 
@@ -57,7 +57,7 @@ tests/
     ...
 ```
 
-This allows each category to be run independently — unit tests on every commit, integration tests in CI, E2E tests on deployment. It also makes it clear what kind of test you're looking at when reading the code.
+This allows each category to be run independently -- unit tests on every commit, integration tests in CI, E2E tests on deployment. It also makes it clear what kind of test you're looking at when reading the code.
 
 If your framework supports tags or markers (pytest markers, JUnit tags, RSpec tags), use them in addition to or instead of directory separation. Either way, the ability to run "just the unit tests" or "just the smoke tests" is essential.
 
@@ -87,20 +87,20 @@ Examples:
 - `parseConfig_missingRequiredField_throwsValidationError`
 - `searchIndex_emptyQuery_returnsAllResults`
 
-This pattern makes test names self-documenting — when a test fails, the name tells you what broke without reading the test body.
+This pattern makes test names self-documenting -- when a test fails, the name tells you what broke without reading the test body.
 
 Avoid:
 - `testProcessTransaction` (which behavior? which scenario?)
 - `test1`, `test2` (meaningless)
-- `testBug1234` (tell the reader what the bug was, not its ticket number — add the ticket number in a comment if needed)
+- `testBug1234` (tell the reader what the bug was, not its ticket number -- add the ticket number in a comment if needed)
 
 ### Test Suite / Test Class Naming
 
 Group tests into classes or suites that correspond to the unit or feature being tested:
 
-- `UserServiceTest` — all unit tests for the UserService
-- `CheckoutFlowIntegrationTest` — integration tests for the checkout workflow
-- `LoginSmokeTest` — smoke tests for login functionality
+- `UserServiceTest` -- all unit tests for the UserService
+- `CheckoutFlowIntegrationTest` -- integration tests for the checkout workflow
+- `LoginSmokeTest` -- smoke tests for login functionality
 
 ---
 
@@ -108,7 +108,7 @@ Group tests into classes or suites that correspond to the unit or feature being 
 
 **Every test must be independent.** A test must produce the same result regardless of which other tests have run before it, what order tests run in, or whether tests run in parallel.
 
-Violations of this principle — "Interacting Tests" in Meszaros's terminology — are one of the most insidious sources of flakiness. They create failures that only appear in specific CI runs, are impossible to reproduce locally, and waste enormous amounts of debugging time.
+Violations of this principle -- "Interacting Tests" in Meszaros's terminology -- are one of the most insidious sources of flakiness. They create failures that only appear in specific CI runs, are impossible to reproduce locally, and waste enormous amounts of debugging time.
 
 Achieving independence requires:
 
@@ -121,7 +121,7 @@ Achieving independence requires:
 
 ## 4. Test Fixture Management
 
-A **fixture** is the state needed for a test to run — objects, data, configuration, external services. Fixture management is a strategic choice that significantly impacts test speed, reliability, and maintainability.
+A **fixture** is the state needed for a test to run -- objects, data, configuration, external services. Fixture management is a strategic choice that significantly impacts test speed, reliability, and maintainability.
 
 ### Fresh Fixture (preferred default)
 

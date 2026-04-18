@@ -1,13 +1,13 @@
 # CLIF-D plugin repo
 
-This is a Claude Code plugin, not an application. It contains Skills (Markdown files with YAML frontmatter) that Claude Code loads at runtime. There is no source code to compile, no build step, and no test suite — verification is reading the changed Markdown and checking it for consistency with other skills and the README.
+This is a Claude Code plugin, not an application. It contains Skills (Markdown files with YAML frontmatter) that Claude Code loads at runtime. There is no source code to compile, no build step, and no test suite -- verification is reading the changed Markdown and checking it for consistency with other skills and the README.
 
 **Read @README.md before editing any skill.** It is the cross-skill knowledge base: what CLIF-D is, the skill pipeline, the artifact lifecycle, and the canonical TODO list of planned skills.
 
 # Layout
 
-- `skills/<skill-name>/SKILL.md` — one skill per directory, with optional `references/` and `assets/` subdirectories. Skills are auto-discovered by Claude Code; no registration step is needed when adding one.
-- `.claude-plugin/` — plugin manifest and marketplace catalog. Update `plugin.json` only if the plugin's name, version, or description changes.
+- `skills/<skill-name>/SKILL.md` -- one skill per directory, with optional `references/` and `assets/` subdirectories. Skills are auto-discovered by Claude Code; no registration step is needed when adding one.
+- `.claude-plugin/` -- plugin manifest and marketplace catalog. Update `plugin.json` only if the plugin's name, version, or description changes.
 
 # IMPORTANT: two meanings of `clif-d/`
 

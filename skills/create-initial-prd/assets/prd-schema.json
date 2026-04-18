@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Product Requirements Document (PRD)",
-  "description": "A flat, behavior-focused product requirements document structured for CLI-First Decomposition (CLIF-D). Requirements are not hierarchical — high-level and low-level requirements coexist as peers, differentiated by abstraction_level, and linked via explicit dependency and context references. This schema is self-documenting: every field includes a description explaining its purpose, type expectations, and usage guidance.",
+  "description": "A flat, behavior-focused product requirements document structured for CLI-First Decomposition (CLIF-D). Requirements are not hierarchical -- high-level and low-level requirements coexist as peers, differentiated by abstraction_level, and linked via explicit dependency and context references. This schema is self-documenting: every field includes a description explaining its purpose, type expectations, and usage guidance.",
   "type": "object",
   "required": ["$schema", "clifd_version", "product_name", "concept_summary", "context", "architecture", "requirements"],
   "properties": {
@@ -20,7 +20,7 @@
     },
     "concept_summary": {
       "type": "object",
-      "description": "A condensed summary of the product concept that this PRD elaborates into requirements. Links to the full concept document for traceability. This is the starting context — the 'why this product exists' — not a requirement itself.",
+      "description": "A condensed summary of the product concept that this PRD elaborates into requirements. Links to the full concept document for traceability. This is the starting context -- the 'why this product exists' -- not a requirement itself.",
       "required": ["description", "reference_link"],
       "properties": {
         "description": {
@@ -57,7 +57,7 @@
           "type": {
             "type": "string",
             "enum": ["non_functional", "constraint", "persona", "domain", "product_goal"],
-            "description": "The category of context this item represents. Each type implies a different interrogation focus and documentation style:\n\n- 'non_functional': Quality attributes that apply broadly across the system — performance targets, security requirements, accessibility standards, reliability expectations. State the measurable threshold and the rationale (e.g. 'p95 latency under 200ms because the tool is used in interactive CLI workflows').\n\n- 'constraint': Non-negotiable boundaries on the solution space — mandated technology choices, platform targets, compliance requirements, integration contracts, resource limits. State the constraint, its source, and its impact on design decisions.\n\n- 'persona': A user type whose workflows and needs shape requirements. Describe their role, technical proficiency, typical environment, goals, and pain points. Be specific enough that acceptance criteria can reference this persona meaningfully.\n\n- 'domain': Core concepts, entities, relationships, or terminology that multiple requirements reference. Define the concept precisely, note any ambiguity in common usage, and establish the meaning used throughout this PRD. This is the glossary and entity model.\n\n- 'product_goal': High-level objectives that the product exists to achieve, typically derived from the concept document. These are the 'why' behind groups of requirements — value propositions, success metrics, strategic priorities. Requirements reference these to maintain traceability from implementation back to purpose."
+            "description": "The category of context this item represents. Each type implies a different interrogation focus and documentation style:\n\n- 'non_functional': Quality attributes that apply broadly across the system -- performance targets, security requirements, accessibility standards, reliability expectations. State the measurable threshold and the rationale (e.g. 'p95 latency under 200ms because the tool is used in interactive CLI workflows').\n\n- 'constraint': Non-negotiable boundaries on the solution space -- mandated technology choices, platform targets, compliance requirements, integration contracts, resource limits. State the constraint, its source, and its impact on design decisions.\n\n- 'persona': A user type whose workflows and needs shape requirements. Describe their role, technical proficiency, typical environment, goals, and pain points. Be specific enough that acceptance criteria can reference this persona meaningfully.\n\n- 'domain': Core concepts, entities, relationships, or terminology that multiple requirements reference. Define the concept precisely, note any ambiguity in common usage, and establish the meaning used throughout this PRD. This is the glossary and entity model.\n\n- 'product_goal': High-level objectives that the product exists to achieve, typically derived from the concept document. These are the 'why' behind groups of requirements -- value propositions, success metrics, strategic priorities. Requirements reference these to maintain traceability from implementation back to purpose."
           },
           "reference_link": {
             "type": "string",
@@ -69,7 +69,7 @@
     },
     "architecture": {
       "type": "array",
-      "description": "Architectural descriptions scoped to what is necessary to support CLI-First Decomposition (CLIF-D). Each item describes a subsystem, boundary, or structural relationship at a level informed by the C4 model (Context, Container, Component). Architecture items should only be specified as far as needed to make the CLIF-D decomposition clear — do not over-specify. Requirements reference these by ID via architecture_refs.",
+      "description": "Architectural descriptions scoped to what is necessary to support CLI-First Decomposition (CLIF-D). Each item describes a subsystem, boundary, or structural relationship at a level informed by the C4 model (Context, Container, Component). Architecture items should only be specified as far as needed to make the CLIF-D decomposition clear -- do not over-specify. Requirements reference these by ID via architecture_refs.",
       "items": {
         "type": "object",
         "required": ["id", "title", "description", "level"],
@@ -94,7 +94,7 @@
           },
           "diagram_file": {
             "type": "string",
-            "description": "Optional. Relative path to a generated architecture diagram file (e.g. 'architecture/system-context.mmd'). Diagrams should use a human-readable textual syntax (Mermaid or PlantUML) and be concise — they supplement the prose description, not replace it."
+            "description": "Optional. Relative path to a generated architecture diagram file (e.g. 'architecture/system-context.mmd'). Diagrams should use a human-readable textual syntax (Mermaid or PlantUML) and be concise -- they supplement the prose description, not replace it."
           },
           "reference_link": {
             "type": "string",
@@ -106,7 +106,7 @@
     },
     "requirements": {
       "type": "array",
-      "description": "A flat list of functional requirements at two abstraction levels. High-level requirements form a COMPLETE picture of the system's intended behavior. Low-level requirements form a PARTIAL picture — only the clear first steps are specified; the rest are deferred to future planning. Requirements are peers, not parent-child. Linkage is via explicit dependencies and context_refs. Field order within each requirement object should be: id, description, title, acceptance_criteria, priority, dependencies, abstraction_level, status, context_refs, architecture_refs, cli_spec.",
+      "description": "A flat list of functional requirements at two abstraction levels. High-level requirements form a COMPLETE picture of the system's intended behavior. Low-level requirements form a PARTIAL picture -- only the clear first steps are specified; the rest are deferred to future planning. Requirements are peers, not parent-child. Linkage is via explicit dependencies and context_refs. Field order within each requirement object should be: id, description, title, acceptance_criteria, priority, dependencies, abstraction_level, status, context_refs, architecture_refs, cli_spec.",
       "items": {
         "type": "object",
         "required": ["id", "description", "title", "acceptance_criteria", "abstraction_level", "status"],
@@ -164,12 +164,12 @@
               "type": "string",
               "pattern": "^REQ-\\d{3}$"
             },
-            "description": "Optional. IDs of other requirements that must be satisfied before this one can be implemented. These are hard dependencies — blocking relationships. For non-blocking relationships (additional context, related reading), reference the other requirement by ID inline in the description field instead."
+            "description": "Optional. IDs of other requirements that must be satisfied before this one can be implemented. These are hard dependencies -- blocking relationships. For non-blocking relationships (additional context, related reading), reference the other requirement by ID inline in the description field instead."
           },
           "abstraction_level": {
             "type": "string",
             "enum": ["high", "low"],
-            "description": "Whether this is a high-level or low-level requirement. 'high': Part of the complete picture of system behavior. Richer motivating context, prose acceptance criteria, may be slightly ambiguous. 'low': A specific, implementable behavior. Part of the partial picture — only clear first steps. Uses structured Given-When-Then acceptance criteria, must be unambiguously verifiable."
+            "description": "Whether this is a high-level or low-level requirement. 'high': Part of the complete picture of system behavior. Richer motivating context, prose acceptance criteria, may be slightly ambiguous. 'low': A specific, implementable behavior. Part of the partial picture -- only clear first steps. Uses structured Given-When-Then acceptance criteria, must be unambiguously verifiable."
           },
           "status": {
             "type": "string",
@@ -178,7 +178,7 @@
           },
           "implementation_commit": {
             "type": "string",
-            "description": "Optional. The git commit SHA that completed this requirement's implementation. Set by the implement-plan skill when it marks the requirement as 'done'. Provides traceability from specification to code — given a requirement, you can inspect the exact commit that delivered it."
+            "description": "Optional. The git commit SHA that completed this requirement's implementation. Set by the implement-plan skill when it marks the requirement as 'done'. Provides traceability from specification to code -- given a requirement, you can inspect the exact commit that delivered it."
           },
           "context_refs": {
             "type": "array",
@@ -198,7 +198,7 @@
           },
           "cli_spec": {
             "type": "object",
-            "description": "Optional. CLI specification for this requirement, following CLI-First Decomposition (CLIF-D). A requirement may define a new CLI tool, add a command to an existing tool, or specify behavior of an existing command. Should be included everywhere a CLI surface is meaningful — which, under CLIF-D, is most requirements.",
+            "description": "Optional. CLI specification for this requirement, following CLI-First Decomposition (CLIF-D). A requirement may define a new CLI tool, add a command to an existing tool, or specify behavior of an existing command. Should be included everywhere a CLI surface is meaningful -- which, under CLIF-D, is most requirements.",
             "properties": {
               "tool_name": {
                 "type": "string",

@@ -2,12 +2,12 @@
 name: plan-requirement
 description: >
   Generate a detailed implementation plan for one or more requirements from a CLIF-D PRD. Use this skill when the
-  user wants to plan the implementation of specific requirements — typically after an architecture document exists.
+  user wants to plan the implementation of specific requirements -- typically after an architecture document exists.
   Reads the PRD to understand the requirement and all its linked context, architecture, and dependency items.
   Explores the current codebase and documentation to understand what already exists. Produces a step-by-step
   implementation plan as a Markdown file, with strong emphasis on TDD (test-first), modular code structure, and
   clear acceptance criteria traceability. Each plan step specifies what to test, what to implement, and how to
-  verify — in that order.
+  verify -- in that order.
 ---
 
 # Plan Requirement Implementation
@@ -22,17 +22,17 @@ You are helping the user plan the implementation of one or more requirements fro
 
 Every implementation step follows the TDD cycle: **write the test, then write the code that makes it pass**. The plan must make this ordering explicit and natural. A step that says "implement X" without first specifying the test for X is incomplete.
 
-This isn't dogma — it's a practical constraint for agentic implementation. An agent that writes tests first has a built-in verification loop: run the tests, see them fail, write code, see them pass. Without this structure, the agent has no reliable signal for "done."
+This isn't dogma -- it's a practical constraint for agentic implementation. An agent that writes tests first has a built-in verification loop: run the tests, see them fail, write code, see them pass. Without this structure, the agent has no reliable signal for "done."
 
 ### Plans are self-contained documents
 
-The plan must be **understandable and actionable without reading any other document during implementation**. The implementer may be a relatively junior developer or a narrowly-scoped agent — they should not need to search the codebase, read the PRD, or interpret the architecture document to understand what to build. Your job as the planner is to do that interpretive work upfront and deliver a plan that is ready to execute.
+The plan must be **understandable and actionable without reading any other document during implementation**. The implementer may be a relatively junior developer or a narrowly-scoped agent -- they should not need to search the codebase, read the PRD, or interpret the architecture document to understand what to build. Your job as the planner is to do that interpretive work upfront and deliver a plan that is ready to execute.
 
-This means inlining or summarizing all necessary context: the requirement's acceptance criteria, relevant architectural decisions, module interfaces, CLI specifications, data structures, error handling conventions, and quality check commands. Reference the source documents by path for traceability, but don't force the implementer to consult them. If a piece of information from an upstream document would help the implementer make a better decision, include it in the plan — don't assume they'll go find it.
+This means inlining or summarizing all necessary context: the requirement's acceptance criteria, relevant architectural decisions, module interfaces, CLI specifications, data structures, error handling conventions, and quality check commands. Reference the source documents by path for traceability, but don't force the implementer to consult them. If a piece of information from an upstream document would help the implementer make a better decision, include it in the plan -- don't assume they'll go find it.
 
 ### Vertical slices, not horizontal layers
 
-Plan implementation as vertical slices — each step delivers a thin, working piece of end-to-end functionality. Do not plan "first build all the data models, then build all the business logic, then build all the CLI handlers." Instead: "first build the simplest possible end-to-end path (test → implement → verify), then extend it step by step."
+Plan implementation as vertical slices -- each step delivers a thin, working piece of end-to-end functionality. Do not plan "first build all the data models, then build all the business logic, then build all the CLI handlers." Instead: "first build the simplest possible end-to-end path (test → implement → verify), then extend it step by step."
 
 This aligns with CLIF-D: each slice should be runnable and testable as a CLI invocation.
 
@@ -49,9 +49,9 @@ The goal is a plan where each step can be completed and verified in isolation be
 This skill expects:
 
 1. **A CLIF-D PRD** (JSON file). The user will specify which requirement(s) to plan by ID (e.g., REQ-003, REQ-007).
-2. **An architecture document** (from the `create-architecture` skill or equivalent) — optional but strongly recommended.
-3. **A backpressure design document** (from the `design-backpressure` skill or equivalent) — optional but strongly recommended.
-4. **The current codebase** — the skill should explore existing code, tests, and documentation to understand what's already built.
+2. **An architecture document** (from the `create-architecture` skill or equivalent) -- optional but strongly recommended.
+3. **A backpressure design document** (from the `design-backpressure` skill or equivalent) -- optional but strongly recommended.
+4. **The current codebase** -- the skill should explore existing code, tests, and documentation to understand what's already built.
 
 Read all inputs before beginning.
 
@@ -69,13 +69,13 @@ If the **design** is missing or incomplete, warn the user: "Quality backpressure
 
 If the design is present but the **implementation** is missing (no hooks installed, no lint configs, no suppression scanner), warn the user: "Quality backpressure is designed in `clif-d/backpressure.md` but not yet installed. Run `bootstrap-dev-environment` to wire the guardrails into the toolchain before planning."
 
-You may proceed after the warning if the user chooses to — this is a gate, not a wall. But the warning must be given.
+You may proceed after the warning if the user chooses to -- this is a gate, not a wall. But the warning must be given.
 
 ---
 
 ## Exploration
 
-Before planning, you must understand the current state of the codebase. This is not optional — plans that ignore existing code produce redundant or conflicting implementations.
+Before planning, you must understand the current state of the codebase. This is not optional -- plans that ignore existing code produce redundant or conflicting implementations.
 
 ### 1. Resolve the requirement graph
 
@@ -109,7 +109,7 @@ Compare what the requirement needs (from the PRD + architecture) with what exist
 
 ### 5. Identify high-level requirements realized
 
-Low-level requirements do not exist in isolation — each one realizes part of some high-level requirement. When you plan the implementation of a low-level requirement (or group of low-level requirements), decide which high-level requirements the plan **fully realizes** and which it **partially realizes**.
+Low-level requirements do not exist in isolation -- each one realizes part of some high-level requirement. When you plan the implementation of a low-level requirement (or group of low-level requirements), decide which high-level requirements the plan **fully realizes** and which it **partially realizes**.
 
 For each high-level requirement the plan touches:
 
@@ -125,19 +125,19 @@ Without this step, high-level requirements drift silently out of sync with reali
 
 ## Ambiguity Resolution
 
-Before planning, you must resolve ambiguity — not defer it to the implementer. The implementer should receive a plan where every step is clear enough to execute without interpretation.
+Before planning, you must resolve ambiguity -- not defer it to the implementer. The implementer should receive a plan where every step is clear enough to execute without interpretation.
 
 ### Trace upstream first
 
 When a requirement is ambiguous, trace upstream through the documentation before asking the user:
 
-1. **PRD context items and descriptions** — the requirement's `context_refs` and `description` often contain the clarifying detail.
-2. **Architecture document** — module interfaces, data flow diagrams, and error handling conventions often resolve "how should this work?" questions.
-3. **Concept document** — the product's fundamental purpose and value proposition often resolve "why does this behave this way?" questions.
-4. **Preceding plans and existing code** — patterns established by earlier implementation often resolve "what convention should I follow?" questions.
-5. **Backpressure document** — quality constraints often resolve "how strict should this be?" questions.
+1. **PRD context items and descriptions** -- the requirement's `context_refs` and `description` often contain the clarifying detail.
+2. **Architecture document** -- module interfaces, data flow diagrams, and error handling conventions often resolve "how should this work?" questions.
+3. **Concept document** -- the product's fundamental purpose and value proposition often resolve "why does this behave this way?" questions.
+4. **Preceding plans and existing code** -- patterns established by earlier implementation often resolve "what convention should I follow?" questions.
+5. **Backpressure document** -- quality constraints often resolve "how strict should this be?" questions.
 
-Most ambiguity in requirements can be resolved by reading upstream documents carefully. The requirement author couldn't (and shouldn't) inline every detail — that's what the reference graph is for. Your job is to follow the references, synthesize the answer, and bake it into the plan.
+Most ambiguity in requirements can be resolved by reading upstream documents carefully. The requirement author couldn't (and shouldn't) inline every detail -- that's what the reference graph is for. Your job is to follow the references, synthesize the answer, and bake it into the plan.
 
 ### Interrogation
 
@@ -163,9 +163,9 @@ Active plans live in `clif-d/plans/active/`. After implementation, the `implemen
 
 **Requirements:** REQ-003, REQ-007
 **PRD:** `clif-d/prd.json`
-**Architecture:** `clif-d/architecture.md` (§4 Module Architecture, §5 CLI-to-Module Mapping — or whichever sections are relevant)
+**Architecture:** `clif-d/architecture.md` (§4 Module Architecture, §5 CLI-to-Module Mapping -- or whichever sections are relevant)
 **Backpressure:** `clif-d/backpressure.md`
-**Preceding plans:** `clif-d/plans/executed/plan-REQ-001.md` (if relevant — list plans that built the code this plan extends)
+**Preceding plans:** `clif-d/plans/executed/plan-REQ-001.md` (if relevant -- list plans that built the code this plan extends)
 **Date:** YYYY-MM-DD
 **Status:** Draft
 ```
@@ -178,17 +178,17 @@ A concise summary (2-3 sentences) of what this plan delivers. State the user-vis
 
 ### 2. Context Summary
 
-This is where you do the heavy lifting that makes the plan self-contained. **Inline everything the implementer needs** so they can work from this document alone. Be generous with context — it's far better to include a paragraph the implementer skims than to omit something they'll need to go hunt for.
+This is where you do the heavy lifting that makes the plan self-contained. **Inline everything the implementer needs** so they can work from this document alone. Be generous with context -- it's far better to include a paragraph the implementer skims than to omit something they'll need to go hunt for.
 
 Include:
 
-- **Requirement description and acceptance criteria** — copy verbatim from the PRD, not summarized. The implementer needs the exact wording to verify against.
-- **CLI specification** — the exact command, args, flags, stdin/stdout/stderr, exit codes. Copy from PRD.
-- **Relevant architecture decisions** — the specific modules involved, their public interfaces, key data structures, and how data flows between them. Don't just name the modules; describe the interfaces the implementer will call or implement. Pull from the architecture document's Module Architecture (§4) and Data Flow (§6) sections.
-- **Relevant context items** — constraints, personas, domain definitions that affect implementation. Copy from PRD context items.
-- **Quality guardrails** — the exact commands to run for linting, type-checking, formatting, and testing. Copy from `clif-d/backpressure.md` Practitioner Quick Reference. The implementer should not need to look these up.
-- **Error handling conventions** — how errors are represented, propagated, and mapped to exit codes. Pull from the architecture document's Error Handling Strategy (§7).
-- **Relevant preceding implementation** — if this plan extends code built by a preceding plan, summarize what already exists: which modules, which interfaces, which test patterns. The implementer needs to know what they're building on top of.
+- **Requirement description and acceptance criteria** -- copy verbatim from the PRD, not summarized. The implementer needs the exact wording to verify against.
+- **CLI specification** -- the exact command, args, flags, stdin/stdout/stderr, exit codes. Copy from PRD.
+- **Relevant architecture decisions** -- the specific modules involved, their public interfaces, key data structures, and how data flows between them. Don't just name the modules; describe the interfaces the implementer will call or implement. Pull from the architecture document's Module Architecture (§4) and Data Flow (§6) sections.
+- **Relevant context items** -- constraints, personas, domain definitions that affect implementation. Copy from PRD context items.
+- **Quality guardrails** -- the exact commands to run for linting, type-checking, formatting, and testing. Copy from `clif-d/backpressure.md` Practitioner Quick Reference. The implementer should not need to look these up.
+- **Error handling conventions** -- how errors are represented, propagated, and mapped to exit codes. Pull from the architecture document's Error Handling Strategy (§7).
+- **Relevant preceding implementation** -- if this plan extends code built by a preceding plan, summarize what already exists: which modules, which interfaces, which test patterns. The implementer needs to know what they're building on top of.
 
 ### 3. Prerequisites
 
@@ -210,7 +210,7 @@ List every high-level requirement this plan touches, with its realization catego
 | REQ-030        | Partially   | not_started -> in_progress at plan start; stays in_progress |
 ```
 
-If the plan realizes no high-level requirements, write "None" and briefly justify why — every low-level requirement should normally ladder up to at least one high-level requirement.
+If the plan realizes no high-level requirements, write "None" and briefly justify why -- every low-level requirement should normally ladder up to at least one high-level requirement.
 
 The transitions listed here drive the corresponding Implementation Steps below. Do not leave them to the implementer to infer.
 
@@ -248,7 +248,7 @@ The core of the plan. Each step follows this structure:
 
 #### Status transition steps
 
-Every status transition named in §4 **High-level Requirements Realized** must appear as an explicit step (or be folded into an existing step's Verify block). Low-level requirement transitions are similarly explicit — do not rely on the implementer inferring which `clif-d req start`/`clif-d req done` commands to run.
+Every status transition named in §4 **High-level Requirements Realized** must appear as an explicit step (or be folded into an existing step's Verify block). Low-level requirement transitions are similarly explicit -- do not rely on the implementer inferring which `clif-d req start`/`clif-d req done` commands to run.
 
 - **First step** for each low-level requirement and each partially-realized high-level requirement not already `in_progress`: transition to `in_progress` via `clif-d req start REQ-XXX`.
 - **Closing step** for each low-level requirement and each fully-realized high-level requirement: transition to `done` via `clif-d req done REQ-XXX --commit=<sha>` using the SHA of the commit that delivers the final acceptance criterion.
@@ -285,7 +285,7 @@ Any assumptions made during planning that the implementer should be aware of. Fl
 
 **Open questions should be rare.** If this section has more than one or two items, that's a signal of one of the following:
 
-1. That the planning phase didn't resolve enough ambiguity. Go back to the upstream documents and the user before leaving questions for the implementer. The implementer should be able to execute the plan without needing to make interpretive decisions — those are the planner's job.
+1. That the planning phase didn't resolve enough ambiguity. Go back to the upstream documents and the user before leaving questions for the implementer. The implementer should be able to execute the plan without needing to make interpretive decisions -- those are the planner's job.
 2. That the requirement itself needs work: further decomposition, clearer acceptance criteria, etc. Discuss with the user to plan requirements revision.
 
 ---
@@ -307,9 +307,9 @@ Once you've explored the codebase and resolved any ambiguities:
 
 This skill's references directory contains guidance on *choosing* test types, proportions, and structure when planning implementation steps. Consult them when deciding what kind of test to specify for a step, where test files should live, or how to map acceptance criteria to tests.
 
-- **Strategy**: [Testing strategy](references/testing-strategy.md) — pyramid vs. trophy vs. honeycomb, risk-based prioritization, test size vs. scope
-- **Test types**: [Testing types overview](references/testing-types.md) — what each type is, when to use it, scope boundaries (unit, integration, E2E, acceptance, smoke)
-- **Acceptance tests**: [Acceptance test guide](references/testing-acceptance.md) — full guidance on mapping business requirements to executable specifications
-- **Organization**: [Test organization](references/testing-organization.md) — file structure, naming conventions, test independence, fixture management
+- **Strategy**: [Testing strategy](references/testing-strategy.md) -- pyramid vs. trophy vs. honeycomb, risk-based prioritization, test size vs. scope
+- **Test types**: [Testing types overview](references/testing-types.md) -- what each type is, when to use it, scope boundaries (unit, integration, E2E, acceptance, smoke)
+- **Acceptance tests**: [Acceptance test guide](references/testing-acceptance.md) -- full guidance on mapping business requirements to executable specifications
+- **Organization**: [Test organization](references/testing-organization.md) -- file structure, naming conventions, test independence, fixture management
 
-These references focus on *planning* which tests to write and how to structure them. The plan specifies the tests; the implement-plan skill writes them. This skill does not need to explain how to write test code — the implementer has their own detailed references for that. Similarly, enforcement of test quality (pre-commit hooks, coverage gates) is the design-backpressure skill's domain.
+These references focus on *planning* which tests to write and how to structure them. The plan specifies the tests; the implement-plan skill writes them. This skill does not need to explain how to write test code -- the implementer has their own detailed references for that. Similarly, enforcement of test quality (pre-commit hooks, coverage gates) is the design-backpressure skill's domain.

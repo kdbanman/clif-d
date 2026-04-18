@@ -49,7 +49,7 @@ another language).
 ---
 
 ### Experiential Names
-**What they do:** Connect to direct human experience — the act of using the
+**What they do:** Connect to direct human experience -- the act of using the
 product, a sensory quality, or a real-world activity. More imaginative than
 Functional, but still literal.
 
@@ -88,27 +88,27 @@ for extended branding (stories, imagery, sub-brands).
 precisely because they *don't* describe the product), may initially confuse
 literal-minded stakeholders.
 
-**When to use:** Almost always — unless there's a compelling reason to use
+**When to use:** Almost always -- unless there's a compelling reason to use
 another type. Evocative names are particularly powerful when entering a category
 dominated by Functional or Invented names, because they immediately differentiate.
 
 ---
 
-## SMILE Test — Qualities of a Strong Name
+## SMILE Test -- Qualities of a Strong Name
 *Framework by Alexandra Watkins, "Hello, My Name Is Awesome"*
 
 Score each candidate on these five qualities. A strong name should hit at
 least 3 of 5 convincingly.
 
-### S — Suggestive
-Does the name evoke something about the brand — not in a descriptive way, but
+### S -- Suggestive
+Does the name evoke something about the brand -- not in a descriptive way, but
 in a metaphorical or associative way?
 
-**Strong example:** Amazon — suggests vastness, an enormous river, unfathomable
+**Strong example:** Amazon -- suggests vastness, an enormous river, unfathomable
 scale. Jeff Bezos chose it because he envisioned his company being immeasurably
 large, and the name never limited what they could sell.
 
-**Weak example:** "Global Cleaning Solutions" — describes the category but
+**Weak example:** "Global Cleaning Solutions" -- describes the category but
 suggests nothing distinctive about the brand.
 
 **Test question:** "If you heard this name with no other context, what would
@@ -116,15 +116,15 @@ you *feel* or *imagine*?"
 
 ---
 
-### M — Memorable
+### M -- Memorable
 Is the name based on a familiar word, concept, or phonetic pattern that makes
 it easy to remember? The brain retains the familiar more easily than the
 completely alien.
 
-**Strong example:** Swiffer — built on "swift" (familiar concept of speed)
+**Strong example:** Swiffer -- built on "swift" (familiar concept of speed)
 with a playful suffix. You hear it once and it sticks.
 
-**Weak example:** "Xobni" ("inbox" spelled backwards) — clever in theory but
+**Weak example:** "Xobni" ("inbox" spelled backwards) -- clever in theory but
 requires explanation to remember.
 
 **Test question:** "If someone heard this name at a dinner party, could they
@@ -132,29 +132,29 @@ recall it the next morning?"
 
 ---
 
-### I — Imagery
+### I -- Imagery
 Does the name conjure a visual image or sensory experience in the mind's eye?
 Names that create pictures are dramatically more memorable than abstract ones.
 
-**Strong example:** Patagonia — instantly evokes rugged mountain landscapes,
+**Strong example:** Patagonia -- instantly evokes rugged mountain landscapes,
 glaciers, wind-swept wilderness.
 
-**Weak example:** "Accenture" — creates no visual image; it's an abstract
+**Weak example:** "Accenture" -- creates no visual image; it's an abstract
 constructed word.
 
 **Test question:** "Close your eyes and say this name. What do you see?"
 
 ---
 
-### L — Legs
+### L -- Legs
 Does the name have a *theme* that can be extended across branding, marketing,
 product lines, and community? Can you build a world around it?
 
-**Strong example:** Virgin — the "virgin" territory metaphor extends everywhere:
+**Strong example:** Virgin -- the "virgin" territory metaphor extends everywhere:
 Virgin Atlantic, Virgin Galactic, Virgin Records. The name creates endless
 possibilities for "first time" and "fresh start" messaging.
 
-**Weak example:** "ProMop" — there's nowhere to go with this. You can't build
+**Weak example:** "ProMop" -- there's nowhere to go with this. You can't build
 a brand world around a mop descriptor.
 
 **Test question:** "Can you imagine a tagline, a community name, a sub-brand,
@@ -162,27 +162,27 @@ or a T-shirt slogan that plays off this name?"
 
 ---
 
-### E — Emotional
+### E -- Emotional
 Does the name move people? Does it create a connection, a feeling, a reaction?
 Even a slight emotional response dramatically increases the name's effectiveness.
 
-**Strong example:** Impossible (Foods) — creates a sense of wonder, defiance,
+**Strong example:** Impossible (Foods) -- creates a sense of wonder, defiance,
 and ambition. People react to it.
 
-**Weak example:** "Advanced Protein Systems" — creates no emotional response.
+**Weak example:** "Advanced Protein Systems" -- creates no emotional response.
 
-**Test question:** "Does this name make you feel *anything* — curiosity,
+**Test question:** "Does this name make you feel *anything* -- curiosity,
 excitement, warmth, surprise?"
 
 ---
 
-## SCRATCH Test — Red Flags to Eliminate
+## SCRATCH Test -- Red Flags to Eliminate
 *Framework by Alexandra Watkins, "Hello, My Name Is Awesome"*
 
 Any name that triggers 2+ of these should be eliminated. One flag is a caution
 worth discussing.
 
-### S — Spelling-Challenged
+### S -- Spelling-Challenged
 Does the name look like a typo, use non-intuitive spelling, or require you to
 spell it out loud for people? Creative misspelling is lazy, not clever. It
 frustrates customers, embarrasses employees, and annoys journalists.
@@ -190,13 +190,13 @@ frustrates customers, embarrasses employees, and annoys journalists.
 **Red flag examples:** Flickr (where's the E?), Lyft (why not "Lift"?),
 Takkion (looks like a misspelling of "tachyon").
 
-**The email test:** Imagine dictating your email address — name@yourcompany.com —
+**The email test:** Imagine dictating your email address -- name@yourcompany.com --
 to someone over the phone. If you have to say "that's with a Y, not an I" or
 "no E at the end," the name fails.
 
 ---
 
-### C — Copycat
+### C -- Copycat
 Is the name too similar to a competitor or an existing well-known brand? This
 signals lack of originality and opens trademark risk.
 
@@ -209,7 +209,7 @@ could plausibly be confused with something that already exists, scratch it.
 
 ---
 
-### R — Restrictive
+### R -- Restrictive
 Will the name limit future growth if the company pivots, expands, or enters
 new markets? Functional names are most vulnerable here.
 
@@ -221,7 +221,7 @@ offering. "Toys 'R' Us" struggled to expand beyond toys.
 
 ---
 
-### A — Annoying
+### A -- Annoying
 Is the name forced, overly "cutesy," or trying too hard to be clever? Names
 that make people groan rather than smile are brand liabilities.
 
@@ -234,7 +234,7 @@ it feel naturally interesting?"
 
 ---
 
-### T — Tame
+### T -- Tame
 Is the name flat, descriptive, generic, or boring? Tame names blend into the
 background. They're the names nobody remembers and nobody talks about.
 
@@ -246,7 +246,7 @@ anyone even notice the difference?" If the answer is no, the name is too tame.
 
 ---
 
-### C — Curse of Knowledge
+### C -- Curse of Knowledge
 Is the name an inside joke, an industry acronym, or a reference that only
 insiders understand? Names need to work for the audience, not the team that
 created them.
@@ -260,7 +260,7 @@ interesting?" If not, it's cursed.
 
 ---
 
-### H — Hard to Pronounce
+### H -- Hard to Pronounce
 Does the name fail the "radio test"? If someone hears the name spoken aloud,
 can they spell it? If they read it, can they pronounce it? Names derived from
 foreign languages the target audience doesn't speak are particularly risky.

@@ -4,14 +4,14 @@
 
 An acceptance test verifies that a system satisfies a business requirement or user story. It answers the question: "Does this feature do what the stakeholder asked for?" Acceptance tests are sometimes called "functional tests," "customer tests," or "story tests."
 
-The defining characteristic of an acceptance test is not its technical scope — it's its *audience and purpose*. An acceptance test should be readable (or at least recognizable) by a non-engineer stakeholder. The behavior it specifies comes from requirements, not from implementation design.
+The defining characteristic of an acceptance test is not its technical scope -- it's its *audience and purpose*. An acceptance test should be readable (or at least recognizable) by a non-engineer stakeholder. The behavior it specifies comes from requirements, not from implementation design.
 
 ## Why They Exist
 
 Acceptance tests bridge the gap between what stakeholders asked for and what engineers built. They serve as:
 
 - **Executable specifications:** A precise, unambiguous definition of what "done" means for a feature. When all acceptance tests pass, the feature meets its requirements.
-- **Shared understanding:** Written collaboratively between stakeholders and engineers, acceptance tests surface misunderstandings about requirements early — before code is written, not after.
+- **Shared understanding:** Written collaboratively between stakeholders and engineers, acceptance tests surface misunderstandings about requirements early -- before code is written, not after.
 - **Regression protection at the requirements level:** If a future change breaks a business requirement, the acceptance test catches it in terms the stakeholder can understand.
 
 Fowler's concept of "Specification by Example" captures this: acceptance tests are examples of desired behavior, expressed concretely enough to be automated and verified.
@@ -36,7 +36,7 @@ Acceptance tests are orthogonal to the test pyramid. They are defined by *what t
 
 ## Relationship to Other Test Types
 
-Acceptance tests overlap with other types by design. A unit test and an acceptance test might exercise the same code — the difference is their purpose. The unit test exists to verify internal correctness during development. The acceptance test exists to verify that a business requirement is met.
+Acceptance tests overlap with other types by design. A unit test and an acceptance test might exercise the same code -- the difference is their purpose. The unit test exists to verify internal correctness during development. The acceptance test exists to verify that a business requirement is met.
 
 It is fine (even encouraged) for a behavior to be covered by both a unit test and an acceptance test. They serve different audiences and protect against different kinds of regression.
 

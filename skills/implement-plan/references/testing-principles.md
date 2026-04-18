@@ -29,7 +29,7 @@ If you routinely update tests during refactoring or feature addition, your tests
 ```python
 def test_calculate_discount():
     service = DiscountService()
-    # Calling internal method directly — if we rename or restructure, test breaks
+    # Calling internal method directly -- if we rename or restructure, test breaks
     raw = service._compute_raw_discount(price=100, tier="gold")
     adjusted = service._apply_seasonal_adjustment(raw, season="summer")
     assert adjusted == 15.0

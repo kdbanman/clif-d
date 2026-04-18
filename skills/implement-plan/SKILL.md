@@ -4,7 +4,7 @@ description: >
   Implement code according to a plan from the plan-requirement skill, with rigorous TDD discipline, modular
   code structure, and continuous quality verification. Use this skill when the user has an implementation plan
   (Markdown file from the plan-requirement skill or equivalent) and wants to execute it step by step. Follows
-  the plan's test-first ordering strictly — writes each test before its implementation, runs tests after each
+  the plan's test-first ordering strictly -- writes each test before its implementation, runs tests after each
   step, and runs all quality checks (lint, type-check, format) before considering a step complete. Produces
   clean, modular, well-documented code that passes all guardrails on every commit.
 ---
@@ -19,7 +19,7 @@ You are implementing code by following a structured implementation plan. The pla
 
 ### The plan is the contract
 
-Follow the plan's step ordering and test-first structure. Do not skip steps, reorder steps, or combine steps unless you encounter a concrete problem that makes the plan's ordering impossible — and if that happens, explain what you found and why you're deviating before proceeding.
+Follow the plan's step ordering and test-first structure. Do not skip steps, reorder steps, or combine steps unless you encounter a concrete problem that makes the plan's ordering impossible -- and if that happens, explain what you found and why you're deviating before proceeding.
 
 The plan was written with care about decomposition and verification ordering. Respecting it means each step is independently verifiable, which is the whole point.
 
@@ -27,27 +27,27 @@ The plan was written with care about decomposition and verification ordering. Re
 
 For every step that includes a "Test first" section:
 
-1. **Red**: Write the test. Run it. Confirm it fails. If it passes before you've written the implementation, something is wrong — either the test is trivial, the behavior already exists, or the test isn't testing what it claims. Investigate before proceeding.
+1. **Red**: Write the test. Run it. Confirm it fails. If it passes before you've written the implementation, something is wrong -- either the test is trivial, the behavior already exists, or the test isn't testing what it claims. Investigate before proceeding.
 
 2. **Green**: Write the minimum implementation to make the test pass. Do not write more than what the test demands. Run the test. Confirm it passes.
 
-3. **Refactor**: Look at what you just wrote. Is there duplication? Is the code clear? Are names precise? Is the module boundary right? Refactor if needed — and run the tests again after refactoring to confirm nothing broke.
+3. **Refactor**: Look at what you just wrote. Is there duplication? Is the code clear? Are names precise? Is the module boundary right? Refactor if needed -- and run the tests again after refactoring to confirm nothing broke.
 
-This is not a suggestion — it's the implementation protocol. Skipping the Red step (writing tests that already pass) defeats the purpose of TDD.
+This is not a suggestion -- it's the implementation protocol. Skipping the Red step (writing tests that already pass) defeats the purpose of TDD.
 
 ### Quality checks are not optional
 
 After completing each step's implementation:
 
-1. **Run the step's specific tests** — they must pass.
-2. **Run the full test suite** — nothing previously passing should break.
-3. **Run the linter** — no new violations.
-4. **Run the type checker** — no new errors.
-5. **Run the formatter** — code must be formatted.
+1. **Run the step's specific tests** -- they must pass.
+2. **Run the full test suite** -- nothing previously passing should break.
+3. **Run the linter** -- no new violations.
+4. **Run the type checker** -- no new errors.
+5. **Run the formatter** -- code must be formatted.
 
 If any check fails, fix the issue before moving to the next step. Do not accumulate debt across steps.
 
-If the project has pre-commit hooks configured (see `clif-d/backpressure.md`), these checks will also run at commit time. But don't rely on hooks as your only verification — run checks explicitly after each step so you catch issues immediately, not at commit time when the context has shifted.
+If the project has pre-commit hooks configured (see `clif-d/backpressure.md`), these checks will also run at commit time. But don't rely on hooks as your only verification -- run checks explicitly after each step so you catch issues immediately, not at commit time when the context has shifted.
 
 ### Code quality is not negotiable
 
@@ -59,7 +59,7 @@ Write code that is:
 
 - **Named precisely**: Names are the primary documentation. A function called `process_data` is a failure. A function called `parse_csv_row_to_transaction` is a success. Variables, functions, modules, and types should all have names that make the code readable without comments.
 
-- **Documented where non-obvious**: Don't comment *what* the code does (the code says that). Comment *why* — the business reason, the edge case being handled, the constraint being respected. Module-level documentation should explain the module's responsibility and public interface.
+- **Documented where non-obvious**: Don't comment *what* the code does (the code says that). Comment *why* -- the business reason, the edge case being handled, the constraint being respected. Module-level documentation should explain the module's responsibility and public interface.
 
 - **Tested at the right level**: Unit tests for logic. Integration tests for CLI behavior. Don't write unit tests for trivial getters. Don't write integration tests for pure computation. Test at the boundary where the behavior is most meaningfully verified.
 
@@ -69,7 +69,7 @@ Sometimes the plan doesn't survive contact with reality. When this happens:
 
 - **If a test needs to be different than sketched**: Write the correct test and note why it differs from the plan.
 - **If an implementation approach doesn't work**: Try the plan's approach first. If it genuinely doesn't work, explain what you found, what you're doing instead, and why.
-- **If you discover a missing step**: Implement it in the spirit of the plan's structure — test first, verify after.
+- **If you discover a missing step**: Implement it in the spirit of the plan's structure -- test first, verify after.
 - **If you discover the plan has a bug**: Stop and explain the issue. Don't silently work around it.
 
 The plan is the contract, but a contract interpreted in good faith, not followed off a cliff.
@@ -81,9 +81,9 @@ The plan is the contract, but a contract interpreted in good faith, not followed
 This skill expects:
 
 1. **An implementation plan** (Markdown file from the `plan-requirement` skill or equivalent). The user will provide the file path.
-2. **The project codebase** — the implementation is written directly into the project.
+2. **The project codebase** -- the implementation is written directly into the project.
 
-Read the full plan before starting. Understand the overall arc — what's being built, why, and how the steps connect — before writing any code.
+Read the full plan before starting. Understand the overall arc -- what's being built, why, and how the steps connect -- before writing any code.
 
 ---
 
@@ -94,7 +94,7 @@ Read the full plan before starting. Understand the overall arc — what's being 
 1. **Read the plan fully.** Understand the objective, context, prerequisites, and the full sequence of steps.
 2. **Verify prerequisites.** Check that required dependencies are installed, required modules exist, required configuration is in place. If a prerequisite is not met, stop and report it.
 3. **Identify the quality check commands.** From the plan's Context Summary or the project's `clif-d/backpressure.md`, determine the exact commands for: running tests, running the linter, running the type checker, running the formatter.
-4. **Run the existing test suite.** Confirm it passes before you change anything. If it doesn't, stop and report — you need a green baseline to detect regressions.
+4. **Run the existing test suite.** Confirm it passes before you change anything. If it doesn't, stop and report -- you need a green baseline to detect regressions.
 
 ### For each step
 
@@ -107,7 +107,7 @@ State which step you're executing and what it will accomplish. This provides a c
 #### 2. Write the test (Red)
 
 - Create or modify the test file specified in the plan's "Test first" section.
-- Follow the plan's test sketch, but write real, complete test code — not pseudocode.
+- Follow the plan's test sketch, but write real, complete test code -- not pseudocode.
 - **Run the test.** It should fail (Red). If it passes, investigate:
   - Is the behavior already implemented? → Skip the implementation part of this step, note why.
   - Is the test not actually testing the right thing? → Fix the test.
@@ -118,7 +118,7 @@ State which step you're executing and what it will accomplish. This provides a c
 - Create or modify the implementation files specified in the plan's "Implement" section.
 - Write the **minimum code** to make the failing test pass. Resist the urge to implement the next step's functionality.
 - **Run the step's test.** It should pass (Green).
-- **Run the full test suite.** Everything should pass — no regressions.
+- **Run the full test suite.** Everything should pass -- no regressions.
 
 #### 4. Refactor (if needed)
 
@@ -154,11 +154,11 @@ State that the step is complete. Summarize what was implemented and what tests v
    - **Trailers:** `Requirement: REQ-NNN`, `Plan: <path>`, `Step: N/M`, and `Fixes:` / `Refs:` / `Link:` as applicable.
    - Never use `git commit -m`. Wrap body at 72 characters.
    - See [Git hygiene reference](references/git-hygiene.md) for full format, trailer vocabulary, and rationale.
-4. **Record the commit SHA** — you will need it for the next steps.
+4. **Record the commit SHA** -- you will need it for the next steps.
 5. **Apply the PRD status transitions.** The plan enumerates every transition in §4 **High-level Requirements Realized** and in the per-step sections. Execute them with the `clif-d req` CLI, never by hand-editing `prd.json`:
    - **Every low-level requirement targeted by the plan:** `clif-d req done REQ-NNN --commit=<sha>` (the SHA from step 4). This sets `status` to `"done"` and records `implementation_commit` in one atomic, validated write.
    - **Every high-level requirement marked "Fully realized" in §4:** `clif-d req done REQ-MMM --commit=<sha>` using the same implementation SHA. A high-level requirement is realized by the collection of low-level requirements this plan closes, so it shares their commit.
-   - **Every high-level requirement marked "Partially realized" in §4 that is still `not_started`:** `clif-d req start REQ-MMM`. No `implementation_commit` — it is not done yet; a future plan will close it.
+   - **Every high-level requirement marked "Partially realized" in §4 that is still `not_started`:** `clif-d req start REQ-MMM`. No `implementation_commit` -- it is not done yet; a future plan will close it.
    - **Any partially-realized high-level requirement already `in_progress`:** no transition; it stays `in_progress`.
 
    If some transitions were already performed inline as individual plan steps (per the plan's Status Transition Steps guidance), the remaining ones are whatever is left. Verify the final PRD state matches §4 before committing.
@@ -212,7 +212,7 @@ These apply universally, regardless of language:
 
 - **Module-level docs**: Every module has a brief description of its responsibility and public interface.
 - **Function-level docs**: Public functions have a brief description of what they do, their parameters, and their return value.
-- **Inline comments**: Only for *why*, never for *what*. If you need to explain *what* the code does, the code isn't clear enough — rewrite it.
+- **Inline comments**: Only for *why*, never for *what*. If you need to explain *what* the code does, the code isn't clear enough -- rewrite it.
 - **No commented-out code**: Delete it. Version control exists.
 
 ---

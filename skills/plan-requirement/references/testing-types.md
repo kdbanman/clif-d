@@ -2,7 +2,7 @@
 
 This document summarizes all five test types at a conceptual level to support planning decisions. For deep guidance on writing specific test types, consult the implement-plan skill's references.
 
-For acceptance tests specifically — which are central to requirement planning — see [testing-acceptance.md](./testing-acceptance.md) for the full reference.
+For acceptance tests specifically -- which are central to requirement planning -- see [testing-acceptance.md](./testing-acceptance.md) for the full reference.
 
 ---
 
@@ -10,7 +10,7 @@ For acceptance tests specifically — which are central to requirement planning 
 
 ### What They Are
 
-A unit test verifies the behavior of a small, isolated piece of code — typically a single function, method, or class. It exercises the code through its public interface, asserts on observable output or state, and runs fast enough that an engineer can execute thousands of them in seconds.
+A unit test verifies the behavior of a small, isolated piece of code -- typically a single function, method, or class. It exercises the code through its public interface, asserts on observable output or state, and runs fast enough that an engineer can execute thousands of them in seconds.
 
 Google defines unit tests as tests of "relatively narrow scope, such as of a single class or method." They are usually (but not always) "small" in Google's size taxonomy: single-process, single-threaded, no I/O.
 
@@ -39,7 +39,7 @@ Do **not** use unit tests for verifying that two components work together (use i
 - **Solitary** tests isolate the unit from all collaborators using test doubles.
 - **Sociable** tests allow the unit to interact with real collaborators, as long as the test remains fast and deterministic.
 
-Google's current guidance leans sociable — prefer real implementations when they are fast and deterministic. Use test doubles only for dependencies that are slow, nondeterministic, or have significant side effects.
+Google's current guidance leans sociable -- prefer real implementations when they are fast and deterministic. Use test doubles only for dependencies that are slow, nondeterministic, or have significant side effects.
 
 ---
 
@@ -47,7 +47,7 @@ Google's current guidance leans sociable — prefer real implementations when th
 
 ### What They Are
 
-An integration test verifies that two or more components work together correctly. It exercises the seams between units — the interfaces, contracts, and data flows that connect them.
+An integration test verifies that two or more components work together correctly. It exercises the seams between units -- the interfaces, contracts, and data flows that connect them.
 
 The term "integration test" is notoriously fuzzy. Fowler observes that its definition varies more than almost any other testing term. For this document: an integration test exercises a collaboration between components that a unit test, by design, does not cover. The components might be classes within a single service, a service and its database, an API layer and its business logic, or two microservices.
 
@@ -82,7 +82,7 @@ Correct units do not guarantee a correct system. Common bugs that only integrati
 
 ### What They Are
 
-An end-to-end (E2E) test exercises the entire system from a user's perspective — entering through the same interface a real user would use (a browser, a CLI, a mobile app, an API client) and verifying the outcome through the same channels a user would observe. E2E tests are sometimes called "broad stack tests" (Fowler) or "system tests."
+An end-to-end (E2E) test exercises the entire system from a user's perspective -- entering through the same interface a real user would use (a browser, a CLI, a mobile app, an API client) and verifying the outcome through the same channels a user would observe. E2E tests are sometimes called "broad stack tests" (Fowler) or "system tests."
 
 The system under test should be deployed in a configuration as close to production as practical, with real (or near-real) dependencies: databases, queues, external services.
 
@@ -100,9 +100,9 @@ E2E tests catch bugs that no lower-level test can: emergent behaviors that arise
 
 ### Scope and Boundaries
 
-E2E tests are, by definition, broad in scope. But "end to end" does not mean "test everything." Each E2E test should focus on a single user journey or workflow — not attempt to verify every feature of the application in one test.
+E2E tests are, by definition, broad in scope. But "end to end" does not mean "test everything." Each E2E test should focus on a single user journey or workflow -- not attempt to verify every feature of the application in one test.
 
-**Choose E2E scenarios based on risk, not coverage.** You cannot E2E-test every path through a complex system — the combinatorial explosion makes it impractical. Instead, identify the 5-20 most critical user journeys and test those.
+**Choose E2E scenarios based on risk, not coverage.** You cannot E2E-test every path through a complex system -- the combinatorial explosion makes it impractical. Instead, identify the 5-20 most critical user journeys and test those.
 
 ---
 
@@ -110,14 +110,14 @@ E2E tests are, by definition, broad in scope. But "end to end" does not mean "te
 
 ### What They Are
 
-An acceptance test verifies that a system satisfies a business requirement or user story. It answers the question: "Does this feature do what the stakeholder asked for?" The defining characteristic of an acceptance test is not its technical scope — it's its *audience and purpose*. An acceptance test should be readable (or at least recognizable) by a non-engineer stakeholder. The behavior it specifies comes from requirements, not from implementation design.
+An acceptance test verifies that a system satisfies a business requirement or user story. It answers the question: "Does this feature do what the stakeholder asked for?" The defining characteristic of an acceptance test is not its technical scope -- it's its *audience and purpose*. An acceptance test should be readable (or at least recognizable) by a non-engineer stakeholder. The behavior it specifies comes from requirements, not from implementation design.
 
 See [testing-acceptance.md](./testing-acceptance.md) for the full reference on acceptance tests, including their relationship to other test types, scope guidance, and pitfalls.
 
 ### Why They Exist
 
 - **Executable specifications:** A precise, unambiguous definition of what "done" means for a feature.
-- **Shared understanding:** Surface misunderstandings about requirements early — before code is written.
+- **Shared understanding:** Surface misunderstandings about requirements early -- before code is written.
 - **Regression protection at the requirements level:** If a future change breaks a business requirement, the acceptance test catches it in terms the stakeholder can understand.
 
 ### When to Use Them
@@ -136,7 +136,7 @@ Acceptance tests are orthogonal to the test pyramid. They are defined by *what t
 
 ### What They Are
 
-A smoke test is a small, fast suite of tests that verifies the most basic, critical functionality of a system is working. The name comes from hardware testing — when you power on a new circuit board, the first test is whether it catches fire (produces smoke). If it does, you don't bother with further testing.
+A smoke test is a small, fast suite of tests that verifies the most basic, critical functionality of a system is working. The name comes from hardware testing -- when you power on a new circuit board, the first test is whether it catches fire (produces smoke). If it does, you don't bother with further testing.
 
 Smoke tests answer one question: "Is this build/deployment so broken that further testing is pointless?"
 

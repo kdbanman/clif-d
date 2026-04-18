@@ -3,10 +3,10 @@
 > These references support the plan-requirement skill. They focus on *choosing* test types, proportions, and ordering when planning implementation. For guidance on *writing* tests during implementation, see the implement-plan skill. For guidance on *designing* the testing architecture, see the create-architecture skill.
 
 **Primary sources:**
-- *Software Engineering at Google* (Winters, Manshreck, Wright, 2020) — freely available at [abseil.io/resources/swe-book](https://abseil.io/resources/swe-book)
+- *Software Engineering at Google* (Winters, Manshreck, Wright, 2020) -- freely available at [abseil.io/resources/swe-book](https://abseil.io/resources/swe-book)
 - Martin Fowler's testing articles at [martinfowler.com/testing](https://martinfowler.com/testing)
-- *xUnit Test Patterns* (Gerard Meszaros, 2007) — companion site at [xunitpatterns.com](http://xunitpatterns.com)
-- Kent C. Dodds, "The Testing Trophy and Testing Classifications" (2021) — at [kentcdodds.com](https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications)
+- *xUnit Test Patterns* (Gerard Meszaros, 2007) -- companion site at [xunitpatterns.com](http://xunitpatterns.com)
+- Kent C. Dodds, "The Testing Trophy and Testing Classifications" (2021) -- at [kentcdodds.com](https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications)
 - Google Testing Blog, especially "Just Say No to More End-to-End Tests" (2015)
 
 ---
@@ -16,12 +16,12 @@
 Automated testing serves three purposes, in order of importance:
 
 1. **Preventing bugs from reaching users.** This is the obvious one, but it is not the most important at scale.
-2. **Enabling change with confidence.** A comprehensive test suite is what makes refactoring, performance optimization, and feature addition safe. Without it, codebases become rigid — engineers are afraid to touch working code. This is the most important long-term function of tests, and it is what makes them worth the investment.
+2. **Enabling change with confidence.** A comprehensive test suite is what makes refactoring, performance optimization, and feature addition safe. Without it, codebases become rigid -- engineers are afraid to touch working code. This is the most important long-term function of tests, and it is what makes them worth the investment.
 3. **Documenting intended behavior.** A well-written test is an executable specification. When an engineer asks "what is this code supposed to do?", a good test answers that question more reliably than comments or design documents, because it is verified every time the code changes.
 
 Google's experience illustrates this concretely: their web search server (GWS) saw an 80%+ rate of user-affecting bugs in production pushes before adopting engineer-driven automated testing. Within a year of requiring tests for all new code, emergency pushes dropped by half.
 
-The xUnit Test Patterns perspective adds a useful framing: the goals of test automation include improving quality, understanding the system under test, reducing risk, being easy to run, being easy to write, and requiring minimal maintenance as the system evolves. The last three are about the tests themselves — they acknowledge that test code is real code that must be maintained, and poorly-written tests can become a net drag on productivity rather than a benefit.
+The xUnit Test Patterns perspective adds a useful framing: the goals of test automation include improving quality, understanding the system under test, reducing risk, being easy to run, being easy to write, and requiring minimal maintenance as the system evolves. The last three are about the tests themselves -- they acknowledge that test code is real code that must be maintained, and poorly-written tests can become a net drag on productivity rather than a benefit.
 
 ---
 
@@ -31,9 +31,9 @@ The xUnit Test Patterns perspective adds a useful framing: the goals of test aut
 
 Three mental models dominate the conversation about how to distribute testing effort. All three agree on more than they disagree.
 
-**The Test Pyramid** (Mike Cohn, popularized by Martin Fowler) argues for many fast, cheap unit tests at the base; fewer integration tests in the middle; and very few slow, expensive end-to-end tests at the top. The essential insight: as you move up the pyramid, tests become slower, more brittle, and harder to debug, so you should have fewer of them. Fowler's rule of thumb: high-level tests are a second line of defense — if a high-level test catches a bug, you should first replicate it with a unit test, so the unit test ensures the bug stays dead.
+**The Test Pyramid** (Mike Cohn, popularized by Martin Fowler) argues for many fast, cheap unit tests at the base; fewer integration tests in the middle; and very few slow, expensive end-to-end tests at the top. The essential insight: as you move up the pyramid, tests become slower, more brittle, and harder to debug, so you should have fewer of them. Fowler's rule of thumb: high-level tests are a second line of defense -- if a high-level test catches a bug, you should first replicate it with a unit test, so the unit test ensures the bug stays dead.
 
-**The Testing Trophy** (Kent C. Dodds) adds static analysis as a foundation layer and argues that integration tests provide the best return on investment — they're close enough to real usage to catch meaningful bugs but not so broad that they become flaky. The motto: "Write tests. Not too many. Mostly integration." This perspective emerged from frontend/UI engineering, where unit-testing individual components in isolation can miss the integration bugs that actually hurt users.
+**The Testing Trophy** (Kent C. Dodds) adds static analysis as a foundation layer and argues that integration tests provide the best return on investment -- they're close enough to real usage to catch meaningful bugs but not so broad that they become flaky. The motto: "Write tests. Not too many. Mostly integration." This perspective emerged from frontend/UI engineering, where unit-testing individual components in isolation can miss the integration bugs that actually hurt users.
 
 **The Testing Honeycomb** (Spotify engineering) similarly de-emphasizes unit tests for microservice architectures, arguing that integration tests between services are where the real risk lies.
 
@@ -55,7 +55,7 @@ Not all code deserves equal testing investment. Before choosing test types and p
 
 - **High cost of failure:** Code that, if broken, causes data loss, incorrect results used for decisions, security vulnerabilities, or significant user impact. Test this heavily, at multiple levels.
 - **Medium cost of failure:** Code that causes degraded experience, slower performance, or incorrect-but-recoverable behavior. Test this solidly, primarily at the unit and integration level.
-- **Low cost of failure:** One-off scripts, exploratory code, internal tooling with a single user. Test this lightly or not at all — your time is better spent elsewhere.
+- **Low cost of failure:** One-off scripts, exploratory code, internal tooling with a single user. Test this lightly or not at all -- your time is better spent elsewhere.
 
 **How stable is each component?**
 
@@ -64,7 +64,7 @@ Not all code deserves equal testing investment. Before choosing test types and p
 
 **How hard is each component to test?**
 
-- Some components are inherently difficult to test (UI rendering, ML training loops, hardware interactions). For these, move as much logic as possible into testable, isolated modules, and test those. Fowler calls this the "Humble Object" pattern — keep the hard-to-test shell thin and push logic into easily-testable code.
+- Some components are inherently difficult to test (UI rendering, ML training loops, hardware interactions). For these, move as much logic as possible into testable, isolated modules, and test those. Fowler calls this the "Humble Object" pattern -- keep the hard-to-test shell thin and push logic into easily-testable code.
 
 ---
 
