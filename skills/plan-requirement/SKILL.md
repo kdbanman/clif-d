@@ -42,6 +42,12 @@ Each step should be small enough that its test is obvious and its implementation
 
 The goal is a plan where each step can be completed and verified in isolation before moving to the next. This makes progress measurable and failures diagnosable.
 
+### Detail ceiling: describe, do not write
+
+The plan describes *what* to build, not *how* to write it. Cap code detail at signatures and pseudocode. Never include full file contents, full function bodies, or unified diffs -- those are the implementer's output, not the planner's.
+
+Over-prescription is a failure mode, not thoroughness. When the plan hands the implementer a finished diff, it bypasses the Red-Green-Refactor loop, pins implementation choices that TDD should surface, and makes the plan expensive to review. The implementer has their own references and judgment; trust them to turn a signature plus a behaviour description into working code.
+
 ---
 
 ## Input
@@ -224,13 +230,14 @@ The core of the plan. Each step follows this structure:
 **Test first:**
 - File: `path/to/test/file`
 - Description: What the test verifies, in plain language
-- Test code sketch: A pseudocode or real-code sketch of the test.
-  For CLI tests: the command invocation, expected stdout, expected stderr, expected exit code.
-  For unit tests: the function call, expected return value, expected side effects.
+- Test sketch: signatures and pseudocode only; 1-5 lines, no full test bodies.
+  For CLI tests: the command invocation, expected stdout/stderr shape, expected exit code.
+  For unit tests: the function signature under test, example input, expected output shape, expected side effects.
 
 **Implement:**
 - File(s): `path/to/implementation/file(s)`
 - Description: What code to write, referencing specific modules and interfaces from the architecture
+- Signatures: the function/type signatures to add or change (names, parameter types, return types). No bodies.
 - Key decisions: Any implementation choices made and why
 
 **Verify:**
@@ -238,6 +245,8 @@ The core of the plan. Each step follows this structure:
 - Expected: All new tests pass, all existing tests still pass
 - Quality check: `<lint/typecheck command>` passes
 ```
+
+Respect the detail ceiling from the Philosophy section: no full function bodies, no full file contents, no unified diffs. Signatures and pseudocode are the ceiling.
 
 #### Step ordering principles
 
@@ -299,7 +308,8 @@ Once you've explored the codebase and resolved any ambiguities:
 3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section. Every architecture element referenced by the requirements should appear in the Context Summary. Every high-level requirement in §4 should have at least one status-transition step in §5.
 4. **Verify completeness**: every file mentioned in Implementation Steps should appear in the Files Created or Modified summary. Every test mentioned should have a corresponding implementation step.
 5. **Review step granularity**: each step should be completable and verifiable in isolation. If a step depends on uncommitted work from a previous step, that's fine -- but if a step can't be tested without completing the *next* step, the plan needs restructuring.
-6. **Commit the plan.** The plan file is a project artifact and should be committed when complete. Use a clear commit message with a `Requirement:` trailer for each targeted requirement so the plan is discoverable via `git log --grep`. Example subject: `plans: Add implementation plan for REQ-003`. The body should briefly state what the plan covers and name the requirement IDs.
+6. **Enforce the detail ceiling**: scan each step for over-prescription. No step should contain more than ~10 consecutive lines of code in any block, and no step should contain a unified diff or a full function/file body. If a snippet exceeds the ceiling, trim it to a signature plus pseudocode.
+7. **Commit the plan.** The plan file is a project artifact and should be committed when complete. Use a clear commit message with a `Requirement:` trailer for each targeted requirement so the plan is discoverable via `git log --grep`. Example subject: `plans: Add implementation plan for REQ-003`. The body should briefly state what the plan covers and name the requirement IDs.
 
 ---
 
