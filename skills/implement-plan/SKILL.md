@@ -33,9 +33,9 @@ For every step that includes a "Test first" section:
 
 3. **Refactor**: Look at what you just wrote. Is there duplication? Is the code clear? Are names precise? Is the module boundary right? Refactor if needed -- and run the tests again after refactoring to confirm nothing broke.
 
-This is not a suggestion -- it's the implementation protocol. Skipping the Red step (writing tests that already pass) defeats the purpose of TDD.
+This is the implementation protocol. Skipping the Red step (writing tests that already pass) defeats the purpose of TDD.
 
-### Quality checks are not optional
+### Quality checks run after every step
 
 After completing each step's implementation:
 

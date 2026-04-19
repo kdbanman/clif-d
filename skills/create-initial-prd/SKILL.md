@@ -24,7 +24,7 @@ A PRD specifies **what the system does**, not how it does it. Never include code
 
 ### CLI-First Decomposition (CLIF-D)
 
-Every system specified by this PRD should be decomposed into **vertical slices of functionality, each implementable as a standalone, Unix-philosophy CLI tool**. This is not an arbitrary constraint -- it has concrete benefits:
+Every system specified by this PRD should be decomposed into **vertical slices of functionality, each implementable as a standalone, Unix-philosophy CLI tool**. The decomposition has concrete benefits:
 
 - CLI tools are inherently testable: inputs (args, flags, stdin) and outputs (stdout, stderr, exit codes) are fully observable.
 - CLI tools compose naturally via pipes and scripts.
@@ -49,7 +49,7 @@ The PRD contains requirements at exactly two abstraction levels:
 
 ### Flat structure with explicit linkage
 
-Requirements are **peers, not parent-child**. A low-level requirement is not a "child" of a high-level requirement -- it could relate to many. Hierarchy is replaced by explicit `dependencies` (blocking) and inline ID references in description text (non-blocking, contextual). This keeps the structure honest about the true shape of requirement relationships, which is a graph, not a tree.
+Requirements are **peers in a graph**. A low-level requirement can relate to many high-level requirements. Structure comes from explicit `dependencies` (blocking) and inline ID references in description text (non-blocking, contextual). The graph shape is the honest shape of requirement relationships.
 
 ---
 
@@ -107,7 +107,7 @@ The output is a single JSON file conforming to `assets/prd-schema.json`. The sch
 
 ### `concept_summary`
 
-A condensed summary of the product concept, with a `reference_link` to the full concept document. This is not a requirement -- it is the orienting context for the entire PRD. Write it to be self-contained enough that a reader who hasn't seen the concept doc can understand why this product exists.
+A condensed summary of the product concept, with a `reference_link` to the full concept document. This is the orienting context for the entire PRD -- sibling to requirements rather than one of them. Write it to be self-contained enough that a reader who hasn't seen the concept doc can understand why this product exists.
 
 ### `context`
 
