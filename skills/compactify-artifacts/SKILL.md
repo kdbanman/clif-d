@@ -25,7 +25,7 @@ You are helping the user clear accumulated planning and execution artifacts. Exe
 
 ### Compactness is the point
 
-A compact archive entry that grows beyond half a page is not compact. A lesson worked into a design doc that grows beyond a short paragraph is not durable -- it is just another long passage nobody will read. A `.claude/rules/*.md` file that grows beyond a few lines stops being a glanceable signpost and starts being context-window weight. If you are tempted to preserve more, ask whether git history already preserves it. It does.
+Archive entries should fit in half a page. Lessons worked into a design doc should fit in a short paragraph. A `.claude/rules/*.md` file that grows beyond a few lines stops being a glanceable signpost and starts being context-window weight. If you are tempted to preserve more, ask whether git history already preserves it. It does.
 
 ### Git is the long-term record
 

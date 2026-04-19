@@ -46,7 +46,7 @@ The bootstrap must be safe to run repeatedly, must not require human input (no `
 
 ### Verify what the architecture promises
 
-The architecture document's Technology Decisions table lists commands: the test framework, the linter, the package manager, the CLI entry point. Every single one must be invokable after bootstrap completes. The verification step is not optional - it is the proof that the environment actually matches the architecture.
+The architecture document's Technology Decisions table lists commands: the test framework, the linter, the package manager, the CLI entry point. Every single one must be invokable after bootstrap completes. The verification step proves that the environment matches the architecture.
 
 ### Implement what the backpressure design promises
 

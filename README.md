@@ -207,7 +207,7 @@ CLIF-D is opinionated about its runtime environment. Skills will misbehave or fa
 ### Not assumed
 
 - **A specific product implementation language.** CLIF-D is language-agnostic. `create-architecture` picks the stack; `bootstrap-dev-environment` installs the matching toolchain. Language-specific examples inside skills are illustrative, not prescriptive.
-- **A specific product type or domain.** CLI-first decomposition is not the right organizing principle for *every* project -- some products genuinely do not decompose into composable CLI steps, and forcing them to is worse than picking a different methodology. But the range of products that *do* decompose this way is surprisingly wide: services, libraries, integration glue, even UI-adjacent tooling often fit cleanly when you look for the decomposition. Assume CLIF-D is worth trying before assuming it isn't.
+- **A specific product type or domain.** CLI-first decomposition is more flexible than you might think!  It's not just for libraries, backend systems and the like.
 - **A specific version control host (GitHub, GitLab, etc.).** Skills use local `git` only. PR workflow is not prescribed by the pipeline.
 
 ## Deployment
