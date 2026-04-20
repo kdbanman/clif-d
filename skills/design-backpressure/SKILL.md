@@ -286,10 +286,38 @@ If the design changes during bootstrap (e.g. a chosen tool turns out not to exis
 Once the user confirms the plan:
 
 1. **Generate the design document** at `clif-d/backpressure.md` in the product repository, following the structure above. Include the practitioner-facing content (how to run checks manually, how to handle failures, suppression policy summary) directly in the backpressure document. The backpressure document is both the design record and the developer reference. Create the `clif-d/` directory if it does not yet exist. Reference the bootstrap command by the name `bootstrap-dev-environment` will wire -- do not assert that hooks are installed yet.
-2. **Backfill PRD references.** The backpressure guardrails are shared constraints that affect all implementation. Update `clif-d/prd.json`:
-   - If a context item for the quality backpressure approach does not already exist, add one (type `constraint`) describing the guardrail standards, including the suppression policy (no line-level or function-level suppressions; directory-scoped exclusions recorded in the Relaxations section are the sanctioned escape hatch).
-   - Add the backpressure context item's ID to the `context_refs` of every requirement that will be subject to the guardrails (which is typically all of them).
-   - This closes the referencing gap: the backpressure document traces back to PRD items (§8), and now PRD items trace forward to the backpressure constraint.
+2. **Backfill PRD references.** The backpressure guardrails are shared constraints that affect all implementation. Update `clif-d/prd.json` via the CLI:
+
+    a. Check whether a backpressure context item already exists: `clif-d ctx ls clif-d/prd.json | grep -i backpressure`. If one exists, record its ID and skip step 2b.
+
+    b. If none exists, create one:
+
+        ```
+        cat <<'EOF' > /tmp/ctx-backpressure.json
+        {
+          "title": "Quality backpressure guardrails",
+          "description": "<copy or summarize the practitioner-facing guardrail standards and suppression prohibition from clif-d/backpressure.md>",
+          "type": "constraint",
+          "reference_link": "clif-d/backpressure.md"
+        }
+        EOF
+        clif-d ctx add clif-d/prd.json < /tmp/ctx-backpressure.json
+        ```
+
+       The CLI echoes the added item with its assigned `CTX-NNN` ID to stdout. Record it as `$CTX_ID` for step 2c.
+
+    c. For every requirement subject to the guardrails (typically all of them), add `$CTX_ID` to the requirement's `context_refs`:
+
+        ```
+        clif-d req show REQ-007 clif-d/prd.json        # read current context_refs
+        echo '{"context_refs": ["CTX-001", "CTX-002", "<CTX_ID>"]}' | clif-d req edit REQ-007 clif-d/prd.json
+        ```
+
+       **Gotcha:** `clif-d req edit` uses replace semantics. You MUST read the current `context_refs` first and send the full merged array; otherwise existing refs are deleted.
+
+    d. Run `clif-d validate clif-d/prd.json`. Exit 0 confirms all backfilled refs resolve and no invariants were violated.
+
+   This closes the referencing gap: the backpressure document traces back to PRD items (§8), and now PRD items trace forward to the backpressure constraint.
 3. **Report** what was generated -- the design document path and the PRD updates. Recommend the next step: run `bootstrap-dev-environment`, which will install the toolchain and implement the guardrails specified in this document.
 
 ---
