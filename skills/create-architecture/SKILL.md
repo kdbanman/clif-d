@@ -218,6 +218,8 @@ Once the user confirms your understanding:
 4. **Cross-reference PRD items** by their IDs (ARCH-*, REQ-*, CTX-*) throughout the document.
 5. **Review for completeness**: every CLI tool from the PRD should appear in the CLI-to-Module Mapping. Every architectural component from the PRD should be decomposed at the code level.
 
+If generation surfaces an ARCH item missing from the PRD, do not hand-edit `clif-d/prd.json` -- add it via `clif-d arch add` (see the "If new ARCH items emerge during architecture design" block in Part B).
+
 ### Part B: Add scaffolding requirements to the PRD
 
 After the architecture is settled, the concrete scaffolding work is now fully specifiable. Append low-level requirements to `clif-d/prd.json` that capture this work, so the standard `plan-requirement` → `implement-plan` cycle will execute it as the first rounds of implementation. These are not part of the architecture document -- they live in the PRD like any other requirement.
@@ -234,11 +236,49 @@ After the architecture is settled, the concrete scaffolding work is now fully sp
 **How to write them:**
 
 - Use `abstraction_level: "low"` with structured Given-When-Then acceptance criteria -- scaffolding work is concrete and must be unambiguously verifiable.
-- Assign new IDs continuing the PRD's existing sequence (`REQ-NNN`).
+- Assign dependencies inline in the JSON payload when they are known at creation (the common case for scaffolding). The CLI rejects cycles, self-loops, and duplicate edges, so the payload's `dependencies` array is fully validated.
 - Set `architecture_refs` to the relevant ARCH items (repository structure, technology decisions).
-- Set `dependencies` to enforce ordering -- package manifest before directory skeleton, directory skeleton before entry point, etc.
 - Use `priority: 1` -- scaffolding blocks everything else.
-- Include a `cli_spec` where applicable (e.g., the minimal CLI entry point requirement should specify its command, stdout, stderr, and exit codes).
+- Include a `cli_spec` where applicable.
+
+For each scaffolding requirement, write the object to a temporary file and pipe it through `clif-d req add`, letting the CLI auto-assign the `REQ-NNN` ID:
+
+```
+cat <<'EOF' > /tmp/req-new.json
+{
+  "title": "Initialize package manifest",
+  "description": "...",
+  "acceptance_criteria": {"given": "...", "when": "...", "then": "..."},
+  "priority": 1,
+  "abstraction_level": "low",
+  "status": "not_started",
+  "dependencies": [],
+  "architecture_refs": ["ARCH-003"],
+  "context_refs": [],
+  "cli_spec": { ... }
+}
+EOF
+clif-d req add clif-d/prd.json < /tmp/req-new.json
+```
+
+The command echoes the added requirement (with its assigned ID) to stdout. Record the ID for use in later scaffolding requirements' `dependencies` arrays.
+
+If a scaffolding requirement needs a dependency on another scaffolding requirement added in the same session, add it in the initial payload (recommended) or, if the dependency is discovered later, run `clif-d req dep add <REQ-ID> <DEP-ID>` to extend the edge set. The CLI enforces acyclicity on every add.
+
+**If new ARCH items emerge during architecture design.** If generation reveals an ARCH item missing from the PRD (create-initial-prd seeds the initial set and this skill primarily consumes and backfills references to them), add it via the CLI rather than hand-editing `clif-d/prd.json`:
+
+```
+cat <<'EOF' > /tmp/arch-new.json
+{
+  "title": "...",
+  "description": "...",
+  "level": "component"
+}
+EOF
+clif-d arch add clif-d/prd.json < /tmp/arch-new.json
+```
+
+The CLI auto-assigns the next `ARCH-NNN`.
 
 **Important:** Do not perform the scaffolding yourself. The purpose of this step is to *specify* the scaffolding as requirements, so it flows through the standard backpressure → plan → implement pipeline. This ensures scaffolding code is written to the same quality standards as feature code and is covered by tests from day one.
 
@@ -246,14 +286,23 @@ After the architecture is settled, the concrete scaffolding work is now fully sp
 
 Now that the architecture document exists, update `clif-d/prd.json` so that existing requirements reference the architecture they relate to:
 
-1. For each requirement in the PRD, determine which ARCH items are relevant based on the CLI-to-Module Mapping (§5) and the module decomposition (§4).
-2. Populate the `architecture_refs` field of each relevant requirement with the appropriate ARCH item IDs.
-3. Do not remove existing `architecture_refs` -- only add new ones.
-4. This step closes the referencing gap: the architecture document traces back to PRD items (§10), and now PRD items trace forward to architecture items.
+1. For each requirement that should reference one or more ARCH items, run `clif-d req show <REQ-ID>` to read its current `architecture_refs` array.
+2. Compute the **merged** array by taking the union of existing refs and the new refs to add. Do not drop existing refs.
+3. Send the merged array through `clif-d req edit`:
+
+    ```
+    echo '{"architecture_refs": ["ARCH-001", "ARCH-003"]}' | clif-d req edit REQ-007 clif-d/prd.json
+    ```
+
+   **Gotcha:** `clif-d req edit` uses replace semantics -- the `architecture_refs` array in the stdin JSON replaces the existing array wholesale, it does not merge. You MUST read the current value first and compute the full new array. Omitting a ref that was already present will delete it.
+
+4. Repeat for every requirement that gains an architecture reference. This step closes the referencing gap: the architecture document traces back to PRD items (§10), and now PRD items trace forward to architecture items.
 
 ### Part D: Confirm
 
-Report to the user:
+Run `clif-d validate clif-d/prd.json`. Exit 0 confirms the new scaffolding requirements, dependency edges, and architecture_refs are internally consistent. Any errors must be fixed before handoff.
+
+Then report to the user:
 - That `clif-d/architecture.md` has been written
 - How many scaffolding requirements were appended to the PRD (with their IDs and titles)
 - How many existing requirements had `architecture_refs` backfilled
