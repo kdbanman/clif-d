@@ -86,10 +86,10 @@ Before planning, you must understand the current state of the codebase. This is 
 ### 1. Resolve the requirement graph
 
 For each target requirement:
-- Read its full entry from the PRD (description, acceptance criteria, CLI spec, dependencies, context refs, architecture refs).
-- Read every item it references: dependency requirements, context items, architecture items.
-- Recursively read dependencies of dependencies until you have the full subgraph.
-- Identify which dependencies are already implemented (by examining the codebase) and which are not.
+- Read its full entry: `clif-d req show <REQ-ID> clif-d/prd.json`.
+- Walk the blocking-dependency subgraph: `clif-d req dep graph --root=<REQ-ID> clif-d/prd.json` prints the JSON adjacency list of ancestors (requirements that must be done before this one can be implemented). Every ID in that graph should be fetched via `clif-d req show` for full detail.
+- Fetch referenced context and architecture items: `clif-d ctx show <CTX-ID>` and `clif-d arch show <ARCH-ID>`.
+- Identify which dependencies are already implemented by comparing against `clif-d req ls --status=done --plain clif-d/prd.json`. Cross-check against `git log` for commits touching the relevant code paths.
 
 ### 2. Read preceding plans
 
@@ -99,7 +99,7 @@ Check `clif-d/plans/executed/` and `clif-d/plans/active/` for plans that impleme
 - What implementation decisions were made that this plan should follow or build on
 - What assumptions were documented that may affect this plan
 
-If a dependency requirement was recently implemented, its executed plan is the fastest way to understand the current state of that area of the codebase. Reference the most relevant preceding plans in the plan header.
+If a dependency requirement was recently implemented, its executed plan is the fastest way to understand the current state of that area of the codebase. Reference the most relevant preceding plans in the plan header. Requirement status for preceding work can be cross-checked with `clif-d req ls --status=done clif-d/prd.json`.
 
 ### 3. Explore the codebase
 
@@ -310,6 +310,7 @@ Once you've explored the codebase and resolved any ambiguities:
 5. **Review step granularity**: each step should be completable and verifiable in isolation. If a step depends on uncommitted work from a previous step, that's fine -- but if a step can't be tested without completing the *next* step, the plan needs restructuring.
 6. **Enforce the detail ceiling**: scan each step for over-prescription. No step should contain more than ~10 consecutive lines of code in any block, and no step should contain a unified diff or a full function/file body. If a snippet exceeds the ceiling, trim it to a signature plus pseudocode.
 7. **Commit the plan.** The plan file is a project artifact and should be committed when complete. Use a clear commit message with a `Requirement:` trailer for each targeted requirement so the plan is discoverable via `git log --grep`. Example subject: `plans: Add implementation plan for REQ-003`. The body should briefly state what the plan covers and name the requirement IDs.
+8. **Transition the target requirement to in_progress.** Run `clif-d req start <REQ-ID>` for each target requirement. This announces that planning (and soon implementation) is underway, so cross-worktree or cross-session agents can see the work is claimed. `implement-plan` will call `clif-d req start` again as an idempotent safety net -- calling it here makes the PRD reflect reality as early as possible.
 
 ---
 
