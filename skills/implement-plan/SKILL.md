@@ -100,6 +100,16 @@ Read the full plan before starting. Understand the overall arc -- what's being b
 
 Follow this sequence exactly:
 
+#### 0. Announce work on the target requirement(s)
+
+For each low-level requirement and each partially-realized high-level requirement listed in the plan's §4 "High-level Requirements Realized":
+
+```
+clif-d req start <REQ-ID> clif-d/prd.json
+```
+
+This is idempotent -- if `plan-requirement` already transitioned the requirement to `in_progress`, the command is a no-op. If the plan was hand-written or skipped that step, this call ensures the PRD reflects claimed work before any code is written.
+
 #### 1. Announce the step
 
 State which step you're executing and what it will accomplish. This provides a clear progress trail.
@@ -173,6 +183,7 @@ State that the step is complete. Summarize what was implemented and what tests v
    - **Environment or tooling issues** -- dependency problems, version mismatches, configuration surprises.
    If nothing significant happened -- the implementation went smoothly with no surprises -- write a short file noting that and skip the categories above. Do not fabricate lessons for the sake of filling the file.
 8. **Commit the lifecycle updates** (PRD status changes, plan move, and lessons-learned file) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct. The bookkeeping commit follows the same format as the implementation commit (see [Git hygiene reference](references/git-hygiene.md)), but its body should: name the implementation commit's SHA in a `Refs:` trailer, list the PRD status transitions (e.g., "REQ-042: not_started -> done"), list plan-file moves, and name any lessons-learned file created.
+   - Before creating the lifecycle commit, run `clif-d validate clif-d/prd.json`. Exit 0 means the PRD is structurally consistent after all status transitions. If the command reports errors, fix them before committing -- do not ship a corrupt PRD.
 9. **Summarize** what was implemented: files created/modified, tests written, any deviations from the plan and why. Include both commit SHAs (implementation and lifecycle).
 
 ---
