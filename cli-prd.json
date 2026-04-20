@@ -130,7 +130,7 @@
       "acceptance_criteria": "An agent or developer can list requirements filtered by status and abstraction level, retrieve any single requirement by ID, and identify the next implementable requirement -- all via CLI commands that output valid, parseable JSON to stdout.",
       "priority": 1,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-004",
         "CTX-007",
@@ -149,7 +149,8 @@
           "0": "Success, results printed to stdout (empty array if no matches).",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "implementation_commit": "bd465f0817f2d4c0add53337e69ab3d37849521b"
     },
     {
       "id": "REQ-002",
@@ -158,7 +159,7 @@
       "acceptance_criteria": "An agent can transition a requirement through its lifecycle (start, done, block) via CLI commands. Each transition validates preconditions (e.g., cannot block a done requirement, done requires a commit SHA). Invalid transitions exit nonzero with a clear error. Valid transitions write the updated PRD atomically.",
       "priority": 1,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-007",
         "CTX-006",
@@ -178,7 +179,8 @@
           "1": "Validation error (requirement not found, invalid transition, bad SHA format).",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "implementation_commit": "4475eee335f7232d1bf7097f45d40af76b7fbeb5"
     },
     {
       "id": "REQ-003",
@@ -187,7 +189,7 @@
       "acceptance_criteria": "An agent can add and remove dependency edges between requirements, query the full dependency graph or a subgraph rooted at a specific requirement, and receive clear errors if a proposed edge would create a cycle. The graph output is structured enough to determine implementation order.",
       "priority": 2,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-008",
         "CTX-010",
@@ -206,7 +208,8 @@
           "1": "Referenced requirement ID does not exist.",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "implementation_commit": "718ad14e6ed2c7589ac0fae6c0b7451ae673c4da"
     },
     {
       "id": "REQ-004",
@@ -215,7 +218,7 @@
       "acceptance_criteria": "An agent can add new requirements, context items, and architecture items by piping JSON to stdin. The CLI auto-assigns the next available ID when id is omitted. An agent can update fields on existing items via merge-edit from stdin. All mutations are validated against the PRD schema before writing.",
       "priority": 2,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-003",
         "CTX-006",
@@ -236,7 +239,8 @@
           "1": "Validation error (schema violation, bad references).",
           "2": "PRD file not found or not valid JSON."
         }
-      }
+      },
+      "implementation_commit": "85bf80d403b148b5313eb58422ccac101800c309"
     },
     {
       "id": "REQ-005",
@@ -245,7 +249,7 @@
       "acceptance_criteria": "An agent or developer can run a single command that checks JSON validity, schema conformance, referential integrity of all ID references, dependency graph acyclicity, ID uniqueness, and status/implementation_commit consistency. The output is a structured list of issues with severity levels.",
       "priority": 1,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-003",
         "CTX-008",
@@ -254,7 +258,8 @@
       ],
       "architecture_refs": [
         "ARCH-002"
-      ]
+      ],
+      "implementation_commit": "7af96fe9e01ad3a4b553f040a318e100f08c9016"
     },
     {
       "id": "REQ-006",
@@ -263,7 +268,7 @@
       "acceptance_criteria": "An agent can copy the PRD schema from the plugin into the product repository's clif-d/ directory via a CLI command. After copying, the $schema field in prd.json can reference the local copy with a relative path that works on any machine.",
       "priority": 3,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-009",
         "CTX-010",
@@ -271,7 +276,8 @@
       ],
       "architecture_refs": [
         "ARCH-001"
-      ]
+      ],
+      "implementation_commit": "718ad14e6ed2c7589ac0fae6c0b7451ae673c4da"
     },
     {
       "id": "REQ-007",
@@ -280,7 +286,7 @@
       "acceptance_criteria": "An agent can query the next available ID for any prefix (REQ, CTX, ARCH) and receive it on stdout. The ID follows the NNN zero-padded pattern and is guaranteed not to collide with any existing ID in the PRD.",
       "priority": 3,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-003",
         "CTX-010",
@@ -288,7 +294,8 @@
       ],
       "architecture_refs": [
         "ARCH-002"
-      ]
+      ],
+      "implementation_commit": "718ad14e6ed2c7589ac0fae6c0b7451ae673c4da"
     },
     {
       "id": "REQ-008",
@@ -1000,7 +1007,7 @@
       "acceptance_criteria": "Every command that loads a PRD verifies structural invariants before operating on it. If the file is malformed, fails schema conformance, contains a dependency cycle, has dangling cross-references, or has duplicate IDs, the command exits nonzero with a diagnostic identifying the specific invariant that failed. Read commands fail cleanly rather than returning partial or inconsistent data from a corrupt PRD. Mutation commands refuse to operate on a PRD that is already structurally invalid, so an agent cannot compound an existing inconsistency.",
       "priority": 2,
       "abstraction_level": "high",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-003",
         "CTX-008",
@@ -1008,7 +1015,8 @@
       ],
       "architecture_refs": [
         "ARCH-003"
-      ]
+      ],
+      "implementation_commit": "c7b115dd7ee73be2a191db54dd9e5c60fa438f7e"
     },
     {
       "id": "REQ-026",
