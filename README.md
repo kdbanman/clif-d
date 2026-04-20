@@ -14,6 +14,7 @@ CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for struc
 | `bootstrap-dev-environment` | Turns the architecture's toolchain decisions and the backpressure design into a reproducible, agent-executable environment -- containerization or version-pinned setup script, the actual linter/type-check/hook configuration that realizes the backpressure design (including the suppression scanner and pre-existing-suppression audit), verification that every Technology Decisions command and hook stage runs, and an agent instruction file (CLAUDE.md) so Claude Code inherits environment context |
 | `plan-requirement` | Takes PRD requirement IDs, resolves the full dependency graph, explores the codebase, and produces a self-contained implementation plan (Markdown) with TDD step ordering |
 | `implement-plan` | Executes an implementation plan step-by-step with strict Red-Green-Refactor discipline, running all quality checks after every step |
+| `extend-low-level-requirements` | Adds the next slice of clear first-step low-level requirements to an existing PRD after a round of implementation has landed -- informed by the current code, executed plans, and lessons -- while preserving the bow-wave discipline from `create-initial-prd`: only specify what is clear right now, never more |
 | `compactify-artifacts` | Compacts a small chunk of executed plans and per-plan lessons per run into terse archive entries; silently discards low-signal lessons and routes high-signal survivors -- per explicit user authorization -- into either an upstream design doc edit or a glob-scoped `.claude/rules/*.md` file in the product repo; deletes the chunk's originals (git history preserves them) and flags upstream design docs that have drifted from what shipped |
 
 ## Pipeline
@@ -34,6 +35,8 @@ create-product-concept
                                                             └──▶ plan-requirement  (repeats per requirement)
                                                                         │
                                                                         └──▶ implement-plan  (repeats per plan)
+                                                                                    │
+                                                                                    ├──▶ extend-low-level-requirements  (periodic; adds the next bow-wave slice of low-level requirements, feeding back to plan-requirement)
                                                                                     │
                                                                                     └──▶ compactify-artifacts  (periodic; compacts a chunk of executed/ and lessons_learned/ each run)
 ```
@@ -62,6 +65,7 @@ The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HI
 | `bootstrap-dev-environment` | HITL-lite | Toolchain installation, hook wiring, verification (research-informed provisional decisions; one HITL gate: pre-existing-suppression audit) |
 | `plan-requirement` | HOTL | Step decomposition, test ordering, codebase state |
 | `implement-plan` | HOTL | Red-Green-Refactor execution, quality checks |
+| `extend-low-level-requirements` | HITL-lite | Which behaviors are clear enough right now to specify (research-informed provisional slice, single confirmation gate) |
 | `compactify-artifacts` | HITL | Which lessons are durable, where each one routes |
 
 `compactify-artifacts` is a special case: it silently discards most lesson noise via aggressive pre-filter, then escalates high-signal survivors to the user one at a time via AskUserQuestion. Every routed lesson requires explicit per-lesson authorization -- no silent amendments to design docs.
@@ -272,7 +276,6 @@ When you change a schema or artifact layout in this plugin, you are implicitly a
 ## TODO
 
 - **Add `references/` to `design-backpressure`** -- opinionated reference material on agentic quality backpressure principles
-- **Implement `extend-low-level-requirements` skill** -- keeps the "bow wave" of low-level requirement granularity just ahead of the implementation ship. Called after a round of implementation to add the next slice of clear-first-step low-level requirements to the PRD, informed by what's now known from the code and what's newly unblocked. Must preserve the bow-wave principle from `create-initial-prd`: only specify what's clear *right now*, never more.
 - **Implement `clif-d-health-check` skill** -- aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
 - **Implement `align-claude-md` skill** -- ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements -- specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
 - **Implement `clif-d-help` skill (or reference file)** -- a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
