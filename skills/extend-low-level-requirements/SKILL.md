@@ -1,28 +1,32 @@
 ---
 name: extend-low-level-requirements
 description: >
-  Extend the partial picture of low-level requirements in a CLIF-D PRD with the next slice of
-  clear first-step requirements. Use this skill after a round of implementation has landed, when
-  executed plans, lessons, and new code have changed what is knowable about the system. Reads
-  the PRD to find high-level requirements whose low-level coverage is incomplete, explores the
-  current codebase and preceding plans to learn what the implementation now makes clear, and
-  appends only those low-level requirements that are unambiguously specifiable right now --
-  preserving the bow-wave discipline inherited from create-initial-prd. Never speculates
-  forward; defers whatever is not yet clear to a future run. Writes exclusively through the
-  `clif-d req` CLI so every addition is shape-validated and reference-checked.
+  Extend the (likely partial) picture of low-level requirements in a CLIF-D PRD by one slice --
+  the next granularity the bow wave of detail is ready to specify, no further. Use after a
+  round of implementation has landed, when executed plans, lessons, and new code have changed
+  what is knowable about the system. Reads the PRD to find high-level requirements whose
+  low-level coverage has room to expand, explores the codebase and preceding plans to learn
+  what implementation now makes clear, and appends only those low-level requirements that are
+  unambiguously specifiable right now -- preserving the granularity bow-wave discipline from
+  create-initial-prd. Never speculates forward; defers whatever is not yet clear to a future
+  run. If low-level coverage already looks complete for every high-level requirement, stops
+  and escalates to the user rather than inventing new work. Writes exclusively through the
+  `clif-d req` CLI so every addition is shape- and reference-validated.
 ---
 
 # Extend Low-Level Requirements
 
-You are helping the user extend the low-level requirements in an existing CLIF-D PRD. The PRD's high-level requirements form a complete picture of system behavior; its low-level requirements form a *partial* picture -- only the clear first steps. Your job is to push that partial picture forward by exactly one slice: add the low-level requirements that are clear **right now** based on the state of the code and the existing PRD, and no more.
+You are helping the user extend the low-level requirements in an existing CLIF-D PRD. The PRD's high-level requirements should already form a complete picture of the system's intended behavior. Its low-level requirements, by contrast, *almost always* form a partial picture -- the granularity bow wave of detail runs just ahead of the implementation ship, no further. Your job is to push that wave forward by exactly one slice: add the low-level requirements that are clear **right now** based on the state of the code and the existing PRD, and no more.
+
+This skill can be run many times over a project's lifetime. Do not assume the existing low-level requirements are "first steps" -- they may be the third, fifth, or twentieth slice that has been added. The only thing you can assume is that some high-level requirement somewhere is probably still waiting for the bow wave to reach it. If it looks like that is *not* the case -- every high-level requirement already has complete low-level coverage -- stop and check with the user. Either the project is genuinely done being extended, the next move belongs upstream (a new high-level requirement, a correction to an existing one), or a high-level requirement has drifted and needs attention before any new low-level work begins. Do not invent extensions to fill the file.
 
 ---
 
 ## Philosophy
 
-### Bow wave, not fleet
+### Granularity bow wave
 
-The implementation ship pushes a bow wave of low-level planning detail. Your job is to keep that wave just ahead of the ship -- not a week ahead, not a month ahead, just the next clear step. A PRD with too many speculative low-level requirements is worse than one with too few: it bakes in decisions that the code has not yet justified, crowds the dependency graph with forks the implementer may never take, and pretends certainty the project does not have.
+The implementation ship pushes a bow wave of granularity detail -- low-level specification -- just ahead of itself. Your job is to keep that wave just ahead of the ship: not a week ahead, not a month ahead, just the next clear slice. A PRD with too many speculative low-level requirements is worse than one with too few: it bakes in decisions that the code has not yet justified, crowds the dependency graph with forks the implementer may never take, and pretends certainty the project does not have.
 
 If a candidate low-level requirement is not unambiguously specifiable today, do not write it. Trust the next run of this skill to pick it up when the code or the preceding requirements have made it clear.
 
@@ -74,9 +78,9 @@ Read all inputs before proposing anything.
 - List existing low-level requirements: `clif-d req ls --abstraction=low --plain`.
 - For each high-level requirement, note the low-level requirements that cite it in their `description` or that share its `context_refs` / `architecture_refs` scope. Use `clif-d req show REQ-NNN` to inspect individual items in full.
 - Classify each high-level requirement's low-level coverage:
-  - **Not started** -- no low-level requirements yet; this is the first slice.
-  - **In progress** -- some low-level requirements exist; more are needed to fully realize it.
-  - **Fully covered** -- every acceptance sub-behavior implied by the high-level requirement already has a specifying low-level requirement. Skip.
+  - **No coverage yet** -- no low-level requirements cite this high-level requirement; the bow wave has not reached it.
+  - **Partial coverage** -- some low-level requirements exist; the bow wave is mid-way through and can expand forward.
+  - **Looks fully covered** -- every acceptance sub-behavior implied by the high-level requirement appears to have a specifying low-level requirement. This is a signal, not a skip: if *every* high-level requirement ends up in this bucket, do not invent extensions -- trigger the escalation described in the intro (stop and check with the user). If only some do, set them aside for now.
 - Note the `status` of each existing low-level requirement. Recently-`done` work often unblocks the next slice.
 
 ### 2. Trace the code
@@ -101,7 +105,7 @@ For each high-level requirement with incomplete low-level coverage, ask four que
 3. **Are its dependencies already satisfied, or already queued as earlier low-level requirements** (existing in the PRD or being added in this same slice)?
 4. **Is the CLI surface it introduces consistent** with existing tools in the PRD and the code?
 
-A candidate that survives all four questions is a clear first step. A candidate that fails any of them is deferred to a future run.
+A candidate that survives all four questions is clear enough to join this slice. A candidate that fails any of them is deferred to a future run.
 
 ---
 
