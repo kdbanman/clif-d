@@ -10,6 +10,9 @@ description: >
   name candidates, or understand why a name works or doesn't. Even casual
   mentions like "I'm stuck on what to call this" should trigger the skill.
   Do NOT use for naming variables in code, naming files, or other non-branding contexts.
+  Pipeline position: optional branch off create-product-concept; no downstream skill.
+  Output: 5-10 named finalists delivered in-session (no persistent artifact under clif-d/).
+  CLI: none.
 ---
 
 # Brand Namer: A Strategic Naming Workshop

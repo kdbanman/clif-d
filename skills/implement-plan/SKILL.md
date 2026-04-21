@@ -7,6 +7,9 @@ description: >
   the plan's test-first ordering strictly -- writes each test before its implementation, runs tests after each
   step, and runs all quality checks (lint, type-check, format) before considering a step complete. Produces
   clean, modular, well-documented code that passes all guardrails on every commit.
+  Pipeline position: after plan-requirement; loops back to plan-requirement and feeds compactify-artifacts.
+  Outputs product code and tests; moves the plan to clif-d/plans/executed/ and writes
+  clif-d/plans/lessons_learned/lessons-REQ-NNN.md. CLI: clif-d req start, clif-d req done, clif-d validate.
 ---
 
 # Implement According to Plan
