@@ -1,7 +1,7 @@
 ---
 name: extend-low-level-requirements
 description: >
-  Extend the (likely partial) picture of low-level requirements in a CLIF-D PRD by one slice --
+  Extend the low-level requirements in a CLIF-D PRD by one slice --
   the next granularity the bow wave of detail is ready to specify, no further. Use after a
   round of implementation has landed, when executed plans, lessons, and new code have changed
   what is knowable about the system. Reads the PRD to find high-level requirements whose
@@ -9,9 +9,11 @@ description: >
   what implementation now makes clear, and appends only those low-level requirements that are
   unambiguously specifiable right now -- preserving the granularity bow-wave discipline from
   create-initial-prd. Never speculates forward; defers whatever is not yet clear to a future
-  run. If low-level coverage already looks complete for every high-level requirement, stops
-  and escalates to the user rather than inventing new work. Writes exclusively through the
-  `clif-d req` CLI so every addition is shape- and reference-validated.
+  run. Writes exclusively through the `clif-d req` CLI so every addition is shape- and
+  reference-validated.
+  Pipeline: periodic; after implement-plan rounds, feeds plan-requirement. Outputs new
+  low-level requirements appended to clif-d/prd.json. Most relevant CLI: clif-d req add,
+  clif-d req dep, clif-d id next.
 ---
 
 # Extend Low-Level Requirements
