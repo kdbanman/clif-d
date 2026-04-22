@@ -10,7 +10,7 @@ description: >
   the pre-existing-suppression audit, verifies every Technology Decisions command and hook stage runs end-to-end,
   and writes a CLAUDE.md so Claude Code inherits environment context. Outputs clif-d/dev-environment.md plus
   setup scripts and configs.
-  Pipeline: after design-backpressure; before plan-requirement. CLI: clif-d validate.
+  Pipeline: after design-backpressure; before plan-requirement. Most relevant CLI: clif-d validate.
 ---
 
 # Bootstrap Dev Environment

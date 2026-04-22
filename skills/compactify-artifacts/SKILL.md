@@ -10,9 +10,9 @@ description: >
   time with structured options, writes one compact archive entry per plan to
   `clif-d/plans/archive/`, edits the upstream design doc or writes a glob-scoped
   `.claude/rules/*.md` file for each user-approved lesson, flags drift in upstream docs and
-  lessons that imply new requirements (without silently amending them), then deletes the
+  lessons that imply new requirements, then deletes the
   originals in the chunk. Active plans are never touched.
-  Pipeline: periodic. CLI: clif-d req edit, clif-d req add, clif-d req dep.
+  Pipeline: periodic. Most relevant CLI: clif-d req edit, clif-d req add, clif-d req dep.
 ---
 
 # Compactify Artifacts

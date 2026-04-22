@@ -9,7 +9,7 @@ description: >
   document with Mermaid diagrams that serves as the bridge between PRD and implementation planning.
   Pipeline position: after create-initial-prd; before design-backpressure. Outputs clif-d/architecture.md
   (and optional clif-d/architecture/*.mmd diagrams); also appends scaffolding requirements to clif-d/prd.json.
-  CLI: clif-d arch add, clif-d req add, clif-d validate.
+  Most relevant CLI: clif-d arch add, clif-d req add, clif-d validate.
 ---
 
 # Generate Detailed Architecture

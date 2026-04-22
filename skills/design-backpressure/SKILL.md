@@ -9,7 +9,7 @@ description: >
   and specifies the pre-commit hook architecture so no code enters the repository without passing all gates. Produces
   clif-d/backpressure.md. Does NOT generate configuration files, install hooks, or run tooling -- that is
   bootstrap-dev-environment's job, and it reads this document as input.
-  Pipeline: after create-architecture; before bootstrap-dev-environment. CLI: clif-d ctx add, clif-d validate.
+  Pipeline: after create-architecture; before bootstrap-dev-environment. Most relevant CLI: clif-d ctx add, clif-d validate.
 ---
 
 # Design Quality Backpressure

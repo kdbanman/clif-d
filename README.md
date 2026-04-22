@@ -4,7 +4,7 @@ CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for struc
 
 ## Skills
 
-| Skill | Purpose | Pipeline | Outputs | CLI |
+| Skill | Purpose | Pipeline | Outputs | Most Relevant CLI |
 |---|---|---|---|---|
 | `create-product-concept` | Interviews the user, researches the landscape, and produces a high-abstraction concept document articulating a functionality gap and why LLMs are the novel unblocker | Entry point; feeds `workshop-names` and `create-initial-prd` | `clif-d/concept.md` | none (no PRD yet) |
 | `workshop-names` | Structured naming workshop based on Lexicon Branding's Diamond Framework and SMILE/SCRATCH evaluation -- produces 100+ candidates filtered to 5-10 contextual finalists | Optional branch off `create-product-concept`; no downstream skill | 5-10 named finalists in-session (no persistent artifact) | none |

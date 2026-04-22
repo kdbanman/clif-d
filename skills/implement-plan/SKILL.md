@@ -9,7 +9,7 @@ description: >
   clean, modular, well-documented code that passes all guardrails on every commit.
   Pipeline position: after plan-requirement; loops back to plan-requirement and feeds compactify-artifacts.
   Outputs product code and tests; moves the plan to clif-d/plans/executed/ and writes
-  clif-d/plans/lessons_learned/lessons-REQ-NNN.md. CLI: clif-d req start, clif-d req done, clif-d validate.
+  clif-d/plans/lessons_learned/lessons-REQ-NNN.md. Most relevant CLI: clif-d req start, clif-d req done, clif-d validate.
 ---
 
 # Implement According to Plan

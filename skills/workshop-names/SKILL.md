@@ -12,7 +12,7 @@ description: >
   Do NOT use for naming variables in code, naming files, or other non-branding contexts.
   Pipeline position: optional branch off create-product-concept; no downstream skill.
   Output: 5-10 named finalists delivered in-session (no persistent artifact under clif-d/).
-  CLI: none.
+  Most relevant CLI: none.
 ---
 
 # Brand Namer: A Strategic Naming Workshop

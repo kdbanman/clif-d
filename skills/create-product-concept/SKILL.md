@@ -6,7 +6,7 @@ description: >
   AI-native tool proposals, new product features, or any idea the user wants to frame as a coherent concept
   document). Conducts a focused interview with the user, does web research on the existing tool landscape, then
   produces a high-abstraction document suitable for communicating the idea to a smart, domain-agnostic reader.
-  Pipeline: entry point; feeds workshop-names and create-initial-prd. Outputs clif-d/concept.md. CLI: none (no
+  Pipeline: entry point; feeds workshop-names and create-initial-prd. Outputs clif-d/concept.md. Most relevant CLI: none (no
   PRD yet).
 ---
 
