@@ -1175,13 +1175,14 @@
         "REQ-022"
       ],
       "abstraction_level": "low",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-004",
         "CTX-006",
         "CTX-010"
       ],
-      "architecture_refs": []
+      "architecture_refs": [],
+      "implementation_commit": "a6d9f9a"
     }
   ]
 }
