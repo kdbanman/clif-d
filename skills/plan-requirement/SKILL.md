@@ -314,13 +314,7 @@ Once you've explored the codebase and resolved any ambiguities:
 5. **Review step granularity**: each step should be completable and verifiable in isolation. If a step depends on uncommitted work from a previous step, that's fine -- but if a step can't be tested without completing the *next* step, the plan needs restructuring.
 6. **Enforce the detail ceiling**: scan each step for over-prescription. No step should contain more than ~10 consecutive lines of code in any block, and no step should contain a unified diff or a full function/file body. If a snippet exceeds the ceiling, trim it to a signature plus pseudocode.
 7. **Commit the plan.** The plan file is a project artifact and should be committed when complete. Use a clear commit message with a `Requirement:` trailer for each targeted requirement so the plan is discoverable via `git log --grep`. Example subject: `plans: Add implementation plan for REQ-003`. The body should briefly state what the plan covers and name the requirement IDs.
-8. **Transition the target requirement to `in_progress`.** As the final action of this skill, run:
-
-    ```
-    clif-d req start <REQ-ID> clif-d/prd.json
-    ```
-
-   for each target low-level requirement (and any partially-realized high-level requirement listed in §4 that is currently `not_started`). This announces that planning -- and soon, implementation -- is underway so cross-worktree or cross-session agents can see the work is claimed. `implement-plan` will call `clif-d req start` again as an idempotent safety net; making the transition here ensures the PRD reflects reality as early as possible, not only after the implementer starts work.
+8. **Transition the target requirement to `in_progress`.** As the final action of this skill, run `clif-d req start <REQ-ID>` for each target low-level requirement (and any partially-realized high-level requirement listed in §4 that is currently `not_started`). This makes the claim visible to cross-worktree or cross-session agents before implementation begins.
 
 ---
 
