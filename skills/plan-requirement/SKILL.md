@@ -8,6 +8,8 @@ description: >
   implementation plan as a Markdown file, with strong emphasis on TDD (test-first), modular code structure, and
   clear acceptance criteria traceability. Each plan step specifies what to test, what to implement, and how to
   verify -- in that order.
+  Pipeline position: after bootstrap-dev-environment and each prior implement-plan; before implement-plan.
+  Outputs clif-d/plans/active/plan-REQ-NNN.md. Most relevant CLI: clif-d req show, clif-d req dep, clif-d req next.
 ---
 
 # Plan Requirement Implementation

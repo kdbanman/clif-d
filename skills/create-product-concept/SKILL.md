@@ -1,6 +1,13 @@
 ---
 name: create-product-concept
-description: Develop a structured product concept document through guided conversation. Use this skill when the user wants to articulate, pressure-test, or write up a product or tool idea (examples include early-stage startup concepts, AI-native tool proposals, new product features, or any idea the user wants to frame as a coherent concept document). Conducts a focused interview with the user, does web research on the existing tool landscape, then produces a high-abstraction document suitable for communicating the idea to a smart, domain-agnostic reader.
+description: >
+  Develop a structured product concept document through guided conversation. Use this skill when the user wants to
+  articulate, pressure-test, or write up a product or tool idea (examples include early-stage startup concepts,
+  AI-native tool proposals, new product features, or any idea the user wants to frame as a coherent concept
+  document). Conducts a focused interview with the user, does web research on the existing tool landscape, then
+  produces a high-abstraction document suitable for communicating the idea to a smart, domain-agnostic reader.
+  Pipeline: entry point; feeds workshop-names and create-initial-prd. Outputs clif-d/concept.md. Most relevant CLI: none (no
+  PRD yet).
 ---
 
 # Generate Concept Document

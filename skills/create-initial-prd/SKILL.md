@@ -8,6 +8,8 @@ description: >
   research to ground technical and domain decisions, then produces a JSON PRD following CLI-First
   Decomposition (CLIF-D). The PRD contains a complete picture of high-level requirements and a
   partial picture of low-level requirements -- only clear first steps are specified in detail.
+  Pipeline position: after create-product-concept; before create-architecture.
+  Outputs clif-d/prd.json. Most relevant CLI: clif-d validate, clif-d id next, clif-d schema copy.
 ---
 
 # Generate Initial Product Requirements Document

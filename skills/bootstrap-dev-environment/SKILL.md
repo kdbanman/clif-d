@@ -8,8 +8,9 @@ description: >
   the ecosystem for the most reproducible bootstrap mechanism (containers, devcontainers, version-pinned setup
   scripts), generates setup artifacts and the configs and hook scripts that realize the backpressure design, runs
   the pre-existing-suppression audit, verifies every Technology Decisions command and hook stage runs end-to-end,
-  and writes a CLAUDE.md so Claude Code inherits environment context. Produces clif-d/dev-environment.md plus the
-  setup artifacts and guardrail implementation.
+  and writes a CLAUDE.md so Claude Code inherits environment context. Outputs clif-d/dev-environment.md plus
+  setup scripts and configs.
+  Pipeline: after design-backpressure; before plan-requirement. Most relevant CLI: clif-d validate.
 ---
 
 # Bootstrap Dev Environment

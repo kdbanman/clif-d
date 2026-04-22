@@ -7,6 +7,9 @@ description: >
   decomposition, and interface decisions before planning implementation. Conducts a focused interrogation to resolve
   ambiguities, performs web research on technology options and conventions, then produces a structured architecture
   document with Mermaid diagrams that serves as the bridge between PRD and implementation planning.
+  Pipeline position: after create-initial-prd; before design-backpressure. Outputs clif-d/architecture.md
+  (and optional clif-d/architecture/*.mmd diagrams); also appends scaffolding requirements to clif-d/prd.json.
+  Most relevant CLI: clif-d arch add, clif-d req add, clif-d validate.
 ---
 
 # Generate Detailed Architecture
