@@ -10,7 +10,7 @@ description: >
   the pre-existing-suppression audit, verifies every Technology Decisions command and hook stage runs end-to-end,
   and writes a CLAUDE.md so Claude Code inherits environment context. Outputs clif-d/dev-environment.md plus
   setup scripts and configs.
-  Pipeline: after design-backpressure; before plan-requirement. Most relevant CLI: clif-d validate.
+  Pipeline: after design-backpressure; before plan-requirement. Most relevant CLI: clif-d ctx add, clif-d req edit, clif-d validate.
 ---
 
 # Bootstrap Dev Environment
@@ -344,11 +344,44 @@ Once the user confirms the plan:
 8. **Run the bootstrap end-to-end** from a fresh subshell in the product repo. If containerized, build the image and open a shell inside. If script-based, invoke the script in a subshell that does not inherit the user's interactive shell hooks (`env -i bash --noprofile --norc` or equivalent). This is the agent's-eye view. This step must also install the hooks -- confirm a fresh clone could run one command and end up with hooks active.
 9. **Run the pre-existing-suppression audit.** Run the suppression scanner over the whole working tree. For every hit, interactively ask the user whether to delete the suppression (preferred) or add a `§4` Relaxation with a written rationale in `clif-d/backpressure.md`. Do not proceed until the tree is clean of un-audited suppressions. Never silently grandfather.
 10. **Run the verification script** and confirm every command exits cleanly, the suppression-scanner negative test blocks the expected commit with the expected message, and the hook-presence check passes for every stage named in `clif-d/backpressure.md`. If anything fails, fix the bootstrap or amend the backpressure design (not the config), and repeat - do not ship a verification script that does not pass.
-11. **Backfill PRD references.** The dev environment is a shared constraint that affects all implementation. Update `clif-d/prd.json`:
-    - Add a context item (type `constraint`) for the dev environment approach if none exists, stating the bootstrap command and containerization choice.
-    - Add the dev-environment context item's ID to the `context_refs` of every requirement that will be implemented inside this environment (typically all of them).
-    - This closes the referencing gap: the dev-environment document traces back to PRD items (§11), and now PRD items trace forward to the dev-environment constraint.
-    - Do not re-create the backpressure context item -- `design-backpressure` already added it. Confirm it is present.
+11. **Backfill PRD references.** The dev environment is a shared constraint that affects all implementation. Update `clif-d/prd.json` via the CLI -- do not hand-edit:
+
+    a. Check whether a dev-environment context item already exists:
+
+        ```
+        clif-d ctx ls clif-d/prd.json | grep -i "dev environment"
+        ```
+
+       If one is present, record its `CTX-NNN` ID and skip step 11b. Also confirm (in the same listing) that the backpressure context item added by `design-backpressure` is still present -- if it is missing, stop and return to `design-backpressure`; do not re-create it here.
+
+    b. If no dev-environment context item exists, create one with `clif-d ctx add`. Set `type` to `constraint` and describe the bootstrap command and containerization choice:
+
+        ```
+        cat <<'EOF' > /tmp/ctx-dev-env.json
+        {
+          "title": "Development environment bootstrap",
+          "description": "<copy or summarize the bootstrap command, containerization choice, and reproducibility guarantees from clif-d/dev-environment.md>",
+          "type": "constraint",
+          "reference_link": "clif-d/dev-environment.md"
+        }
+        EOF
+        clif-d ctx add clif-d/prd.json < /tmp/ctx-dev-env.json
+        ```
+
+       The CLI echoes the added item with its assigned `CTX-NNN` ID to stdout. Record it as `$CTX_ID` for step 11c.
+
+    c. For every requirement that will be implemented inside this environment (typically all of them), add `$CTX_ID` to the requirement's `context_refs` via a read-then-write pattern:
+
+        ```
+        clif-d req show REQ-007 clif-d/prd.json        # read current context_refs
+        echo '{"context_refs": ["CTX-001", "<CTX_ID>"]}' | clif-d req edit REQ-007 clif-d/prd.json
+        ```
+
+       **Gotcha:** `clif-d req edit` uses replace semantics -- the `context_refs` array in the stdin JSON replaces the existing array wholesale, it does not merge. You MUST read the current value first and send the full merged array. Omitting a ref that was already present (including the backpressure CTX added by `design-backpressure`) will delete it.
+
+    d. Run `clif-d validate clif-d/prd.json`. Exit 0 confirms the new context item and all backfilled refs resolve. Fix any reported issues before handoff.
+
+   This closes the referencing gap: the dev-environment document traces back to PRD items (§11), and now PRD items trace forward to the dev-environment constraint.
 12. **Report** what was generated: design document path, setup artifact paths, backpressure config paths, suppression scanner path, `CLAUDE.md` path, `.claude/settings.json` SessionStart hook, verification result (including the scanner negative test and hook-presence check), audit result, PRD updates. Recommend the next step: run `plan-requirement` on the earliest scaffolding requirement.
 
 ---
