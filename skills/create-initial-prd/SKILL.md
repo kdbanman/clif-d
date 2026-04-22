@@ -162,7 +162,7 @@ The core of the PRD. A flat array of requirements, each with fields in this orde
 Once the user confirms your understanding, generate the PRD:
 
 1. **Name the output file** `prd.json`, placed in the project's `clif-d/` directory (at the root of the product repository). Create the directory if it does not yet exist. See the README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
-2. **Set `$schema`** to the relative path from the PRD file to `assets/prd-schema.json`.
+2. **Copy and reference the schema.** Run `clif-d schema copy clif-d/` from the product repo root to copy the canonical PRD schema into `clif-d/prd-schema.json`. Then set the PRD's `$schema` field to `"prd-schema.json"` (a repo-relative path that works on any machine). This resolves the schema-path portability TODO noted in the top-level README.
 3. **Set `clifd_version`** to the `version` field read from the CLIF-D plugin manifest at `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`. This records which version of the plugin authored the PRD so that a future migration skill can detect schema drift. See the project README's "Current constraints" section for background on why this matters.
 4. **Write `concept_summary`** by condensing the product concept document. Include the `reference_link` to the original concept file.
 5. **Write `context` items.** Derive these from the interrogation -- constraints, personas, conventions, domain definitions. Assign IDs as `CTX-001`, `CTX-002`, etc.
@@ -170,5 +170,5 @@ Once the user confirms your understanding, generate the PRD:
 7. **Write high-level requirements first** -- the complete picture. Assign IDs as `REQ-001`, `REQ-002`, etc. Set `status: "not_started"` on every one.
 8. **Write low-level requirements** -- the clear first steps only. Continue the ID sequence. Set `status: "not_started"` on every one.
 9. **Cross-reference.** Ensure `dependencies`, `context_refs`, and `architecture_refs` are consistent. Every referenced ID must exist. Inline ID references in description text should also be valid.
-10. **Validate** the generated PRD against the schema for structural correctness.
+10. **Validate** the generated PRD by running `clif-d validate clif-d/prd.json`. It prints a JSON array of issue objects to stdout and exits 0 when clean. Fix any errors before handing off -- a non-empty error list means the PRD is rejected by every downstream `clif-d` command (REQ-029 enforces structural validation on every PRD load).
 
