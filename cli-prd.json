@@ -1183,6 +1183,27 @@
       ],
       "architecture_refs": [],
       "implementation_commit": "a6d9f9a"
+    },
+    {
+      "id": "REQ-033",
+      "description": "The current CLI exposes structural mutations in schema terminology -- `req edit` takes a partial JSON and replaces array fields wholesale. Skills that work with reference arrays (`dependencies`, `architecture_refs`, `context_refs`) must read-then-write to avoid deleting existing entries, and must carry a 'Gotcha: replace semantics' paragraph everywhere that pattern appears. Similarly, confirming that a given constraint context item already exists before adding one currently requires grepping `ctx ls` output on fragile title substrings. These framings leak schema mechanics into skill prose and make simple, load-bearing operations (add one architecture_ref, remove one dependency, ensure one constraint context item pointing at a known document) verbose and error-prone. The CLI should instead expose CRUD operations in the terminology of the domain itself -- 'add an architecture ref', 'remove a dependency', 'ensure a constraint context item pointing at clif-d/<doc>.md' -- so that each skill invocation reads as an atomic, intent-named action rather than a read-merge-write dance. See also the README TODO items for `clif-d req ref add/rm` and `clif-d ctx ensure` / `clif-d arch ensure`, which propose concrete first commands to realize this requirement.",
+      "title": "Domainful CRUD on PRD schema elements",
+      "acceptance_criteria": "Every PRD schema element that a skill operates on has a corresponding domainful CLI operation -- single-element add/remove on reference arrays (architecture_refs, context_refs, dependencies), idempotent upsert keyed by reference_link for context and architecture items, and intent-named commands for any other schema-scoped mutation skills need to perform. These operations are documented in the CLI reference documentation, surfaced in each command's --help output, and invoked by name in every relevant skill file. After this requirement is realized, the read-then-write pattern and 'replace-semantics' gotcha are no longer load-bearing in any skill's prose, and no skill relies on fragile title-substring grepping to determine whether a schema element already exists.",
+      "priority": 2,
+      "dependencies": [
+        "REQ-004"
+      ],
+      "abstraction_level": "high",
+      "status": "not_started",
+      "context_refs": [
+        "CTX-004",
+        "CTX-005",
+        "CTX-006"
+      ],
+      "architecture_refs": [
+        "ARCH-002",
+        "ARCH-003"
+      ]
     }
   ]
 }
