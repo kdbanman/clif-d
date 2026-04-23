@@ -24,8 +24,10 @@ A summary of CLI design conventions relevant to CLIF-D product requirements, dra
 
 ### Flags (named options)
 
-- Always provide a `--long-form` for every flag. Long forms make scripts readable without constant lookup.
-- Reserve single-letter short forms (`-v`) for commonly used options only. Namespace pollution forces awkward letters later.
+- Always provide a `--long-form` for every flag.
+  Long forms make scripts readable without constant lookup.
+- Reserve single-letter short forms (`-v`) for commonly used options only.
+  Namespace pollution forces awkward letters later.
 - Support both `--flag value` and `--flag=value` syntax where practical.
 - Make flags and arguments order-independent when possible.
 - Boolean flags require no value; presence means true.
@@ -100,7 +102,8 @@ Intercept expected errors and rewrite them as actionable guidance:
 
 ### Don't treat stderr like a log file
 
-Avoid timestamp prefixes and log-level labels in normal output. Reserve that verbosity for `--debug` mode.
+Avoid timestamp prefixes and log-level labels in normal output.
+Reserve that verbosity for `--debug` mode.
 
 ---
 
@@ -108,11 +111,13 @@ Avoid timestamp prefixes and log-level labels in normal output. Reserve that ver
 
 ### Design as components, not monoliths
 
-Programs will be used in pipelines developers didn't anticipate. The only question is whether your tool is a well-behaved component.
+Programs will be used in pipelines developers didn't anticipate.
+The only question is whether your tool is a well-behaved component.
 
 ### Piping conventions
 
-- Line-based plain text is the default pipe format. One record per line.
+- Line-based plain text is the default pipe format.
+  One record per line.
 - Support `-` to read from stdin or write to stdout (e.g., `tar xvf -`).
 - Provide `--json` for structured output that works with `jq`.
 - Provide `--plain` for tabular text when human-readable formatting would break piping.
@@ -165,19 +170,23 @@ Detect whether stdout/stderr connects to an interactive terminal and adjust:
 
 ### Success output
 
-- Confirm what happened, briefly. UNIX tradition is silence when nothing is wrong, but state-changing operations should always report what changed.
+- Confirm what happened, briefly.
+  UNIX tradition is silence when nothing is wrong, but state-changing operations should always report what changed.
 - Provide `-q` / `--quiet` for scripts that want silence.
 
 ### Progress and responsiveness
 
-- Print something within 100ms if the operation might take time. Responsiveness matters more than raw speed.
-- Show a spinner or progress bar for long operations. Include estimated time remaining if available.
+- Print something within 100ms if the operation might take time.
+  Responsiveness matters more than raw speed.
+- Show a spinner or progress bar for long operations.
+  Include estimated time remaining if available.
 - On error, redisplay logs that were hidden behind a progress indicator.
 
 ### Structured output modes
 
 - **Default (TTY)**: Human-readable formatted text, colors, tables.
-- **`--json`**: Structured JSON for programmatic consumption. Integrates with `jq` and web tooling.
+- **`--json`**: Structured JSON for programmatic consumption.
+  Integrates with `jq` and web tooling.
 - **`--plain`**: Tabular plain text for `grep`/`awk`/`cut` pipelines.
 
 ---
@@ -229,9 +238,11 @@ Follow the [XDG Base Directory Specification](https://specifications.freedesktop
 
 ## Robustness
 
-- **Crash-only design**: Avoid requiring cleanup after interruption. Defer cleanup to the next run.
+- **Crash-only design**: Avoid requiring cleanup after interruption.
+  Defer cleanup to the next run.
 - **Idempotence**: Users should be able to re-run a command to recover from transient failures.
-- **Timeouts**: Make network timeouts configurable with sensible defaults. Don't hang forever.
+- **Timeouts**: Make network timeouts configurable with sensible defaults.
+  Don't hang forever.
 - **Signals**: Exit immediately on Ctrl-C. If cleanup is needed, say so, add a timeout to cleanup, and skip cleanup on a second Ctrl-C.
 
 ---
