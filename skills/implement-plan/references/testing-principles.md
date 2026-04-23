@@ -1,8 +1,10 @@
 # Principles & Practices of Test Design
 
-This document contains the universal guidance that applies to every test you write, regardless of type. It is the most frequently consulted document in this set -- the Test Type subdocs are thin by design and refer back here.
+This document contains the universal guidance that applies to every test you write, regardless of type.
+It is the most frequently consulted document in this set -- the Test Type subdocs are thin by design and refer back here.
 
-Each principle includes explicit **Do** and **Don't** examples. The examples use Python-like pseudocode for readability, but the principles are language-agnostic.
+Each principle includes explicit **Do** and **Don't** examples.
+The examples use Python-like pseudocode for readability, but the principles are language-agnostic.
 
 **Primary sources:**
 - *Software Engineering at Google*, Ch 12: Unit Testing
@@ -13,11 +15,14 @@ Each principle includes explicit **Do** and **Don't** examples. The examples use
 
 ## 1. Strive for Unchanging Tests
 
-The ideal test, once written, never needs to change unless the *requirements* of the system under test change. Google identifies four kinds of changes engineers make to production code and how tests should respond:
+The ideal test, once written, never needs to change unless the *requirements* of the system under test change.
+Google identifies four kinds of changes engineers make to production code and how tests should respond:
 
 - **Refactoring** (changing internals without changing behavior): Tests should not break.
-- **Adding new features**: Existing tests should not break. Write new tests for new behavior.
-- **Fixing bugs**: Existing tests should not break. Add the missing test case.
+- **Adding new features**: Existing tests should not break.
+  Write new tests for new behavior.
+- **Fixing bugs**: Existing tests should not break.
+  Add the missing test case.
 - **Changing behavior**: This is the *only* case where existing tests should need updating.
 
 If you routinely update tests during refactoring or feature addition, your tests are too tightly coupled to implementation.
@@ -52,7 +57,8 @@ Now we can freely rename, merge, or split those internal methods without touchin
 
 Invoke the system under test the same way its real users would -- through its public interface, not its internal methods.
 
-**Why:** Tests that use public APIs are, by definition, exercising the system the way real consumers do. If such a test breaks, a real consumer might also be broken.
+**Why:** Tests that use public APIs are, by definition, exercising the system the way real consumers do.
+If such a test breaks, a real consumer might also be broken.
 
 **What counts as a "public API":**
 - If a module or class is designed for external consumption, test through that external interface.
@@ -137,7 +143,8 @@ def test_process_order():
 
 This test survives internal refactoring because it asserts on observable outcomes.
 
-**When interaction testing is justified:** When the side effect *is* the important behavior and there's no observable state to check -- e.g., verifying an audit log entry was created, or that a third-party API was called. Even then, prefer a fake that records calls over a mock with rigid expectations.
+**When interaction testing is justified:** When the side effect *is* the important behavior and there's no observable state to check -- e.g., verifying an audit log entry was created, or that a third-party API was called.
+Even then, prefer a fake that records calls over a mock with rigid expectations.
 
 ---
 
@@ -196,13 +203,15 @@ def test_add_items_increases_total():
     assert len(cart.items) == 2
 ```
 
-Two tests, each with one Act step, each verifying one behavior. Note that the second test has two assertions -- that's fine because they collectively verify the single behavior of "adding items."
+Two tests, each with one Act step, each verifying one behavior.
+Note that the second test has two assertions -- that's fine because they collectively verify the single behavior of "adding items."
 
 ---
 
 ## 5. Test Behaviors, Not Methods
 
-Don't write one test per method. Write one test per *behavior* -- a specific response to a specific condition.
+Don't write one test per method.
+Write one test per *behavior* -- a specific response to a specific condition.
 
 A behavior-oriented test name answers three questions:
 1. What is being tested?
@@ -228,7 +237,8 @@ def test_process_transaction():
     assert result3.success == False
 ```
 
-When this test fails, which behavior is broken? You have to read the whole test to find out.
+When this test fails, which behavior is broken?
+You have to read the whole test to find out.
 
 **Do** -- one test per behavior, named descriptively:
 
@@ -310,7 +320,8 @@ def test_update_profile_changes_display_name():
     assert updated.display_name == "Alice"
 ```
 
-Yes, the Arrange phase overlaps between tests. That's fine -- clarity trumps deduplication in tests.
+Yes, the Arrange phase overlaps between tests.
+That's fine -- clarity trumps deduplication in tests.
 
 ---
 
@@ -334,7 +345,9 @@ def test_gold_discount():
     assert discount == EXPECTED_DISCOUNT
 ```
 
-Why does this user get this discount? You have to go find `TEST_USER` in another file. If someone modifies `TEST_USER` for a different test, this test might silently break.
+Why does this user get this discount?
+You have to go find `TEST_USER` in another file.
+If someone modifies `TEST_USER` for a different test, this test might silently break.
 
 **Do** -- complete, with all relevant values visible:
 
@@ -365,13 +378,17 @@ def test_gold_tier_gets_fifteen_percent_discount():
     assert discount == 0.15
 ```
 
-The reader wastes time wondering: does the balance matter? The creation date? None of them do -- only the tier matters. But you can't tell without reading the production code.
+The reader wastes time wondering: does the balance matter?
+The creation date?
+None of them do -- only the tier matters.
+But you can't tell without reading the production code.
 
 ---
 
 ## 8. Don't Put Logic in Tests
 
-Test code should be straight-line code. No loops, no conditionals, no computation to derive expected values.
+Test code should be straight-line code.
+No loops, no conditionals, no computation to derive expected values.
 
 ### Do / Don't
 
@@ -402,7 +419,8 @@ def test_format_price_under_one_dollar():
     assert format_price(0.99) == "$0.99"
 ```
 
-The expected values are the specification. The test verifies the code meets them.
+The expected values are the specification.
+The test verifies the code meets them.
 
 **Don't** -- conditional logic in a test:
 
@@ -441,7 +459,8 @@ def test_viewer_can_view_but_not_edit():
     assert result.can_edit == False
 ```
 
-**Exception -- parameterized tests:** Frameworks like pytest's `@pytest.mark.parametrize` let you run the same test logic with multiple inputs. This is acceptable when the logic is identical across cases and only inputs/outputs differ:
+**Exception -- parameterized tests:** Frameworks like pytest's `@pytest.mark.parametrize` let you run the same test logic with multiple inputs.
+This is acceptable when the logic is identical across cases and only inputs/outputs differ:
 
 ```python
 @pytest.mark.parametrize("price, expected", [
@@ -471,7 +490,9 @@ def test_process_order():
     assert result  # Failure: "AssertionError: assert False"
 ```
 
-What failed? What was `result`? What was expected?
+What failed?
+What was `result`?
+What was expected?
 
 **Do** -- assertion with context:
 
@@ -498,7 +519,8 @@ def test_build_report_includes_all_sections():
 
 ## 10. DAMP over DRY
 
-In production code, DRY (Don't Repeat Yourself) is essential. In test code, readability matters more. **DAMP** stands for **Descriptive And Meaningful Phrases**.
+In production code, DRY (Don't Repeat Yourself) is essential.
+In test code, readability matters more. **DAMP** stands for **Descriptive And Meaningful Phrases**.
 
 ### Do / Don't
 
@@ -595,7 +617,8 @@ def test_create_order():
     mock_notifier.notify.assert_called_once()
 ```
 
-This verifies that three methods were called -- not that an order was actually created correctly. If we refactor internal method names, the test breaks.
+This verifies that three methods were called -- not that an order was actually created correctly.
+If we refactor internal method names, the test breaks.
 
 **Do** -- fakes with state verification:
 
@@ -612,7 +635,9 @@ def test_create_order_saves_and_notifies():
     assert len(notifier.sent_notifications) == 1
 ```
 
-Uses a real validator (it's fast, why fake it?), fake repo and notifier. Asserts on state: was an order saved? Was a notification sent?
+Uses a real validator (it's fast, why fake it?), fake repo and notifier.
+Asserts on state: was an order saved?
+Was a notification sent?
 
 ### Writing a Good Fake
 
@@ -638,7 +663,8 @@ class FakeEmailer:
 
 ## 12. Test Smells: Recognizing and Fixing Common Problems
 
-A smell is a symptom, not a diagnosis. Here are the most common smells with concrete before/after examples.
+A smell is a symptom, not a diagnosis.
+Here are the most common smells with concrete before/after examples.
 
 ### Fragile Test
 
@@ -803,13 +829,15 @@ def process_file(path):
         json.dump(result, f)
 ```
 
-Now `transform_records` can be unit-tested with hardcoded inputs. The thin `process_file` wrapper gets a single integration test.
+Now `transform_records` can be unit-tested with hardcoded inputs.
+The thin `process_file` wrapper gets a single integration test.
 
 ---
 
 ## 14. The Role of Coverage Metrics
 
-Code coverage measures what percentage of your code is *executed* during testing. It does not measure what percentage is *correctly tested*.
+Code coverage measures what percentage of your code is *executed* during testing.
+It does not measure what percentage is *correctly tested*.
 
 ### Do / Don't
 
@@ -822,7 +850,8 @@ def test_covers_calculate():
 
 This achieves line coverage for `calculate` while providing zero protection against bugs.
 
-**Don't** -- set a single project-wide coverage target and enforce it rigidly. This incentivizes engineers to write easy, low-value tests for trivial code while ignoring hard-to-test, high-risk code.
+**Don't** -- set a single project-wide coverage target and enforce it rigidly.
+This incentivizes engineers to write easy, low-value tests for trivial code while ignoring hard-to-test, high-risk code.
 
 **Do** -- use coverage to find gaps:
 
@@ -837,15 +866,18 @@ utils.py                    50     10    80%
 
 "Payment processor has 62% coverage" is a signal to investigate -- are the untested lines high-risk?
 
-**Do** -- watch for coverage *decreasing* between commits. A drop means new code was added without tests.
+**Do** -- watch for coverage *decreasing* between commits.
+A drop means new code was added without tests.
 
-**Do** -- set per-component minimum floors rather than a single project-wide number. High-risk code gets a higher floor.
+**Do** -- set per-component minimum floors rather than a single project-wide number.
+High-risk code gets a higher floor.
 
 ---
 
 ## 15. Regression Testing
 
-A regression test is any test that prevents a previously-fixed bug from recurring. It is a *purpose*, not a *type*.
+A regression test is any test that prevents a previously-fixed bug from recurring.
+It is a *purpose*, not a *type*.
 
 ### Do / Don't
 
