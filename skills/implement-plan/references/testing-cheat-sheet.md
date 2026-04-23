@@ -1,6 +1,7 @@
 # Testing Cheat Sheet
 
-Pin this next to your editor. For full explanations and examples, see [Principles & Practices](./testing-principles.md).
+Pin this next to your editor.
+For full explanations and examples, see [Principles & Practices](./testing-principles.md).
 
 ---
 
@@ -8,7 +9,8 @@ Pin this next to your editor. For full explanations and examples, see [Principle
 
 1. **What behavior am I testing?** (Not: what method am I calling.)
 2. **What's the lowest test level that can verify this?** (Unit > Integration > broader scope.)
-3. **Would a user of this code care if this behavior changed?** If yes, test it. If no, you may be testing implementation details.
+3. **Would a user of this code care if this behavior changed?** If yes, test it.
+   If no, you may be testing implementation details.
 
 ---
 
@@ -20,7 +22,10 @@ Act      ->  do the ONE thing being tested
 Assert   ->  verify the expected outcome
 ```
 
-One Act step. One behavior. One test. Separate with blank lines.
+One Act step.
+One behavior.
+One test.
+Separate with blank lines.
 
 ---
 
@@ -34,7 +39,8 @@ One Act step. One behavior. One test. Separate with blank lines.
 - **Use helpers for boilerplate.** `make_user(role="admin")` with sensible defaults.
 - **Create fresh state per test.** No shared mutable fixtures between tests.
 - **Write a regression test before fixing a bug.** Verify it fails, then fix, then verify it passes.
-- **Use real dependencies** when they are fast and deterministic. Prefer real > fake > stub > mock.
+- **Use real dependencies** when they are fast and deterministic.
+  Prefer real > fake > stub > mock.
 - **Write clear failure messages.** "Expected status 'completed' but got 'failed'" not "assert False."
 
 ---
@@ -46,10 +52,13 @@ One Act step. One behavior. One test. Separate with blank lines.
 - **Don't over-mock.** If you're verifying `mock.save.assert_called_once_with(...)`, you're testing wiring, not behavior.
 - **Don't share mutable state between tests.** Each test must pass in isolation and in any order.
 - **Don't compute expected values.** `assert user.full_name() == user.first + " " + user.last` is a change-detector, not a test.
-- **Don't write one test per method.** Write one test per *behavior*. A method may have many behaviors.
+- **Don't write one test per method.** Write one test per *behavior*.
+  A method may have many behaviors.
 - **Don't cram multiple behaviors into one test.** If you have two Act steps, you have two tests.
-- **Don't use fixed sleep timers** in tests that wait for async operations. Wait for a specific condition.
-- **Don't test at a higher level than necessary.** If it's pure logic, unit-test it. Don't spin up a server.
+- **Don't use fixed sleep timers** in tests that wait for async operations.
+  Wait for a specific condition.
+- **Don't test at a higher level than necessary.** If it's pure logic, unit-test it.
+  Don't spin up a server.
 - **Don't skip reviewing test code.** Test code rots just like production code.
 
 ---
@@ -99,7 +108,8 @@ Examples:
 
 - **Low coverage = untested code.** Investigate high-risk uncovered areas.
 - **High coverage does not equal good tests.** A test with no assertions achieves coverage but catches nothing.
-- **Watch for drops**, not just absolute numbers. Coverage decreasing means new code has no tests.
+- **Watch for drops**, not just absolute numbers.
+  Coverage decreasing means new code has no tests.
 - **Set per-component floors**, not one project-wide ceiling.
 
 ---
