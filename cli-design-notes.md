@@ -29,7 +29,7 @@ Worth considering if the read-then-write pattern proves too cumbersome in practi
 ### Schema versioning
 
 The PRD schema will evolve.
-The `schema copy` command always copies the version bundled with the current plugin release.
+The schema ships inside the plugin and is read by `bin/clif-d` from its install location; user repos reference it there rather than carrying a copy.
 If the schema changes in a breaking way, existing PRDs may fail validation.
 
 Options:
@@ -129,7 +129,6 @@ These are more complex (stdin parsing, referential integrity checks, cycle detec
 
 ### Phase 3 -- Quality of life
 
-- `schema copy` / `schema path` -- schema distribution
 - `--plain` for all read commands -- human readability
 - `--dot` for dep graph -- visualization
 

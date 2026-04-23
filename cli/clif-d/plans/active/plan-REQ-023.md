@@ -9,7 +9,7 @@
 - `cli/clif-d/plans/active/plan-REQ-011-REQ-012-REQ-013.md` (`req done`, `req start`, `req block`)
 - `cli/clif-d/plans/active/plan-REQ-014.md` (`validate`)
 - `cli/clif-d/plans/active/plan-REQ-015-REQ-016-REQ-017.md` (`req add`, `req edit`, `req dep add`, `req dep rm`)
-- `cli/clif-d/plans/active/plan-REQ-018-REQ-021-REQ-022.md` (`req dep graph`, `id next`, `schema copy`)
+- `cli/clif-d/plans/active/plan-REQ-018-REQ-021-REQ-022.md` (`req dep graph`, `id next`; `schema copy` was retired, see superseded REQ-022)
 - `cli/clif-d/plans/active/plan-REQ-019-REQ-020.md` (`ctx` and `arch` CRUD)
 
 **Date:** 2026-04-14
@@ -57,7 +57,6 @@ Every command below must appear in the README. Source of truth for each is linke
 | `clif-d arch add` | REQ-020 | same |
 | `clif-d arch edit` | REQ-020 | same |
 | `clif-d id next` | REQ-021 | `plans/active/plan-REQ-018-REQ-021-REQ-022.md` |
-| `clif-d schema copy` | REQ-022 | same |
 
 ### Cross-cutting conventions to describe once at the top of the README (not per command)
 
@@ -136,8 +135,6 @@ One-paragraph elevator pitch: what clif-d is, who it's for, where the PRD lives.
 ### validate
 
 ### id next
-
-### schema copy
 
 ## Hacking on clif-d
 
@@ -278,7 +275,7 @@ This plan has a different shape from the prior plans because the deliverable is 
 
 **Implement:**
 - File: `bin/README.md`
-- Description: Add `### ctx`, `### arch`, `### validate`, `### id next`, `### schema copy` sections. Reuse the template. `ctx` and `arch` are near-mirrors of each other -- write `ctx` first, then adapt for `arch`. Do not collapse them into a single table -- readers scanning the file should be able to find either with Ctrl-F on the command name.
+- Description: Add `### ctx`, `### arch`, `### validate`, `### id next` sections. Reuse the template. `ctx` and `arch` are near-mirrors of each other -- write `ctx` first, then adapt for `arch`. Do not collapse them into a single table -- readers scanning the file should be able to find either with Ctrl-F on the command name.
 
 **Verify:**
 - Examples run; output matches; no invented flags.

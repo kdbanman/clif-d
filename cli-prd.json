@@ -263,8 +263,8 @@
     },
     {
       "id": "REQ-006",
-      "title": "Schema distribution",
-      "description": "The create-initial-prd skill currently generates a prd.json with a $schema field pointing into the .claude/ directory where the plugin is installed. This is awkward because the schema path is machine-specific and breaks if the plugin is updated or reinstalled. The README TODO explicitly calls this out. The CLI should provide a way to copy the canonical schema into the product's clif-d/ directory so the $schema field can use a stable, repo-relative path.",
+      "title": "[SUPERSEDED] Schema distribution",
+      "description": "SUPERSEDED (2026-04-23): The clif-d schema copy subcommand that realized this requirement has been removed. The PRD schema is plugin-owned and stays in the plugin repo; copying it into the user repo created a second, non-authoritative source of truth and risked drift. Skills now leave the PRD $schema field as a path into the plugin (same behavior as before REQ-022 shipped). This requirement and its low-level child REQ-022 are retained as historical records; status remains done because the feature did ship before being superseded.\n\nOriginal description: The create-initial-prd skill currently generates a prd.json with a $schema field pointing into the .claude/ directory where the plugin is installed. This is awkward because the schema path is machine-specific and breaks if the plugin is updated or reinstalled. The README TODO explicitly calls this out. The CLI should provide a way to copy the canonical schema into the product clif-d/ directory so the $schema field can use a stable, repo-relative path.",
       "acceptance_criteria": "An agent can copy the PRD schema from the plugin into the product repository's clif-d/ directory via a CLI command. After copying, the $schema field in prd.json can reference the local copy with a relative path that works on any machine.",
       "priority": 3,
       "abstraction_level": "high",
@@ -909,8 +909,8 @@
     },
     {
       "id": "REQ-022",
-      "title": "Copy PRD schema to product repo",
-      "description": "Addresses the README TODO about the $schema field pointing into .claude/. After running this command, the skill can set $schema to a repo-relative path. Related to REQ-006.",
+      "title": "[SUPERSEDED] Copy PRD schema to product repo",
+      "description": "SUPERSEDED (2026-04-23): The clif-d schema copy subcommand has been removed end-to-end -- from bin/clif-d, its test, and the skill documentation -- because the PRD schema is plugin-owned and copying it into user repos created a non-authoritative duplicate that risked drift on plugin upgrades. The skill create-initial-prd no longer uses this command; $schema continues to point at the plugin-bundled schema as it did before REQ-022 shipped. Kept for historical traceability of what was built and then retired.\n\nOriginal description: Addresses the README TODO about the $schema field pointing into .claude/. After running this command, the skill can set $schema to a repo-relative path. Related to REQ-006.",
       "acceptance_criteria": {
         "given": "A product repository with a clif-d/ directory",
         "when": "The agent runs clif-d schema copy clif-d/",

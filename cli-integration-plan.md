@@ -14,22 +14,17 @@ How each existing skill should call the CLI, and what existing skill instruction
 **CLI calls to add:**
 
 The initial PRD is a bulk creation -- the CLI is not the right tool for generating it from scratch.
-Two post-creation steps change:
+One post-creation step changes:
 
 ```bash
-# Copy the schema into the product repo so $schema is repo-relative
-clif-d schema copy clif-d/
-
 # Validate the generated PRD
 clif-d validate clif-d/prd.json
 ```
 
 **Skill text changes:**
-- CHANGE the `$schema` guidance in the "Generation process" section.
-  Currently tells the skill to set `$schema` to a relative path pointing at the plugin's `assets/prd-schema.json`.
-  Should instead instruct: "Run `clif-d schema copy clif-d/` to place the schema alongside the PRD, then set `$schema` to `prd-schema.json`."
 - ADD a final step to the generation process: "Run `clif-d validate` to verify the PRD."
 - REMOVE any ad-hoc "validate the JSON structure" instructions -- the CLI validate command replaces them.
+- The `$schema` guidance stays as-is: set `$schema` to a relative path pointing at the plugin's `assets/prd-schema.json`. The former plan to copy the schema into the user repo via `clif-d schema copy` has been retired (see superseded REQ-006 / REQ-022 in `cli-prd.json`).
 
 ---
 
