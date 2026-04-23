@@ -12,7 +12,8 @@ description: >
 
 # Generate Concept Document
 
-You are helping the user develop a product concept document. The document you will eventually produce has a specific structure and philosophy:
+You are helping the user develop a product concept document.
+The document you will eventually produce has a specific structure and philosophy:
 
 - It articulates a **functionality gap** in the current landscape of tools
 - It describes the **value** of filling that gap
@@ -24,30 +25,50 @@ You are helping the user develop a product concept document. The document you wi
 
 ---
 
-**Your job is to arrive at enough understanding to write that document.** Do not write it until you are ready. Instead, interrogate the user.
+**Your job is to arrive at enough understanding to write that document.** Do not write it until you are ready.
+Instead, interrogate the user.
 
 Start by asking the user to describe their idea in whatever form they have it -- rough, partial, or half-formed is fine.
 
-Then, ask focused follow-up questions to close the gaps you need to fill. Think about what you need to know across these dimensions:
+Then, ask focused follow-up questions to close the gaps you need to fill.
+Think about what you need to know across these dimensions:
 
-- **The problem space**: Who experiences this friction? In what context? What do they currently do instead, and why is that unsatisfying at a structural level -- not just inconvenient?
-- **The existing tool landscape**: What tools already exist in this space? Do you know them, or do you need to research them? What do they do well, and where do they stop? Use web research to ground your understanding -- do not rely solely on what the user tells you or what you already know.
-- **The AI role**: What is the action space the AI would operate over -- is it finite and well-defined? What is the intent space the user brings -- is it fuzzy and varied? Is the gap between those two things the core insight, or is something else going on?
-- **Scope and framing**: Should this be a general-purpose tool or domain-specific? What is explicitly out of scope? Is there a concrete illustrative use case that makes the idea tangible without over-constraining it?
+- **The problem space**: Who experiences this friction?
+  In what context?
+  What do they currently do instead, and why is that unsatisfying at a structural level -- not just inconvenient?
+- **The existing tool landscape**: What tools already exist in this space?
+  Do you know them, or do you need to research them?
+  What do they do well, and where do they stop?
+  Use web research to ground your understanding -- do not rely solely on what the user tells you or what you already know.
+- **The AI role**: What is the action space the AI would operate over -- is it finite and well-defined?
+  What is the intent space the user brings -- is it fuzzy and varied?
+  Is the gap between those two things the core insight, or is something else going on?
+- **Scope and framing**: Should this be a general-purpose tool or domain-specific?
+  What is explicitly out of scope?
+  Is there a concrete illustrative use case that makes the idea tangible without over-constraining it?
 
-Some of these questions depend on each other. You may need to ask a first round of questions, do web research on the existing tool landscape based on the answers, and then ask a second round of questions informed by what you find.
+Some of these questions depend on each other.
+You may need to ask a first round of questions, do web research on the existing tool landscape based on the answers, and then ask a second round of questions informed by what you find.
 
-Do not ask all questions at once. Prioritize. Ask the most load-bearing questions first -- the ones whose answers will determine what else you need to ask or research. Each round can have as many questions as necessary, but lean toward fewer, more focused questions over exhaustive lists.
+Do not ask all questions at once.
+Prioritize.
+Ask the most load-bearing questions first -- the ones whose answers will determine what else you need to ask or research.
+Each round can have as many questions as necessary, but lean toward fewer, more focused questions over exhaustive lists.
 
-When you believe you have enough understanding to write the document, say so and summarize your understanding. Wait for the user to confirm or offer final thoughts before producing the document.
+When you believe you have enough understanding to write the document, say so and summarize your understanding.
+Wait for the user to confirm or offer final thoughts before producing the document.
 
 ---
 
 ## Output location
 
-The concept document is typically the first artifact in the CLIF-D pipeline and may predate the existence of a product repository. Use this rule:
+The concept document is typically the first artifact in the CLIF-D pipeline and may predate the existence of a product repository.
+Use this rule:
 
-- **If a product repository already exists** (the user has specified or is working within one): save the concept document as `clif-d/concept.md` in that repository. Create the `clif-d/` directory if it does not yet exist. See the CLIF-D README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
-- **If no product repository exists yet** (this is the very first artifact and the repo will be created later): save the concept document in the user's current working directory as `concept.md`. When the repository is eventually scaffolded by `create-architecture`'s scaffolding requirements, the concept document should be moved into `clif-d/concept.md` at that time.
+- **If a product repository already exists** (the user has specified or is working within one): save the concept document as `clif-d/concept.md` in that repository.
+  Create the `clif-d/` directory if it does not yet exist.
+  See the CLIF-D README section "The `clif-d/` directory" for the full artifact layout and lifecycle.
+- **If no product repository exists yet** (this is the very first artifact and the repo will be created later): save the concept document in the user's current working directory as `concept.md`.
+  When the repository is eventually scaffolded by `create-architecture`'s scaffolding requirements, the concept document should be moved into `clif-d/concept.md` at that time.
 
 Ask the user which applies if it is not clear from context.

@@ -2,13 +2,18 @@
 
 ## What They Are
 
-An integration test verifies that two or more components work together correctly. It exercises the seams between units -- the interfaces, contracts, and data flows that connect them.
+An integration test verifies that two or more components work together correctly.
+It exercises the seams between units -- the interfaces, contracts, and data flows that connect them.
 
-The term "integration test" is notoriously fuzzy. Fowler observes that its definition varies more than almost any other testing term. For this document: an integration test exercises a collaboration between components that a unit test, by design, does not cover. The components might be classes within a single service, a service and its database, an API layer and its business logic, or two microservices.
+The term "integration test" is notoriously fuzzy.
+Fowler observes that its definition varies more than almost any other testing term.
+For this document: an integration test exercises a collaboration between components that a unit test, by design, does not cover.
+The components might be classes within a single service, a service and its database, an API layer and its business logic, or two microservices.
 
 ## Why They Exist
 
-Correct units do not guarantee a correct system. Common bugs that only integration tests catch:
+Correct units do not guarantee a correct system.
+Common bugs that only integration tests catch:
 
 - A function produces output in a format its consumer doesn't expect.
 - A database query works logically but fails with real schema constraints.
@@ -28,11 +33,15 @@ Use integration tests for:
 
 ## Scope and Boundaries
 
-**Prefer narrower integration tests.** Each test should focus on one specific boundary. A test that exercises controller + service + repository + database all at once is harder to debug than three tests verifying each boundary separately.
+**Prefer narrower integration tests.** Each test should focus on one specific boundary.
+A test that exercises controller + service + repository + database all at once is harder to debug than three tests verifying each boundary separately.
 
-**Real vs. fake dependencies:** Use real dependencies when they are fast and reliable. An in-memory database (SQLite, H2) is often preferable to mocking the database layer because it catches real SQL bugs while remaining fast. But a real external API that is slow or rate-limited should be replaced with a fake.
+**Real vs. fake dependencies:** Use real dependencies when they are fast and reliable.
+An in-memory database (SQLite, H2) is often preferable to mocking the database layer because it catches real SQL bugs while remaining fast.
+But a real external API that is slow or rate-limited should be replaced with a fake.
 
-**Contract tests** are a specialized form for microservice architectures. Rather than spinning up both services, you test each side of the contract independently: the consumer tests that it correctly calls the expected API, and the provider tests that it correctly serves it.
+**Contract tests** are a specialized form for microservice architectures.
+Rather than spinning up both services, you test each side of the contract independently: the consumer tests that it correctly calls the expected API, and the provider tests that it correctly serves it.
 
 ## Worked Example: Testing a Repository Against a Real Database
 
@@ -123,7 +132,8 @@ def test_create_user_endpoint():
     )
 ```
 
-This test verifies *call wiring*, not behavior. If `create_user` changes its parameter order, the test breaks without any real bug.
+This test verifies *call wiring*, not behavior.
+If `create_user` changes its parameter order, the test breaks without any real bug.
 
 ```python
 # GOOD -- real service with fake database
@@ -144,7 +154,8 @@ def test_create_user_endpoint():
     assert service.get_user_by_email("alice@example.com") is not None
 ```
 
-This test exercises the real controller-to-service-to-repository chain with an in-memory database. It verifies the full behavior: correct HTTP response *and* actual persistence.
+This test exercises the real controller-to-service-to-repository chain with an in-memory database.
+It verifies the full behavior: correct HTTP response *and* actual persistence.
 
 ## Type-Specific Pitfalls (with Examples)
 
@@ -162,7 +173,9 @@ def test_full_checkout_flow():
     # (50 lines of test code spanning 6 components)
 ```
 
-This test spans too many boundaries. If it fails, you don't know which boundary is broken. Break it into focused tests: controller-to-service, service-to-repository, service-to-emailer.
+This test spans too many boundaries.
+If it fails, you don't know which boundary is broken.
+Break it into focused tests: controller-to-service, service-to-repository, service-to-emailer.
 
 ### Pitfall: Testing Logic at the Wrong Level
 
@@ -178,7 +191,8 @@ def test_discount_calculation():
     assert discount == 15.00
 ```
 
-The discount calculation is pure logic -- it doesn't need a database. Test it as a unit test:
+The discount calculation is pure logic -- it doesn't need a database.
+Test it as a unit test:
 
 ```python
 # GOOD -- unit test for the logic, integration test only for the DB interaction
@@ -230,9 +244,11 @@ When writing or reviewing an integration test, verify:
 - [ ] **Focused boundary:** The test verifies a specific interaction between a specific pair of components, not the entire system. *(avoid scope creep)*
 - [ ] **Real over fake when possible:** Dependencies are real implementations unless they are slow, flaky, or impractical. *([Principles](./testing-principles.md) -- Test Doubles)*
 - [ ] **Minimal fixture:** Only the data/state needed for this specific interaction. *([Principles](./testing-principles.md) -- Make Tests Complete and Concise)*
-- [ ] **Isolated state:** Does not share mutable state with other tests. Each test gets a fresh database, clean file system, etc. *([Principles](./testing-principles.md) -- Test Smells, Erratic Test)*
+- [ ] **Isolated state:** Does not share mutable state with other tests.
+  Each test gets a fresh database, clean file system, etc. *([Principles](./testing-principles.md) -- Test Smells, Erratic Test)*
 - [ ] **Behavior-focused name:** Describes the cross-boundary behavior, not internal methods. *([Principles](./testing-principles.md) -- Test Behaviors Not Methods)*
 - [ ] **Arrange-Act-Assert:** Clear three-phase structure. *([Principles](./testing-principles.md) -- Arrange Act Assert)*
 - [ ] **Reasonable speed:** Completes in seconds, not minutes. *([Principles](./testing-principles.md) -- Test Smells, Slow Tests)*
-- [ ] **Correct layer:** The behavior genuinely requires an integration test. If it's pure logic, push it to a [unit test](./testing-unit.md). *([Overview](./testing-overview.md): prefer lowest-scope test)*
+- [ ] **Correct layer:** The behavior genuinely requires an integration test.
+  If it's pure logic, push it to a [unit test](./testing-unit.md). *([Overview](./testing-overview.md): prefer lowest-scope test)*
 - [ ] **State verification:** Asserts on observable outcomes (data in the database, response body), not on which internal methods were called. *([Principles](./testing-principles.md) -- Test State Not Interactions)*

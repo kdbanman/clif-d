@@ -2,11 +2,16 @@
 
 ## 1. Overview
 
-This document defines the quality guardrails for the `clif-d` CLI tool -- a zero-dependency Node.js executable shipped as part of the CLIF-D Claude Code plugin. The guardrails enforce code quality as hard local gates that block commits on failure. No code enters the repository without passing formatting, linting, type checking, and tests.
+This document defines the quality guardrails for the `clif-d` CLI tool -- a zero-dependency Node.js executable shipped as part of the CLIF-D Claude Code plugin.
+The guardrails enforce code quality as hard local gates that block commits on failure.
+No code enters the repository without passing formatting, linting, type checking, and tests.
 
-The primary consumer of this CLI is a Claude Code agent executing CLIF-D skills. Agentic implementation makes backpressure especially important: the agent needs clear, fast, deterministic signals about whether its output meets quality standards. Vague warnings are useless; hard failures with actionable messages are essential.
+The primary consumer of this CLI is a Claude Code agent executing CLIF-D skills.
+Agentic implementation makes backpressure especially important: the agent needs clear, fast, deterministic signals about whether its output meets quality standards.
+Vague warnings are useless; hard failures with actionable messages are essential.
 
-The PRD for this tool is at `cli-prd.json` (repo root). No architecture document exists -- this backpressure design was derived directly from the PRD and its constraints (CTX-001 through CTX-009).
+The PRD for this tool is at `cli-prd.json` (repo root).
+No architecture document exists -- this backpressure design was derived directly from the PRD and its constraints (CTX-001 through CTX-009).
 
 ## 2. Technology Stack Context
 
@@ -20,7 +25,8 @@ The PRD for this tool is at `cli-prd.json` (repo root). No architecture document
 | Test framework | Node.js built-in test runner (`node:test`, `node:assert`) |
 | Project structure | `bin/clif-d` (executable), `cli/` (dev infrastructure, tests, CLIF-D artifacts) |
 
-The zero-dependency constraint (CTX-001) and single-file distribution (CTX-002) apply to the shipped artifact only. Development tooling lives in `cli/package.json` as devDependencies and is never bundled.
+The zero-dependency constraint (CTX-001) and single-file distribution (CTX-002) apply to the shipped artifact only.
+Development tooling lives in `cli/package.json` as devDependencies and is never bundled.
 
 ## 3. Guardrail Decisions
 
@@ -38,7 +44,8 @@ The zero-dependency constraint (CTX-001) and single-file distribution (CTX-002) 
 
 ## 4. Relaxations from Maximum Strictness
 
-Every relaxation is listed here with explicit justification. If a rule is not listed, maximum strictness applies.
+Every relaxation is listed here with explicit justification.
+If a rule is not listed, maximum strictness applies.
 
 | Rule | Plugin | Status | Justification |
 |------|--------|--------|---------------|
@@ -51,40 +58,63 @@ Every relaxation is listed here with explicit justification. If a rule is not li
 | `unicorn/prefer-module` | eslint-plugin-unicorn | Disabled | The CLI is intentionally CommonJS (CTX-002 -- single file, no transpilation). Node loads `bin/clif-d` as CommonJS because there is no `"type": "module"` at the repo root. `"use strict"` is appropriate for CommonJS modules. |
 
 **Configuration notes from bootstrap:**
-- `eslint-plugin-security`'s `configs.recommended` still uses the legacy `env` key, which is incompatible with ESLint v9 flat config. Instead of extending the preset, we opt into specific rules (`detect-child-process`, `detect-non-literal-fs-filename`, `detect-unsafe-regex`, `detect-eval-with-expression`, `detect-non-literal-regexp`, `detect-pseudoRandomBytes`, `detect-new-buffer`).
-- `eslint-plugin-unicorn` v56 exports both legacy (`configs.recommended`) and flat (`configs["flat/recommended"]`) configs. We use the flat variant.
-- `bin/clif-d` has no file extension (plugin convention). ESLint refuses to lint files outside its base path, and TypeScript ignores files without a recognized extension. A symlink `cli/clif-d.js -> ../bin/clif-d` resolves both issues. Prettier does not support symlinks as explicit targets, so Prettier runs against `../bin/clif-d` directly.
-- The `files` matcher for the function-size/complexity/depth ESLint override is `["clif-d.js", "**/clif-d.js"]` -- the second glob lets the backpressure tests assert these rules by writing fixture files named `clif-d.js` into per-test directories under `cli/test/.fixtures-backpressure-lint/`. The fixtures must live inside ESLint's base path (`cli/`); flat-config base-path semantics ignore files outside the config directory regardless of `--config` overrides.
+- `eslint-plugin-security`'s `configs.recommended` still uses the legacy `env` key, which is incompatible with ESLint v9 flat config.
+  Instead of extending the preset, we opt into specific rules (`detect-child-process`, `detect-non-literal-fs-filename`, `detect-unsafe-regex`, `detect-eval-with-expression`, `detect-non-literal-regexp`, `detect-pseudoRandomBytes`, `detect-new-buffer`).
+- `eslint-plugin-unicorn` v56 exports both legacy (`configs.recommended`) and flat (`configs["flat/recommended"]`) configs.
+  We use the flat variant.
+- `bin/clif-d` has no file extension (plugin convention).
+  ESLint refuses to lint files outside its base path, and TypeScript ignores files without a recognized extension.
+  A symlink `cli/clif-d.js -> ../bin/clif-d` resolves both issues.
+  Prettier does not support symlinks as explicit targets, so Prettier runs against `../bin/clif-d` directly.
+- The `files` matcher for the function-size/complexity/depth ESLint override is `["clif-d.js", "**/clif-d.js"]` -- the second glob lets the backpressure tests assert these rules by writing fixture files named `clif-d.js` into per-test directories under `cli/test/.fixtures-backpressure-lint/`.
+  The fixtures must live inside ESLint's base path (`cli/`); flat-config base-path semantics ignore files outside the config directory regardless of `--config` overrides.
 
-**Plan deviation note (REQ-027):** The plan section "What is intentionally out of scope" said "no changes to `bin/clif-d`." When jscpd was wired up at `threshold: 0`, it detected three pre-existing clones in `bin/clif-d` (two cycle-detection routines, two commit-with-cycle-check command handlers, two field-projection helpers), plus one function at depth 4 that violated the new `max-depth: 3` cap. The plan also required the real CLI to pass at the configured thresholds and required loose thresholds to be avoided. These constraints were resolved by extracting `initThreeColorState`, `buildDependencyGraph`, `commitWithCycleCheck`, `Projection.selectFields`, and `validateAcceptanceCriteria` -- minimal, documented refactors that left command-level behavior intact. CTX-012 (internal modularity) supports this direction.
+**Plan deviation note (REQ-027):** The plan section "What is intentionally out of scope" said "no changes to `bin/clif-d`." When jscpd was wired up at `threshold: 0`, it detected three pre-existing clones in `bin/clif-d` (two cycle-detection routines, two commit-with-cycle-check command handlers, two field-projection helpers), plus one function at depth 4 that violated the new `max-depth: 3` cap.
+The plan also required the real CLI to pass at the configured thresholds and required loose thresholds to be avoided.
+These constraints were resolved by extracting `initThreeColorState`, `buildDependencyGraph`, `commitWithCycleCheck`, `Projection.selectFields`, and `validateAcceptanceCriteria` -- minimal, documented refactors that left command-level behavior intact.
+CTX-012 (internal modularity) supports this direction.
 
 ## 5. Suppression Policy
 
 - Inline suppression (`// eslint-disable-next-line <rule>`) requires a comment on the same line or preceding line explaining **why the rule does not apply**, not why it is inconvenient.
 - Blanket file-level suppressions (`/* eslint-disable */`) are not permitted without amending this document.
-- Security-related suppressions (any `security/*` rule) require an explanation added to the Relaxations table above (section 4). Do not suppress security rules inline without updating this document.
-- `// @ts-ignore` is prohibited. Use `// @ts-expect-error` with an explanation instead -- it will fail if the error is fixed, preventing stale suppressions.
+- Security-related suppressions (any `security/*` rule) require an explanation added to the Relaxations table above (section 4).
+  Do not suppress security rules inline without updating this document.
+- `// @ts-ignore` is prohibited.
+  Use `// @ts-expect-error` with an explanation instead -- it will fail if the error is fixed, preventing stale suppressions.
 - Type-level suppressions via `/** @type {any} */` are permitted only at system boundaries (parsing raw JSON input, process.argv handling) with a comment explaining the boundary.
 
 ## 6. Hook Architecture
 
 ### Pre-commit (must complete in seconds)
 
-Runs on every `git commit`. Order matters -- fast checks first, expensive checks last:
+Runs on every `git commit`.
+Order matters -- fast checks first, expensive checks last:
 
-1. **Prettier** -- check formatting of `bin/clif-d`. Does not auto-fix in the hook; run `npm run format` to fix before committing.
-2. **ESLint** -- lint `bin/clif-d`. No auto-fix. Fail and report violations. Includes function-size, complexity, and nesting-depth caps (see section 3).
-3. **jscpd** -- duplication detector. Runs against `bin/clif-d` and fails on any duplicated block above threshold. See section 3.
-4. **tsc --noEmit** -- full project type check. Type errors can emerge from context changes anywhere in the file, so this checks the whole file, not just staged hunks.
-5. **node --test** -- full test suite. The CLI operates on small JSON fixtures, so tests should complete in under 5 seconds.
+1. **Prettier** -- check formatting of `bin/clif-d`.
+   Does not auto-fix in the hook; run `npm run format` to fix before committing.
+2. **ESLint** -- lint `bin/clif-d`.
+   No auto-fix.
+   Fail and report violations.
+   Includes function-size, complexity, and nesting-depth caps (see section 3).
+3. **jscpd** -- duplication detector.
+   Runs against `bin/clif-d` and fails on any duplicated block above threshold.
+   See section 3.
+4. **tsc --noEmit** -- full project type check.
+   Type errors can emerge from context changes anywhere in the file, so this checks the whole file, not just staged hunks.
+5. **node --test** -- full test suite.
+   The CLI operates on small JSON fixtures, so tests should complete in under 5 seconds.
 
-Since `bin/clif-d` is a single file, lint-staged's incremental staging is unnecessary. Checks run directly against the file.
+Since `bin/clif-d` is a single file, lint-staged's incremental staging is unnecessary.
+Checks run directly against the file.
 
 If any step fails, the commit is blocked.
 
 ### Pre-push
 
-Not configured. The test suite is fast enough to run at pre-commit. If integration tests are added later and exceed the pre-commit time budget, move them to pre-push.
+Not configured.
+The test suite is fast enough to run at pre-commit.
+If integration tests are added later and exceed the pre-commit time budget, move them to pre-push.
 
 ### CI (out of scope, noted for boundary clarity)
 
@@ -94,13 +124,22 @@ Not configured. The test suite is fast enough to run at pre-commit. If integrati
 
 ## 7. Developer/Agent Experience
 
-**Lint violation:** The agent runs `git commit`. Husky fires the pre-commit hook. lint-staged runs ESLint on the staged `bin/clif-d` file. ESLint reports the rule name, line number, and message to stderr. The commit is blocked. The agent reads the error, fixes the violation in `bin/clif-d`, re-stages, and retries.
+**Lint violation:** The agent runs `git commit`.
+Husky fires the pre-commit hook. lint-staged runs ESLint on the staged `bin/clif-d` file.
+ESLint reports the rule name, line number, and message to stderr.
+The commit is blocked.
+The agent reads the error, fixes the violation in `bin/clif-d`, re-stages, and retries.
 
-**Type error:** The agent runs `git commit`. lint-staged passes (formatting and linting OK). `tsc --noEmit` runs and reports a type error with file, line, and the expected vs actual types. The commit is blocked. The agent fixes the JSDoc annotation or the code, re-stages, and retries.
+**Type error:** The agent runs `git commit`. lint-staged passes (formatting and linting OK). `tsc --noEmit` runs and reports a type error with file, line, and the expected vs actual types.
+The commit is blocked.
+The agent fixes the JSDoc annotation or the code, re-stages, and retries.
 
-**Test failure:** The agent runs `git commit`. lint-staged and tsc pass. `node --test` runs and reports the failing test name, the assertion that failed, and the expected vs actual values. The commit is blocked. The agent fixes the code or test, re-stages, and retries.
+**Test failure:** The agent runs `git commit`. lint-staged and tsc pass. `node --test` runs and reports the failing test name, the assertion that failed, and the expected vs actual values.
+The commit is blocked.
+The agent fixes the code or test, re-stages, and retries.
 
-**Suppressing a lint rule:** The agent adds `// eslint-disable-next-line <rule> -- <reason>`. If the rule is security-related, the agent must also update the Relaxations table in this document and include that change in the commit.
+**Suppressing a lint rule:** The agent adds `// eslint-disable-next-line <rule> -- <reason>`.
+If the rule is security-related, the agent must also update the Relaxations table in this document and include that change in the commit.
 
 ## 8. Practitioner Quick Reference
 
@@ -152,8 +191,10 @@ npm run check
 
 ### How to handle failures
 
-1. Read the error message. It tells you the rule, the line, and what is wrong.
-2. Fix the code, not the rule. If the rule is genuinely wrong for this case, see Suppression Policy (section 5).
+1. Read the error message.
+   It tells you the rule, the line, and what is wrong.
+2. Fix the code, not the rule.
+   If the rule is genuinely wrong for this case, see Suppression Policy (section 5).
 3. Re-stage and retry.
 
 ### Suppression policy (summary)
@@ -162,12 +203,17 @@ npm run check
 - Security rule suppressions require updating this document.
 - `// @ts-ignore` is prohibited; use `// @ts-expect-error` with explanation.
 - File-level suppressions require amending this document.
-- jscpd inline suppression: wrap an intentionally-duplicated block with `// jscpd:ignore-start` and `// jscpd:ignore-end` comments. Use this only when the duplication is genuinely intentional (e.g. mirrored shape across distinct domains) and refactoring would harm clarity. The accompanying comment must explain why -- "annoying" is not a reason. Prefer extraction to suppression in nearly all cases.
+- jscpd inline suppression: wrap an intentionally-duplicated block with `// jscpd:ignore-start` and `// jscpd:ignore-end` comments.
+  Use this only when the duplication is genuinely intentional (e.g. mirrored shape across distinct domains) and refactoring would harm clarity.
+  The accompanying comment must explain why -- "annoying" is not a reason.
+  Prefer extraction to suppression in nearly all cases.
 
 ### How to update guardrails
 
-- To add or modify ESLint rules: edit `cli/eslint.config.js`. If disabling a rule from maximum strictness, add it to the Relaxations table (section 4) with justification.
-- To change type checking strictness: edit `cli/tsconfig.json`. Document the change in this file.
+- To add or modify ESLint rules: edit `cli/eslint.config.js`.
+  If disabling a rule from maximum strictness, add it to the Relaxations table (section 4) with justification.
+- To change type checking strictness: edit `cli/tsconfig.json`.
+  Document the change in this file.
 - To add a pre-push hook: create `cli/.husky/pre-push` and document the change in Hook Architecture (section 6).
 
 ## 9. PRD and Architecture Traceability
