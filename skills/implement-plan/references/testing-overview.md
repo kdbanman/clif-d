@@ -2,7 +2,9 @@
 
 ## Purpose of These Documents
 
-You are implementing a plan. You need to write tests right now -- good ones, quickly. These documents give you the practical guidance to do that.
+You are implementing a plan.
+You need to write tests right now -- good ones, quickly.
+These documents give you the practical guidance to do that.
 
 They are language-agnostic and domain-agnostic, drawn from a small number of deeply respected sources:
 
@@ -16,7 +18,9 @@ They are language-agnostic and domain-agnostic, drawn from a small number of dee
 
 ## How to Use These Documents
 
-Use the **Scenario Quick-Reference** below to find your situation, then jump directly to the linked document. For routine work, each test type doc has an inlined checklist of the most relevant principles. For tricky situations, go to the full Principles & Practices doc.
+Use the **Scenario Quick-Reference** below to find your situation, then jump directly to the linked document.
+For routine work, each test type doc has an inlined checklist of the most relevant principles.
+For tricky situations, go to the full Principles & Practices doc.
 
 ---
 
@@ -38,10 +42,14 @@ Use the **Scenario Quick-Reference** below to find your situation, then jump dir
 Automated testing serves three purposes, in order of importance:
 
 1. **Preventing bugs from reaching users.** This is the obvious one, but it is not the most important at scale.
-2. **Enabling change with confidence.** A comprehensive test suite is what makes refactoring, performance optimization, and feature addition safe. Without it, codebases become rigid -- engineers are afraid to touch working code. This is the most important long-term function of tests, and it is what makes them worth the investment.
-3. **Documenting intended behavior.** A well-written test is an executable specification. When an engineer asks "what is this code supposed to do?", a good test answers that question more reliably than comments or design documents, because it is verified every time the code changes.
+2. **Enabling change with confidence.** A comprehensive test suite is what makes refactoring, performance optimization, and feature addition safe.
+   Without it, codebases become rigid -- engineers are afraid to touch working code.
+   This is the most important long-term function of tests, and it is what makes them worth the investment.
+3. **Documenting intended behavior.** A well-written test is an executable specification.
+   When an engineer asks "what is this code supposed to do?", a good test answers that question more reliably than comments or design documents, because it is verified every time the code changes.
 
-The xUnit Test Patterns perspective adds a useful framing: the goals of test automation include improving quality, understanding the system under test, reducing risk, being easy to run, being easy to write, and requiring minimal maintenance as the system evolves. The last three are about the tests themselves -- they acknowledge that test code is real code that must be maintained, and poorly-written tests can become a net drag on productivity rather than a benefit.
+The xUnit Test Patterns perspective adds a useful framing: the goals of test automation include improving quality, understanding the system under test, reducing risk, being easy to run, being easy to write, and requiring minimal maintenance as the system evolves.
+The last three are about the tests themselves -- they acknowledge that test code is real code that must be maintained, and poorly-written tests can become a net drag on productivity rather than a benefit.
 
 ---
 
@@ -56,4 +64,7 @@ The xUnit Test Patterns perspective adds a useful framing: the goals of test aut
 
 ---
 
-*These references support the implement-plan skill. They focus on writing sound tests during implementation. For guidance on choosing test types and proportions (testing strategy), see the plan-requirement or create-architecture skills. For guidance on designing test-quality gates, see the design-backpressure skill; for how those gates are wired into the toolchain, see bootstrap-dev-environment.*
+*These references support the implement-plan skill.
+They focus on writing sound tests during implementation.
+For guidance on choosing test types and proportions (testing strategy), see the plan-requirement or create-architecture skills.
+For guidance on designing test-quality gates, see the design-backpressure skill; for how those gates are wired into the toolchain, see bootstrap-dev-environment.*
