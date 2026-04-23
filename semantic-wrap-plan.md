@@ -86,13 +86,23 @@ For each in-scope file number N, spawn one subagent with this self-contained pro
 >
 > **Steps:**
 > 1. Read `semantic-wrap-plan.md` on the base branch and confirm which file is number N.
-> 2. Check out a new branch off `claude/improve-readme-formatting-xs3Oa` named `claude/semantic-wrap-NN-<short-slug>` (two-digit N, short slug of the file path).
-> 3. Run `node cli/scripts/semantic-wrap.mjs <path-to-file-N>` from the repo root.
-> 4. **Mechanical check:** non-whitespace content must be byte-identical. Run `cmp <(tr -d '[:space:]' < <(git show HEAD:<path-to-file-N>)) <(tr -d '[:space:]' < <path-to-file-N>)`; it must exit 0 with no output. This proves no non-whitespace character changed. (`git diff -w` is not sufficient because the transformation changes line counts, which `-w` treats as add/delete rather than reflow.) If the check fails, stop and report.
-> 5. **Semantic check:** read the diff (`git diff -- <path-to-file-N>`) and confirm: no content changed; code fences, tables, headings, and frontmatter untouched; breaks land at sentence boundaries (no `e.g.` / version-number / abbreviation splits); list-item continuations stay valid Markdown; no paragraph was merged or split at the block level.
-> 6. Commit with message: `docs: semantic line breaks in <path-to-file-N>`. No other changes.
-> 7. Push the branch and open a PR against `claude/improve-readme-formatting-xs3Oa`.
-> 8. In the PR body, report: PASS or any issues found (e.g. unexpected Markdown constructs, false-positive splits, script bugs). Include suggested script adjustments if any.
+> 2. Fetch, branch, and hard-reset to guarantee a clean working tree (worktrees may inherit stale state from the parent session):
+>    ```
+>    git fetch origin claude/improve-readme-formatting-xs3Oa
+>    git checkout -B claude/semantic-wrap-NN-<short-slug> origin/claude/improve-readme-formatting-xs3Oa
+>    git reset --hard origin/claude/improve-readme-formatting-xs3Oa
+>    git status    # must report clean working tree before proceeding
+>    ```
+> 3. Ensure the CLI dev deps are installed in this worktree. A fresh git worktree shares `.git` with the parent but not `cli/node_modules`, so the script will fail with `ERR_MODULE_NOT_FOUND` if this step is skipped:
+>    ```
+>    ./cli/scripts/bootstrap.sh    # idempotent; no-op when node_modules already present
+>    ```
+> 4. Run `node cli/scripts/semantic-wrap.mjs <path-to-file-N>` from the repo root.
+> 5. **Mechanical check:** non-whitespace content must be byte-identical. Run `cmp <(tr -d '[:space:]' < <(git show HEAD:<path-to-file-N>)) <(tr -d '[:space:]' < <path-to-file-N>)`; it must exit 0 with no output. This proves no non-whitespace character changed. (`git diff -w` is not sufficient because the transformation changes line counts, which `-w` treats as add/delete rather than reflow.) If the check fails, stop and report.
+> 6. **Semantic check:** read the diff (`git diff -- <path-to-file-N>`) and confirm: no content changed; code fences, tables, headings, and frontmatter untouched; breaks land at sentence boundaries (no `e.g.` / version-number / abbreviation splits); list-item continuations stay valid Markdown; no paragraph was merged or split at the block level.
+> 7. Commit with message: `docs: semantic line breaks in <path-to-file-N>`. No other changes.
+> 8. Push the branch and open a PR against `claude/improve-readme-formatting-xs3Oa`.
+> 9. In the PR body, report: PASS or any issues found (e.g. unexpected Markdown constructs, false-positive splits, script bugs). Include suggested script adjustments if any.
 >
 > **Do not** modify the script or the plan. If the script needs changes, surface them in the PR report; a separate PR on the base branch will fix the script and subagents will be re-run.
 
