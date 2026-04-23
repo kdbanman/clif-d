@@ -1,6 +1,8 @@
 # CLIF-D
 
-CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for structured product development -- from initial concept through naming, requirements, implementation planning, and code. Each skill guides a focused, interactive session and produces a structured artifact that feeds the next stage of the pipeline. The methodology emphasizes decomposing systems into testable, composable CLI tools as the primary implementation target.
+CLIF-D (CLI-First Decomposition) is a collection of Claude Code skills for structured product development -- from initial concept through naming, requirements, implementation planning, and code.
+Each skill guides a focused, interactive session and produces a structured artifact that feeds the next stage of the pipeline.
+The methodology emphasizes decomposing systems into testable, composable CLI tools as the primary implementation target.
 
 ## Skills
 
@@ -43,15 +45,25 @@ create-product-concept
 
 ## Skill disposition: HITL vs HOTL
 
-Every CLIF-D skill is classified by **where uncertainty gets resolved**. HITL skills resolve it in-session by interrogating the user; HOTL skills consume resolutions that upstream artifacts have already made. This determines whether the skill interrogates or runs without intervention.
+Every CLIF-D skill is classified by **where uncertainty gets resolved**.
+HITL skills resolve it in-session by interrogating the user; HOTL skills consume resolutions that upstream artifacts have already made.
+This determines whether the skill interrogates or runs without intervention.
 
-"Upstream" and "downstream" throughout this document and the skill files refer to **position in the pipeline diagram above**. A skill's upstream artifacts are the ones produced by skills earlier in the pipeline (e.g. `plan-requirement`'s upstream is the concept, PRD, architecture, backpressure, dev-environment, and any preceding executed plans); its downstream consumers are the skills that read its output (e.g. `implement-plan` is downstream of `plan-requirement`). When a skill is told to "trace upstream" it means read those earlier artifacts before interrogating the user.
+"Upstream" and "downstream" throughout this document and the skill files refer to **position in the pipeline diagram above**.
+A skill's upstream artifacts are the ones produced by skills earlier in the pipeline (e.g. `plan-requirement`'s upstream is the concept, PRD, architecture, backpressure, dev-environment, and any preceding executed plans); its downstream consumers are the skills that read its output (e.g. `implement-plan` is downstream of `plan-requirement`).
+When a skill is told to "trace upstream" it means read those earlier artifacts before interrogating the user.
 
-- **HITL (human-in-the-loop) skills interrogate ruthlessly.** They resolve uncertainty that only the user can resolve -- product intent, brand taste, which lessons are durable, which trade-off to accept. They block progress until ambiguity is closed. The interrogation *is* the skill's main work.
-- **HOTL (human-out-of-the-loop) skills execute without interruption.** They do not resolve uncertainty themselves -- they consume the resolutions that upstream artifacts have already made. They trace upstream, research, and only stop when an upstream artifact proves wrong, silent, or self-contradictory on a load-bearing question. A well-run HOTL skill produces a complete artifact end-to-end without a single AskUserQuestion call.
+- **HITL (human-in-the-loop) skills interrogate ruthlessly.** They resolve uncertainty that only the user can resolve -- product intent, brand taste, which lessons are durable, which trade-off to accept.
+  They block progress until ambiguity is closed.
+  The interrogation *is* the skill's main work.
+- **HOTL (human-out-of-the-loop) skills execute without interruption.** They do not resolve uncertainty themselves -- they consume the resolutions that upstream artifacts have already made.
+  They trace upstream, research, and only stop when an upstream artifact proves wrong, silent, or self-contradictory on a load-bearing question.
+  A well-run HOTL skill produces a complete artifact end-to-end without a single AskUserQuestion call.
 - **HITL-lite skills sit between.** They research autonomously, draft provisional decisions, and present the whole package for one confirmation gate per phase -- not a loop on every micro-decision.
 
-The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HITL skills do their job.** If a PRD is vague, `plan-requirement` degrades into interrogation. If an architecture is incomplete, `implement-plan` stalls. The rubric is symbiotic: HITL skills pay the attention cost up front so HOTL skills do not have to pay it in a loop.
+The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HITL skills do their job.** If a PRD is vague, `plan-requirement` degrades into interrogation.
+If an architecture is incomplete, `implement-plan` stalls.
+The rubric is symbiotic: HITL skills pay the attention cost up front so HOTL skills do not have to pay it in a loop.
 
 ### Classification
 
@@ -68,7 +80,8 @@ The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HI
 | `extend-low-level-requirements` | HITL-lite | Which behaviors are clear enough right now to specify (research-informed provisional slice, single confirmation gate) |
 | `compactify-artifacts` | HITL | Which lessons are durable, where each one routes |
 
-`compactify-artifacts` is a special case: it silently discards most lesson noise via aggressive pre-filter, then escalates high-signal survivors to the user one at a time via AskUserQuestion. Every routed lesson requires explicit per-lesson authorization -- no silent amendments to design docs.
+`compactify-artifacts` is a special case: it silently discards most lesson noise via aggressive pre-filter, then escalates high-signal survivors to the user one at a time via AskUserQuestion.
+Every routed lesson requires explicit per-lesson authorization -- no silent amendments to design docs.
 
 ### Interrogation discipline
 
@@ -81,7 +94,8 @@ The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HI
 
 **HOTL skills MUST:**
 
-- Trace upstream documents before asking the user anything. Most ambiguity is already resolved in the PRD, architecture, backpressure, dev-environment, or preceding plans.
+- Trace upstream documents before asking the user anything.
+  Most ambiguity is already resolved in the PRD, architecture, backpressure, dev-environment, or preceding plans.
 - Escalate only when the upstream graph is silent, contradictory, or impossible on a load-bearing question.
 - Prefer a documented assumption over a blocking question, and surface the assumption in the output (e.g. the plan's Open Questions section).
 - Treat any AskUserQuestion call as a signal that an upstream artifact may be inadequate -- flag it back to the user.
@@ -89,16 +103,20 @@ The load-bearing assumption: **HOTL skills can only stay HOTL if the upstream HI
 **HITL-lite skills MUST:**
 
 - Do the research pass before the confirmation pass.
-- Present provisional decisions, not open-ended questions. "I would pin Python to 3.12.7 because X; does that work?" beats "What Python version should we use?"
+- Present provisional decisions, not open-ended questions.
+  "I would pin Python to 3.12.7 because X; does that work?" beats "What Python version should we use?"
 - Use a single confirmation gate per phase, not a per-decision loop.
 
-Every AskUserQuestion call is a tax on user attention. HITL skills spend that tax to earn clarity; HOTL skills hoard it.
+Every AskUserQuestion call is a tax on user attention.
+HITL skills spend that tax to earn clarity; HOTL skills hoard it.
 
-A SKILL.md that does not reflect the discipline its disposition requires is a smell -- either the skill is misclassified, or its instructions have not caught up with the rubric. Audit for this when revising skills.
+A SKILL.md that does not reflect the discipline its disposition requires is a smell -- either the skill is misclassified, or its instructions have not caught up with the rubric.
+Audit for this when revising skills.
 
 ## The `clif-d/` directory
 
-All CLIF-D artifacts for a given product live in a single `clif-d/` directory at the root of the product repository. This directory is version-controlled alongside the code.
+All CLIF-D artifacts for a given product live in a single `clif-d/` directory at the root of the product repository.
+This directory is version-controlled alongside the code.
 
 ### Layout
 
@@ -127,47 +145,79 @@ All CLIF-D artifacts for a given product live in a single `clif-d/` directory at
   <source code, tests, configs...>
 ```
 
-All design documents (concept, PRD, architecture, backpressure, dev-environment) live inside `clif-d/`. The backpressure document includes both the design rationale and the practitioner-facing quick reference (how to run checks, suppression policy); the dev-environment document records how those guardrails were actually installed and wired to the toolchain. Strategic lessons distilled by `compactify-artifacts` are merged back into these design documents under explicit user authorization; tactical, file-pattern-specific lessons land in `.claude/rules/<topic>.md` files (sibling to `clif-d/`) so they re-enter the agent's context only when matching files are touched.
+All design documents (concept, PRD, architecture, backpressure, dev-environment) live inside `clif-d/`.
+The backpressure document includes both the design rationale and the practitioner-facing quick reference (how to run checks, suppression policy); the dev-environment document records how those guardrails were actually installed and wired to the toolchain.
+Strategic lessons distilled by `compactify-artifacts` are merged back into these design documents under explicit user authorization; tactical, file-pattern-specific lessons land in `.claude/rules/<topic>.md` files (sibling to `clif-d/`) so they re-enter the agent's context only when matching files are touched.
 
 ### Artifact precedence and lifecycle
 
-Artifacts are listed here in **order of authority**. When two artifacts disagree, the earlier one takes precedence unless the later one has explicitly superseded it:
+Artifacts are listed here in **order of authority**.
+When two artifacts disagree, the earlier one takes precedence unless the later one has explicitly superseded it:
 
-1. **`concept.md`** -- *Why this product exists.* Written once, changes rarely. Updated only when the product's fundamental purpose shifts.
-2. **`prd.json`** -- *What the product does.* **Living document.** Grows continuously as implementation progresses and low-level requirements are added (the "bow wave"). Represents the current agreed-upon behavior of the system.
-3. **`architecture.md`** -- *How the product is structured.* Updated when structural decisions change. New scaffolding requirements are added to `prd.json` when the architecture document is generated.
-4. **`backpressure.md`** -- *What quality standards the product enforces.* Updated when guardrails change. Every change should be a deliberate, documented decision -- relaxations especially. Authoritative for rule choices; `dev-environment.md` below implements those choices and must yield to this document on any conflict about what a rule *should* be.
-5. **`dev-environment.md`** -- *How the product is built and tested on a developer or agent machine, and how the backpressure guardrails are actually installed.* Updated when toolchain versions, containerization, agent rules-file conventions, or the concrete guardrail wiring changes. Every change should be a deliberate, documented decision -- relaxations especially.
-6. **`plans/active/*.md`** -- *How specific requirements will be implemented.* Short-lived. Each plan targets a set of requirements and is consumed by `implement-plan`. After implementation is complete, plans are moved to `plans/executed/` by `implement-plan`.
-7. **`plans/executed/*.md`** -- *Completed plans with implementation commit SHAs.* Full step-by-step detail is preserved. These accumulate until `compactify-artifacts` distills them into `plans/archive/` and deletes the originals (git history preserves them).
-8. **`plans/lessons_learned/*.md`** -- *Per-plan post-implementation lessons.* Written by `implement-plan`. Short-lived; consumed by `compactify-artifacts` one chunk at a time. Most lesson content is silently discarded by an aggressive pre-filter; high-signal survivors are presented to the user via structured AskUserQuestion calls and routed -- on per-lesson authorization -- into either an upstream design doc (items 1-5 above) or a glob-scoped `.claude/rules/*.md` file (item 10 below).
-9. **`plans/archive/*.md`** -- *Compact historical map of what was implemented and how.* One terse entry per executed plan: requirement IDs, major commit SHAs, acceptance-criteria checklist, one-paragraph summary, pointers for git/PR deep dive. Not a comprehensive history -- a starting point for one.
-10. **`.claude/rules/*.md`** -- *Glob-scoped tactical rules, sibling to `clif-d/`.* Each file declares a `globs:` frontmatter array; the rule re-enters the agent's context only when a matching file is read or edited. Created or extended by `compactify-artifacts` for tactical, file-pattern-specific lessons that earned a permanent home but do not belong in a top-level design doc. See `cli/clif-d/plans/executed/plan-REQ-027.md` for the format precedent. Not authoritative in the same sense as the design documents above -- the design documents stay authoritative, and rule files are signposts that point to them.
+1. **`concept.md`** -- *Why this product exists.* Written once, changes rarely.
+   Updated only when the product's fundamental purpose shifts.
+2. **`prd.json`** -- *What the product does.* **Living document.** Grows continuously as implementation progresses and low-level requirements are added (the "bow wave").
+   Represents the current agreed-upon behavior of the system.
+3. **`architecture.md`** -- *How the product is structured.* Updated when structural decisions change.
+   New scaffolding requirements are added to `prd.json` when the architecture document is generated.
+4. **`backpressure.md`** -- *What quality standards the product enforces.* Updated when guardrails change.
+   Every change should be a deliberate, documented decision -- relaxations especially.
+   Authoritative for rule choices; `dev-environment.md` below implements those choices and must yield to this document on any conflict about what a rule *should* be.
+5. **`dev-environment.md`** -- *How the product is built and tested on a developer or agent machine, and how the backpressure guardrails are actually installed.* Updated when toolchain versions, containerization, agent rules-file conventions, or the concrete guardrail wiring changes.
+   Every change should be a deliberate, documented decision -- relaxations especially.
+6. **`plans/active/*.md`** -- *How specific requirements will be implemented.* Short-lived.
+   Each plan targets a set of requirements and is consumed by `implement-plan`.
+   After implementation is complete, plans are moved to `plans/executed/` by `implement-plan`.
+7. **`plans/executed/*.md`** -- *Completed plans with implementation commit SHAs.* Full step-by-step detail is preserved.
+   These accumulate until `compactify-artifacts` distills them into `plans/archive/` and deletes the originals (git history preserves them).
+8. **`plans/lessons_learned/*.md`** -- *Per-plan post-implementation lessons.* Written by `implement-plan`.
+   Short-lived; consumed by `compactify-artifacts` one chunk at a time.
+   Most lesson content is silently discarded by an aggressive pre-filter; high-signal survivors are presented to the user via structured AskUserQuestion calls and routed -- on per-lesson authorization -- into either an upstream design doc (items 1-5 above) or a glob-scoped `.claude/rules/*.md` file (item 10 below).
+9. **`plans/archive/*.md`** -- *Compact historical map of what was implemented and how.* One terse entry per executed plan: requirement IDs, major commit SHAs, acceptance-criteria checklist, one-paragraph summary, pointers for git/PR deep dive.
+   Not a comprehensive history -- a starting point for one.
+10. **`.claude/rules/*.md`** -- *Glob-scoped tactical rules, sibling to `clif-d/`.* Each file declares a `globs:` frontmatter array; the rule re-enters the agent's context only when a matching file is read or edited.
+    Created or extended by `compactify-artifacts` for tactical, file-pattern-specific lessons that earned a permanent home but do not belong in a top-level design doc.
+    See `cli/clif-d/plans/executed/plan-REQ-027.md` for the format precedent.
+    Not authoritative in the same sense as the design documents above -- the design documents stay authoritative, and rule files are signposts that point to them.
 
 ### Feedback loop: implementation informs design
 
-The pipeline diagram reads left-to-right, but design is not one-way. As requirements are implemented, `implement-plan` records per-plan lessons in `plans/lessons_learned/*.md`, and `compactify-artifacts` later distills those lessons into two kinds of durable change:
+The pipeline diagram reads left-to-right, but design is not one-way.
+As requirements are implemented, `implement-plan` records per-plan lessons in `plans/lessons_learned/*.md`, and `compactify-artifacts` later distills those lessons into two kinds of durable change:
 
-- **Percolation into upstream design docs.** High-signal lessons that contradict, refine, or extend an earlier design decision get routed -- under explicit per-lesson user authorization -- into the relevant upstream document (items 1-5 above: concept, PRD, architecture, backpressure, dev-environment). This is how the architecture, backpressure, and other "upstream" artifacts evolve after the fact: not by being re-run from scratch, but by having specific, evidence-backed edits merged in when the code teaches us something the design got wrong or silent on.
+- **Percolation into upstream design docs.** High-signal lessons that contradict, refine, or extend an earlier design decision get routed -- under explicit per-lesson user authorization -- into the relevant upstream document (items 1-5 above: concept, PRD, architecture, backpressure, dev-environment).
+  This is how the architecture, backpressure, and other "upstream" artifacts evolve after the fact: not by being re-run from scratch, but by having specific, evidence-backed edits merged in when the code teaches us something the design got wrong or silent on.
 - **Tactical rule files.** Lessons that are file-pattern-specific rather than architectural land in `.claude/rules/*.md` (item 10 above).
 
-`compactify-artifacts` also flags upstream design documents that have drifted from what actually shipped, without necessarily amending them -- the flag surfaces the drift so the user can decide whether to amend, re-run an upstream skill, or accept the drift as the new truth. The practical effect: the design documents are authoritative at any given moment, but they are not frozen. The feedback loop keeps them honest.
+`compactify-artifacts` also flags upstream design documents that have drifted from what actually shipped, without necessarily amending them -- the flag surfaces the drift so the user can decide whether to amend, re-run an upstream skill, or accept the drift as the new truth.
+The practical effect: the design documents are authoritative at any given moment, but they are not frozen.
+The feedback loop keeps them honest.
 
 ### The PRD as a living document
 
-The PRD (`clif-d/prd.json`) is the most operationally important artifact and deserves special attention. It is a **living document** -- it grows and evolves throughout the project's life. High-level requirements are written early and change rarely. Low-level requirements are added continuously, as the "bow wave" of planning detail stays just ahead of the implementation ship.
+The PRD (`clif-d/prd.json`) is the most operationally important artifact and deserves special attention.
+It is a **living document** -- it grows and evolves throughout the project's life.
+High-level requirements are written early and change rarely.
+Low-level requirements are added continuously, as the "bow wave" of planning detail stays just ahead of the implementation ship.
 
 #### Principles
 
-- **The PRD tracks the state of implementation.** It is kept in sync with what has been built and what is next. It is not a snapshot from a kickoff meeting.
-- **High-level requirements form a complete picture.** They describe the whole system's intended behavior. They are rich with motivating context and may be slightly ambiguous.
-- **Low-level requirements form a partial picture.** Only the clear first steps are specified at any given time. Future planning fills in more low-level detail as needed -- the bow wave metaphor from `create-initial-prd`.
-- **Text and documentation are executable infrastructure.** In the age of language models, a well-structured PRD is not a dead deliverable -- it is a source of truth that agents read, reason about, and act on. Its structure matters because structure is what makes it machine-readable.
-- **Version control the PRD.** It lives in the repo because it must evolve in lockstep with the code. A PR that changes behavior should, when appropriate, also update the PRD. This is the only way to keep the two aligned.
+- **The PRD tracks the state of implementation.** It is kept in sync with what has been built and what is next.
+  It is not a snapshot from a kickoff meeting.
+- **High-level requirements form a complete picture.** They describe the whole system's intended behavior.
+  They are rich with motivating context and may be slightly ambiguous.
+- **Low-level requirements form a partial picture.** Only the clear first steps are specified at any given time.
+  Future planning fills in more low-level detail as needed -- the bow wave metaphor from `create-initial-prd`.
+- **Text and documentation are executable infrastructure.** In the age of language models, a well-structured PRD is not a dead deliverable -- it is a source of truth that agents read, reason about, and act on.
+  Its structure matters because structure is what makes it machine-readable.
+- **Version control the PRD.** It lives in the repo because it must evolve in lockstep with the code.
+  A PR that changes behavior should, when appropriate, also update the PRD.
+  This is the only way to keep the two aligned.
 
 #### Benefits of living in the repo
 
-- **Single source of truth.** The PRD, the code, and the tests all travel together. A clone of the repo contains everything needed to understand and work on the product.
+- **Single source of truth.** The PRD, the code, and the tests all travel together.
+  A clone of the repo contains everything needed to understand and work on the product.
 - **Atomic changes.** A feature and its specification change in the same commit, reviewed together.
 - **Diffable history.** Git log shows how the product's intended behavior has evolved over time.
 - **Agent-accessible.** Agents working in the repo can read the PRD without any external integration.
@@ -177,13 +227,22 @@ The PRD (`clif-d/prd.json`) is the most operationally important artifact and des
 
 The PRD's in-repo nature makes it unsuitable for certain coordination tasks:
 
-- **Cross-machine coordination.** Two developers (or agents) working in parallel on separate branches cannot use the PRD to coordinate who is doing what. Git will merge edits, but it will not prevent two people from starting work on the same requirement.
-- **Work assignment and claiming.** The PRD does not know who is working on what. It has no concept of "in progress by X" that survives across machines.
-- **Stakeholder and product-manager dashboards.** Stakeholders who are not working in the repo need a view into progress. The PRD is not that view -- it is a source document, not a dashboard.
-- **External discussions.** Comments, questions, and debate about requirements do not belong in the PRD. They belong in an issue tracker or a design document.
-- **Scale beyond a single product.** The PRD covers one product per repo. Multi-product coordination needs to happen elsewhere.
+- **Cross-machine coordination.** Two developers (or agents) working in parallel on separate branches cannot use the PRD to coordinate who is doing what.
+  Git will merge edits, but it will not prevent two people from starting work on the same requirement.
+- **Work assignment and claiming.** The PRD does not know who is working on what.
+  It has no concept of "in progress by X" that survives across machines.
+- **Stakeholder and product-manager dashboards.** Stakeholders who are not working in the repo need a view into progress.
+  The PRD is not that view -- it is a source document, not a dashboard.
+- **External discussions.** Comments, questions, and debate about requirements do not belong in the PRD.
+  They belong in an issue tracker or a design document.
+- **Scale beyond a single product.** The PRD covers one product per repo.
+  Multi-product coordination needs to happen elsewhere.
 
-These use cases require **external, synchronized systems** -- issue trackers (Linear, Jira, GitHub Issues), project management tools, communication platforms -- and there will be **some degree of duplication** between those systems and the in-repo PRD. That duplication is acceptable: each system serves a different purpose. The in-repo PRD is the authoritative specification. The external system is the coordination layer. Keep them aligned, but do not conflate them.
+These use cases require **external, synchronized systems** -- issue trackers (Linear, Jira, GitHub Issues), project management tools, communication platforms -- and there will be **some degree of duplication** between those systems and the in-repo PRD.
+That duplication is acceptable: each system serves a different purpose.
+The in-repo PRD is the authoritative specification.
+The external system is the coordination layer.
+Keep them aligned, but do not conflate them.
 
 ### Why `clif-d/` at the repo root
 
@@ -194,14 +253,21 @@ These use cases require **external, synchronized systems** -- issue trackers (Li
 
 ## Assumptions
 
-CLIF-D is opinionated about its runtime environment. Skills will misbehave or fail silently if any of the following is missing.
+CLIF-D is opinionated about its runtime environment.
+Skills will misbehave or fail silently if any of the following is missing.
 
 ### Required
 
-- **Claude Code.** Every skill is authored against Claude Code's skill, tool, and hook model. Skills assume access to the `AskUserQuestion`, `Glob`, `Grep`, `Read`, `Edit`, `Write`, and `Bash` tools. Other agent runtimes are not supported.
-- **Git, in the product repo.** Skills invoke `git` for history inspection, commit creation, branch management, and worktrees. `compactify-artifacts` deletes originals after archiving and relies on `git log` to preserve full text. Without git, deleted artifacts are unrecoverable and commit-SHA references in archive entries have no referent.
-- **POSIX-like shell.** Bootstrap scripts under `cli/scripts/` are bash with `set -euo pipefail`. Paths are assumed to be forward-slash. Windows users need WSL or Git Bash.
-- **Node.js 18 or newer.** Already implied by the Claude Code assumption above, but called out because the `bin/clif-d` CLI ships as a single-file Node script (`#!/usr/bin/env node`, zero runtime deps) and dev infra under `cli/` pins Node 18 via `cli/.nvmrc`. The CLI is a hard prerequisite even if the user's product is not written in JavaScript.
+- **Claude Code.** Every skill is authored against Claude Code's skill, tool, and hook model.
+  Skills assume access to the `AskUserQuestion`, `Glob`, `Grep`, `Read`, `Edit`, `Write`, and `Bash` tools.
+  Other agent runtimes are not supported.
+- **Git, in the product repo.** Skills invoke `git` for history inspection, commit creation, branch management, and worktrees. `compactify-artifacts` deletes originals after archiving and relies on `git log` to preserve full text.
+  Without git, deleted artifacts are unrecoverable and commit-SHA references in archive entries have no referent.
+- **POSIX-like shell.** Bootstrap scripts under `cli/scripts/` are bash with `set -euo pipefail`.
+  Paths are assumed to be forward-slash.
+  Windows users need WSL or Git Bash.
+- **Node.js 18 or newer.** Already implied by the Claude Code assumption above, but called out because the `bin/clif-d` CLI ships as a single-file Node script (`#!/usr/bin/env node`, zero runtime deps) and dev infra under `cli/` pins Node 18 via `cli/.nvmrc`.
+  The CLI is a hard prerequisite even if the user's product is not written in JavaScript.
 
 ### Expected
 
@@ -210,13 +276,17 @@ CLIF-D is opinionated about its runtime environment. Skills will misbehave or fa
 
 ### Not assumed
 
-- **A specific product implementation language.** CLIF-D is language-agnostic. `create-architecture` picks the stack; `bootstrap-dev-environment` installs the matching toolchain. Language-specific examples inside skills are illustrative, not prescriptive.
-- **A specific product type or domain.** CLI-first decomposition is more flexible than you might think!  It's not just for libraries, backend systems and the like.
-- **A specific version control host (GitHub, GitLab, etc.).** Skills use local `git` only. PR workflow is not prescribed by the pipeline.
+- **A specific product implementation language.** CLIF-D is language-agnostic. `create-architecture` picks the stack; `bootstrap-dev-environment` installs the matching toolchain.
+  Language-specific examples inside skills are illustrative, not prescriptive.
+- **A specific product type or domain.** CLI-first decomposition is more flexible than you might think!
+  It's not just for libraries, backend systems and the like.
+- **A specific version control host (GitHub, GitLab, etc.).** Skills use local `git` only.
+  PR workflow is not prescribed by the pipeline.
 
 ## Deployment
 
-This repo is a Claude Code plugin and marketplace. Skills are namespaced as `clif-d:<skill-name>` once installed.
+This repo is a Claude Code plugin and marketplace.
+Skills are namespaced as `clif-d:<skill-name>` once installed.
 
 ### Install
 
@@ -233,22 +303,32 @@ Run these in a Claude Code session:
 /plugin marketplace update
 ```
 
-In `clif-d@clif-d`, the first `clif-d` is the plugin name and the second is the marketplace name -- both are defined in `.claude-plugin/`. After install:
+In `clif-d@clif-d`, the first `clif-d` is the plugin name and the second is the marketplace name -- both are defined in `.claude-plugin/`.
+After install:
 
 - Skills are invokable as `clif-d:<skill-name>` (e.g. `clif-d:create-initial-prd`).
 - The `clif-d` CLI lands on the Bash tool's `PATH` and is callable by bare name from any agent session while the plugin is enabled.
 
-The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalog), `skills/` (skill definitions), and `bin/` (the `clif-d` CLI, auto-discovered and added to `PATH`). The old git-hooks sync approach (`sync-skills.sh`) is retired.
+The plugin structure lives in `.claude-plugin/` (manifest and marketplace catalog), `skills/` (skill definitions), and `bin/` (the `clif-d` CLI, auto-discovered and added to `PATH`).
+The old git-hooks sync approach (`sync-skills.sh`) is retired.
 
 ### Ship a new version
 
-This repo is its own marketplace: the default branch on GitHub *is* the published version. There is no registry, no release tag, and no `npm publish` step. Merging to `main` publishes.
+This repo is its own marketplace: the default branch on GitHub *is* the published version.
+There is no registry, no release tag, and no `npm publish` step.
+Merging to `main` publishes.
 
-1. **Bump both manifests.** Update `version` in `.claude-plugin/plugin.json` AND the matching `plugins[].version` entry in `.claude-plugin/marketplace.json`. They must agree -- `cli/scripts/verify-plugin-payload.sh` enforces this.
-2. **Verify the payload.** Run `./cli/scripts/verify-plugin-payload.sh`. Confirms manifests parse, versions agree, `bin/clif-d` is executable with the right shebang, and the `bin/` directory contains only the expected files (everything in `bin/` ships on the user's `PATH`).
-3. **If the CLI changed, run the full gate.** `cd cli && npm run check` runs prettier, eslint, jscpd, tsc, and `node --test`. The husky pre-commit hook runs this automatically on every commit that touches the CLI.
-4. **Call out breakage in the commit message.** There is no official breaking-change signal for Claude Code plugins -- users pick up updates pull-style via `/plugin marketplace update` and cannot be interrogated at install time. See "Current constraints" below. Any change to `prd.json` schema, CLI flags, skill inputs/outputs, or artifact layout should be explicit in the commit message (and eventually a CHANGELOG).
-5. **Merge to `main`.** Opening a PR from your feature branch and merging it publishes the new version. No additional release step.
+1. **Bump both manifests.** Update `version` in `.claude-plugin/plugin.json` AND the matching `plugins[].version` entry in `.claude-plugin/marketplace.json`.
+   They must agree -- `cli/scripts/verify-plugin-payload.sh` enforces this.
+2. **Verify the payload.** Run `./cli/scripts/verify-plugin-payload.sh`.
+   Confirms manifests parse, versions agree, `bin/clif-d` is executable with the right shebang, and the `bin/` directory contains only the expected files (everything in `bin/` ships on the user's `PATH`).
+3. **If the CLI changed, run the full gate.** `cd cli && npm run check` runs prettier, eslint, jscpd, tsc, and `node --test`.
+   The husky pre-commit hook runs this automatically on every commit that touches the CLI.
+4. **Call out breakage in the commit message.** There is no official breaking-change signal for Claude Code plugins -- users pick up updates pull-style via `/plugin marketplace update` and cannot be interrogated at install time.
+   See "Current constraints" below.
+   Any change to `prd.json` schema, CLI flags, skill inputs/outputs, or artifact layout should be explicit in the commit message (and eventually a CHANGELOG).
+5. **Merge to `main`.** Opening a PR from your feature branch and merging it publishes the new version.
+   No additional release step.
 6. **Users update** with `/plugin marketplace update` in their session (or auto-update if they have it enabled).
 
 Semver guidance for the version bump:
@@ -267,37 +347,85 @@ Claude Code's plugin system lacks lifecycle hooks we would normally use for arti
 
 **How CLIF-D copes:**
 
-- Artifact schemas stay plugin-owned. The PRD schema lives at `skills/create-initial-prd/assets/prd-schema.json` inside the plugin, not copied into the user's repo, so the skills and CLI that consume it remain the single source of truth for the contract. (The `clif-d schema copy` command can pull a snapshot into the user's repo for local IDE tooling, but that copy is not authoritative.)
-- Each versioned artifact records the plugin version that wrote it. `prd.json` carries a top-level `clifd_version` field set from `.claude-plugin/plugin.json` at authoring time. Future migration tooling can compare that against the currently-installed plugin version to detect when a PRD predates a schema change.
-- Breaking changes are documented, not automated. Schema-breaking releases are called out in commit messages (and eventually a CHANGELOG); users or agents invoke migrations explicitly.
+- Artifact schemas stay plugin-owned.
+  The PRD schema lives at `skills/create-initial-prd/assets/prd-schema.json` inside the plugin, not copied into the user's repo, so the skills and CLI that consume it remain the single source of truth for the contract.
+  (The `clif-d schema copy` command can pull a snapshot into the user's repo for local IDE tooling, but that copy is not authoritative.)
+- Each versioned artifact records the plugin version that wrote it. `prd.json` carries a top-level `clifd_version` field set from `.claude-plugin/plugin.json` at authoring time.
+  Future migration tooling can compare that against the currently-installed plugin version to detect when a PRD predates a schema change.
+- Breaking changes are documented, not automated.
+  Schema-breaking releases are called out in commit messages (and eventually a CHANGELOG); users or agents invoke migrations explicitly.
 
-When you change a schema or artifact layout in this plugin, you are implicitly asking every user to migrate. Design the change accordingly.
+When you change a schema or artifact layout in this plugin, you are implicitly asking every user to migrate.
+Design the change accordingly.
 
 ## TODO
 
 - **Add `references/` to `design-backpressure`** -- opinionated reference material on agentic quality backpressure principles
-- **Implement `add-requirement` skill** -- a HITL skill for capturing new product ideas that arrive mid-project, complementing `extend-low-level-requirements` (which only expands the bow wave within the existing high-level graph). Grills the user until the idea is understood well enough to express as one or more high-level requirements, adds those high-level requirements to the PRD, and -- in the same run -- adds any low-level requirements that are already ready to be specified per the granularity bow-wave metaphor. Writes exclusively through `clif-d req add`; preserves the bow-wave discipline so the low-level additions never outrun what is clear right now.
-- **Implement `clif-d-health-check` skill** -- aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans). Examines them for consistency with each other and with the codebase. Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
-- **Implement `align-claude-md` skill** -- ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements -- specifically pointing at the CLIF-D artifacts. Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.  So just describe and link the next step of references to dig into.
-- **Implement `clif-d-help` skill (or reference file)** -- a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file. Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships. May partially overlap with the README, but the README should stay terse, so overlap is likely small. Decide whether this should be a skill or some other auto-exposed reference mechanism.
-- **Make all docs better line-separated.**  Right now, all markdown (skill files, reference files, instruction files, etc) have a lot of content per line.  That makes line-by-line diffs hard to review.  We should make better use of newline separation (e.g. between sentences) to make reviewing and surgical editing better.
-- **Review skills library against Anthropic best practices** -- audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices. Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored. Includes a per-skill audit against the HITL vs HOTL rubric above: does each skill's interrogation discipline match the discipline its disposition requires?
-- **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
-- **Eventually DRY up skill and reference files.** There is substantial repetition across skill and reference files. Once Claude plugins support a modular, composable context system (or if we build one ourselves), skill files should be compiled from a DRY dev directory instead of hand-maintained.
-- **Make `plan-requirement` explain why context items are relevant** -- current plans do a good job locating and citing related documents, PRD requirements, architecture sections, and preceding plans, but they do not consistently state why each item is relevant to the requirement being planned. Update the skill so every cited context item includes a one-sentence rationale explaining its bearing on the plan (e.g. "architecture.md §4 -- defines the module boundary this requirement must not cross").
-- **Spike aggressive skill-file minimization on a branch** -- skill files are growing bloated. Create a branch that radically strips each `SKILL.md` down to the smallest set of instructions that still produces correct behavior: remove every sentence that restates context the agent already has, every example that does not change behavior, and every structural element that is ceremony rather than constraint. Reference files are out of scope for this pass; focus is the skill bodies only. The goal is to learn how far minimization can go before quality degrades, not necessarily to ship the result.
-- **Remove `clif-d schema copy` functionality** -- the PRD schema is plugin-owned and should stay in the plugin repo, not be copied into user repos where it becomes a second, non-authoritative source of truth. Delete the `schema copy` subcommand from `bin/clif-d`; mark `REQ-006` (high-level "Schema distribution") and `REQ-022` (low-level "Copy PRD schema to product repo") as superseded in `cli-prd.json`; remove the parenthetical in the "Current constraints" section of this README that still advertises the command; and purge any remaining references in `cli-design-notes.md` and `cli-integration-plan.md`. Executed plan `cli/clif-d/plans/executed/plan-REQ-018-REQ-021-REQ-022.md` stays as-is (historical record).
-- **Design a universal/ambient context scope in the PRD schema** -- `design-backpressure` and `bootstrap-dev-environment` each produce one constraint context item that applies to every requirement in the product (backpressure guardrails apply to all implementation; the dev environment is where all implementation happens). The current mechanism is a per-requirement `context_refs` link on every requirement -- exhaustive, drift-prone, and the direct cause of the "typically all of them" loop in both skills. The underlying smell is universal context masquerading as per-requirement context. A cleaner model would add a first-class scope concept to the PRD schema -- either a `scope: "universal"` field on context items, or a top-level `universal_context_refs` array -- with `plan-requirement` and `implement-plan` auto-loading those CTXs alongside each target requirement's own `context_refs`. Open questions to resolve before specifying:
-  - Is universal scope a property of the CTX (self-declared, via a field on the item) or a PRD-level listing (explicitly named universal, via a top-level array)? Self-declared is more intrinsic; PRD-level listing lets the same CTX be universal in one product and requirement-specific in another.
+- **Implement `add-requirement` skill** -- a HITL skill for capturing new product ideas that arrive mid-project, complementing `extend-low-level-requirements` (which only expands the bow wave within the existing high-level graph).
+  Grills the user until the idea is understood well enough to express as one or more high-level requirements, adds those high-level requirements to the PRD, and -- in the same run -- adds any low-level requirements that are already ready to be specified per the granularity bow-wave metaphor.
+  Writes exclusively through `clif-d req add`; preserves the bow-wave discipline so the low-level additions never outrun what is clear right now.
+- **Implement `clif-d-health-check` skill** -- aware of the structure, purpose, and precedence of all CLIF-D artifacts (concept, PRD, architecture, backpressure, plans).
+  Examines them for consistency with each other and with the codebase.
+  Flags drift: requirements without matching code, code without matching requirements, architecture decisions violated in practice, guardrails that have silently been relaxed.
+- **Implement `align-claude-md` skill** -- ensures the product repo's `CLAUDE.md` (agent instruction file) correctly describes where to dig for project purpose, architecture, and requirements -- specifically pointing at the CLIF-D artifacts.
+  Must look up the latest official guidance on `CLAUDE.md` structure and scope before writing, not rely on cached knowledge.
+  Minimalism wins here - there's a lot of potential context to uncover, and we want that to work as progressive disclosure.
+  So just describe and link the next step of references to dig into.
+- **Implement `clif-d-help` skill (or reference file)** -- a "what is CLIF-D" skill that fills the gap left by the absence of a shared cross-skill reference file.
+  Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships.
+  May partially overlap with the README, but the README should stay terse, so overlap is likely small.
+  Decide whether this should be a skill or some other auto-exposed reference mechanism.
+- **Make all docs better line-separated.**  Right now, all markdown (skill files, reference files, instruction files, etc) have a lot of content per line.
+  That makes line-by-line diffs hard to review.
+  We should make better use of newline separation (e.g. between sentences) to make reviewing and surgical editing better.
+- **Review skills library against Anthropic best practices** -- audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices.
+  Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
+  Includes a per-skill audit against the HITL vs HOTL rubric above: does each skill's interrogation discipline match the discipline its disposition requires?
+- **Ensure instruction quality.**  After a complete runthrough of the project initialization skills, ensure the resulting artifacts are well interlinked and instructive.
+  Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
+- **Eventually DRY up skill and reference files.** There is substantial repetition across skill and reference files.
+  Once Claude plugins support a modular, composable context system (or if we build one ourselves), skill files should be compiled from a DRY dev directory instead of hand-maintained.
+- **Make `plan-requirement` explain why context items are relevant** -- current plans do a good job locating and citing related documents, PRD requirements, architecture sections, and preceding plans, but they do not consistently state why each item is relevant to the requirement being planned.
+  Update the skill so every cited context item includes a one-sentence rationale explaining its bearing on the plan (e.g. "architecture.md §4 -- defines the module boundary this requirement must not cross").
+- **Spike aggressive skill-file minimization on a branch** -- skill files are growing bloated.
+  Create a branch that radically strips each `SKILL.md` down to the smallest set of instructions that still produces correct behavior: remove every sentence that restates context the agent already has, every example that does not change behavior, and every structural element that is ceremony rather than constraint.
+  Reference files are out of scope for this pass; focus is the skill bodies only.
+  The goal is to learn how far minimization can go before quality degrades, not necessarily to ship the result.
+- **Remove `clif-d schema copy` functionality** -- the PRD schema is plugin-owned and should stay in the plugin repo, not be copied into user repos where it becomes a second, non-authoritative source of truth.
+  Delete the `schema copy` subcommand from `bin/clif-d`; mark `REQ-006` (high-level "Schema distribution") and `REQ-022` (low-level "Copy PRD schema to product repo") as superseded in `cli-prd.json`; remove the parenthetical in the "Current constraints" section of this README that still advertises the command; and purge any remaining references in `cli-design-notes.md` and `cli-integration-plan.md`.
+  Executed plan `cli/clif-d/plans/executed/plan-REQ-018-REQ-021-REQ-022.md` stays as-is (historical record).
+- **Design a universal/ambient context scope in the PRD schema** -- `design-backpressure` and `bootstrap-dev-environment` each produce one constraint context item that applies to every requirement in the product (backpressure guardrails apply to all implementation; the dev environment is where all implementation happens).
+  The current mechanism is a per-requirement `context_refs` link on every requirement -- exhaustive, drift-prone, and the direct cause of the "typically all of them" loop in both skills.
+  The underlying smell is universal context masquerading as per-requirement context.
+  A cleaner model would add a first-class scope concept to the PRD schema -- either a `scope: "universal"` field on context items, or a top-level `universal_context_refs` array -- with `plan-requirement` and `implement-plan` auto-loading those CTXs alongside each target requirement's own `context_refs`.
+  Open questions to resolve before specifying:
+  - Is universal scope a property of the CTX (self-declared, via a field on the item) or a PRD-level listing (explicitly named universal, via a top-level array)?
+    Self-declared is more intrinsic; PRD-level listing lets the same CTX be universal in one product and requirement-specific in another.
   - Do other CTX types warrant scope (e.g. a persona that applies to a specific subsystem only), or is universal/non-universal enough for now?
-  - Does `architecture_refs` need the same treatment? No current skill asks for it, but the concept generalizes.
+  - Does `architecture_refs` need the same treatment?
+    No current skill asks for it, but the concept generalizes.
   - This is a breaking schema change -- `clifd_version` must bump, and a migration default must be specified (likely "no universal context items" for existing PRDs).
 
-  Ripple effects once it lands: obviates the backpressure/dev-env bulk-ref-backfill use case entirely (those CTXs become universal, not per-requirement linked); `design-backpressure` and `bootstrap-dev-environment` lose their `context_refs`-backfill sub-steps; `plan-requirement` and `implement-plan` grow a small "load universal context" step. REQ-034 (`req ref add/rm`) and REQ-035 (`ctx/arch ensure`) retain their value -- requirement-specific CTXs and architecture refs still need those operations. Likely its own high-level requirement rather than a child of REQ-033, since the change is to the schema itself rather than to CLI surface ergonomics.
-- **Add a rich rendered pipeline diagram alongside the ASCII one** -- the ASCII tree stays (it is terse and works everywhere), but add a second diagram below it that is more detailed and visually pleasing. The ASCII tree cannot show back-connecting arrows (e.g. `extend-low-level-requirements` feeding back to `plan-requirement`, `compactify-artifacts` routing lessons into upstream design docs), HITL/HOTL classification by color, or artifact filenames at each node. Express the new diagram in a text-based format that GitHub renders natively in Markdown -- Mermaid is the primary candidate (GitHub renders `mermaid` fenced code blocks). The diagram should: (1) show all skills as labeled nodes; (2) show the forward pipeline edges and the back-connecting feedback edges; (3) color-code nodes by HITL/HOTL/HITL-lite disposition; (4) annotate each node with its key input and output artifact filenames; (5) include a "codebase" block that `implement-plan` writes to and `plan-requirement` / `clif-d-health-check` read from. Evaluate SVG embedded in an `<img>` tag as a fallback if Mermaid's layout engine cannot handle the back-edges cleanly.
+  Ripple effects once it lands: obviates the backpressure/dev-env bulk-ref-backfill use case entirely (those CTXs become universal, not per-requirement linked); `design-backpressure` and `bootstrap-dev-environment` lose their `context_refs`-backfill sub-steps; `plan-requirement` and `implement-plan` grow a small "load universal context" step.
+  REQ-034 (`req ref add/rm`) and REQ-035 (`ctx/arch ensure`) retain their value -- requirement-specific CTXs and architecture refs still need those operations.
+  Likely its own high-level requirement rather than a child of REQ-033, since the change is to the schema itself rather than to CLI surface ergonomics.
+- **Add a rich rendered pipeline diagram alongside the ASCII one** -- the ASCII tree stays (it is terse and works everywhere), but add a second diagram below it that is more detailed and visually pleasing.
+  The ASCII tree cannot show back-connecting arrows (e.g. `extend-low-level-requirements` feeding back to `plan-requirement`, `compactify-artifacts` routing lessons into upstream design docs), HITL/HOTL classification by color, or artifact filenames at each node.
+  Express the new diagram in a text-based format that GitHub renders natively in Markdown -- Mermaid is the primary candidate (GitHub renders `mermaid` fenced code blocks).
+  The diagram should: (1) show all skills as labeled nodes; (2) show the forward pipeline edges and the back-connecting feedback edges; (3) color-code nodes by HITL/HOTL/HITL-lite disposition; (4) annotate each node with its key input and output artifact filenames; (5) include a "codebase" block that `implement-plan` writes to and `plan-requirement` / `clif-d-health-check` read from.
+  Evaluate SVG embedded in an `<img>` tag as a fallback if Mermaid's layout engine cannot handle the back-edges cleanly.
 
 ## Potential Issues
 
-- the plan-requirement skill and the implement-plan skill might sometimes have a hard time figuring out what has already been implemented.  Solution ideas: Once the PRD CLI is implemented, both skills should use it to investigate what is already done.  Use the CLI to find prerequisite requirement IDs and context from the PRDs.  (Prerequisite as in requirement dependencies.)  Use the git detailed log and other git CLI commands to look at most recent work to see if anything relevant is in there.  (In general, this plugin project needs more explicit guidance on how to use git, because it's a beautiful log of changes, and can even be used to investigate changes at arbitrary detail and depth.)
-- The current workflow with PRD JSON files may not coordinate well across worktrees.  The PRD file in the main worktree has no way to know when requirements are in progress in other worktrees.  When Claude Code spawns a new worktree-based session, the agent in that worktree modifies its own local copy of the PRD JSON on its own branch -- the main worktree and its checked-out branch never see those changes until the branch merges back.  This is a fundamental limitation of a git-versioned PRD: each worktree has its own copy, and there is no cross-worktree synchronization.  Possible mitigations: a Claude Code hook that writes worktree status to a shared location outside the repo (e.g. a dotfile, a local SQLite database, or even a file in `~/.claude/`), a pre-plan or post-plan hook that updates a lightweight coordination file on the main branch, or accepting the limitation and relying on branch-merge discipline plus the `clif-d req` CLI to reconcile status after merge.  Worth investigating whether Claude Code plugin hooks can bridge this gap.
+- the plan-requirement skill and the implement-plan skill might sometimes have a hard time figuring out what has already been implemented.
+  Solution ideas: Once the PRD CLI is implemented, both skills should use it to investigate what is already done.
+  Use the CLI to find prerequisite requirement IDs and context from the PRDs.
+  (Prerequisite as in requirement dependencies.)  Use the git detailed log and other git CLI commands to look at most recent work to see if anything relevant is in there.
+  (In general, this plugin project needs more explicit guidance on how to use git, because it's a beautiful log of changes, and can even be used to investigate changes at arbitrary detail and depth.)
+- The current workflow with PRD JSON files may not coordinate well across worktrees.
+  The PRD file in the main worktree has no way to know when requirements are in progress in other worktrees.
+  When Claude Code spawns a new worktree-based session, the agent in that worktree modifies its own local copy of the PRD JSON on its own branch -- the main worktree and its checked-out branch never see those changes until the branch merges back.
+  This is a fundamental limitation of a git-versioned PRD: each worktree has its own copy, and there is no cross-worktree synchronization.
+  Possible mitigations: a Claude Code hook that writes worktree status to a shared location outside the repo (e.g. a dotfile, a local SQLite database, or even a file in `~/.claude/`), a pre-plan or post-plan hook that updates a lightweight coordination file on the main branch, or accepting the limitation and relying on branch-merge discipline plus the `clif-d req` CLI to reconcile status after merge.
+  Worth investigating whether Claude Code plugin hooks can bridge this gap.
 
