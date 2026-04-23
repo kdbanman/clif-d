@@ -13,7 +13,8 @@ How each existing skill should call the CLI, and what existing skill instruction
 
 **CLI calls to add:**
 
-The initial PRD is a bulk creation -- the CLI is not the right tool for generating it from scratch. Two post-creation steps change:
+The initial PRD is a bulk creation -- the CLI is not the right tool for generating it from scratch.
+Two post-creation steps change:
 
 ```bash
 # Copy the schema into the product repo so $schema is repo-relative
@@ -24,7 +25,9 @@ clif-d validate clif-d/prd.json
 ```
 
 **Skill text changes:**
-- CHANGE the `$schema` guidance in the "Generation process" section. Currently tells the skill to set `$schema` to a relative path pointing at the plugin's `assets/prd-schema.json`. Should instead instruct: "Run `clif-d schema copy clif-d/` to place the schema alongside the PRD, then set `$schema` to `prd-schema.json`."
+- CHANGE the `$schema` guidance in the "Generation process" section.
+  Currently tells the skill to set `$schema` to a relative path pointing at the plugin's `assets/prd-schema.json`.
+  Should instead instruct: "Run `clif-d schema copy clif-d/` to place the schema alongside the PRD, then set `$schema` to `prd-schema.json`."
 - ADD a final step to the generation process: "Run `clif-d validate` to verify the PRD."
 - REMOVE any ad-hoc "validate the JSON structure" instructions -- the CLI validate command replaces them.
 
@@ -32,7 +35,8 @@ clif-d validate clif-d/prd.json
 
 ## create-architecture
 
-**Current behavior:** Claude reads the full PRD by parsing prd.json. Directly edits the JSON to append scaffolding requirements and backfill architecture_refs on existing requirements.
+**Current behavior:** Claude reads the full PRD by parsing prd.json.
+Directly edits the JSON to append scaffolding requirements and backfill architecture_refs on existing requirements.
 
 **CLI calls to add:**
 
@@ -62,7 +66,8 @@ clif-d validate
 **Skill text changes:**
 - REMOVE all instructions about "carefully edit the JSON array" or "append to requirements ensuring valid JSON." These are the most fragile instructions in the skill.
 - REPLACE with instructions to use `clif-d req add` (piping JSON to stdin) for each scaffolding requirement and `clif-d arch add` for each architecture item.
-- REMOVE manual ID assignment instructions ("find the highest REQ-NNN and increment"). Replace with: "Let `clif-d req add` auto-assign IDs, or use `clif-d id next REQ` if you need to know the ID before constructing the object."
+- REMOVE manual ID assignment instructions ("find the highest REQ-NNN and increment").
+  Replace with: "Let `clif-d req add` auto-assign IDs, or use `clif-d id next REQ` if you need to know the ID before constructing the object."
 - REPLACE dependency manipulation instructions with `clif-d req dep add`.
 - REPLACE architecture_refs backfilling instructions with `clif-d req edit` calls.
 - ADD a final `clif-d validate` step.
@@ -71,7 +76,9 @@ clif-d validate
 
 ## design-backpressure
 
-**Current behavior:** Claude reads architecture.md and prd.json. May add a backpressure constraint context item. May backfill context_refs on requirements.
+**Current behavior:** Claude reads architecture.md and prd.json.
+May add a backpressure constraint context item.
+May backfill context_refs on requirements.
 
 **CLI calls to add:**
 
@@ -135,9 +142,15 @@ clif-d req start REQ-007
 ```
 
 **Skill text changes:**
-- REMOVE the instruction block (currently around lines 80-83 of plan-requirement/SKILL.md) that says: "Read its full entry from the PRD (description, acceptance criteria, CLI spec, dependencies, context refs, architecture refs). Read every item it references: dependency requirements, context items, architecture items. Recursively read dependencies of dependencies until you have the full subgraph. Identify which dependencies are already implemented (by examining the codebase) and which are not."
-- REPLACE with a "PRD interrogation" step that uses the CLI commands listed above. The new instruction should emphasize the two-source pattern: the CLI tells you what SHOULD be done (requirement state), git and code reading tell you what ACTUALLY exists (implementation state). Both are needed.
-- ADD explicit guidance to use `clif-d req ls --status=done` combined with `git log` and `git show` for understanding implemented state. This addresses the README "Potential Issues" item directly.
+- REMOVE the instruction block (currently around lines 80-83 of plan-requirement/SKILL.md) that says: "Read its full entry from the PRD (description, acceptance criteria, CLI spec, dependencies, context refs, architecture refs).
+  Read every item it references: dependency requirements, context items, architecture items.
+  Recursively read dependencies of dependencies until you have the full subgraph.
+  Identify which dependencies are already implemented (by examining the codebase) and which are not."
+- REPLACE with a "PRD interrogation" step that uses the CLI commands listed above.
+  The new instruction should emphasize the two-source pattern: the CLI tells you what SHOULD be done (requirement state), git and code reading tell you what ACTUALLY exists (implementation state).
+  Both are needed.
+- ADD explicit guidance to use `clif-d req ls --status=done` combined with `git log` and `git show` for understanding implemented state.
+  This addresses the README "Potential Issues" item directly.
 - KEEP the codebase exploration step -- the CLI doesn't replace reading code, it replaces parsing PRD JSON.
 - KEEP the executed-plans reading step (clif-d/plans/executed/) -- those provide implementation detail the CLI doesn't have.
 - ADD `clif-d req start REQ-NNN` as a step when planning begins.
@@ -146,7 +159,8 @@ clif-d req start REQ-007
 
 ## implement-plan
 
-**Current behavior:** Claude executes the plan, then directly edits prd.json to set status to "done" and implementation_commit to the commit SHA. This is a separate commit from the implementation.
+**Current behavior:** Claude executes the plan, then directly edits prd.json to set status to "done" and implementation_commit to the commit SHA.
+This is a separate commit from the implementation.
 
 **CLI calls to add:**
 
@@ -163,7 +177,8 @@ clif-d validate
 ```
 
 **Skill text changes:**
-- REMOVE the instruction block (currently around lines 154-155 of implement-plan/SKILL.md) that says: "Set `status` to `\"done\"`. Set `implementation_commit` to the commit SHA from step 4." These two lines describe a manual JSON edit that the CLI replaces entirely.
+- REMOVE the instruction block (currently around lines 154-155 of implement-plan/SKILL.md) that says: "Set `status` to `\"done\"`.
+  Set `implementation_commit` to the commit SHA from step 4." These two lines describe a manual JSON edit that the CLI replaces entirely.
 - REPLACE with: "Run `clif-d req done <REQ-ID> --commit=<SHA>` for each completed requirement, where SHA is the implementation commit from the previous step."
 - REMOVE any cautionary language about "be careful not to modify other fields" or "preserve JSON formatting" -- the CLI handles this.
 - KEEP the instruction that PRD updates go in a separate commit from the implementation commit.
@@ -188,7 +203,8 @@ clif-d validate
 
 ### extend-low-level-requirements
 
-Heavy CLI user. Would use `clif-d req ls` to survey current state, `clif-d req add` to append new low-level requirements, `clif-d req dep add` to wire dependencies, and `clif-d validate` to check the result.
+Heavy CLI user.
+Would use `clif-d req ls` to survey current state, `clif-d req add` to append new low-level requirements, `clif-d req dep add` to wire dependencies, and `clif-d validate` to check the result.
 
 ### check-clif-d-consistency
 
@@ -196,4 +212,5 @@ Maps primarily to `clif-d validate` for PRD-internal checks, plus `clif-d req ls
 
 ### compactify-artifacts
 
-Minimal CLI interaction. May use `clif-d req ls --status=done` to confirm which plans are safe to compact.
+Minimal CLI interaction.
+May use `clif-d req ls --status=done` to confirm which plans are safe to compact.
