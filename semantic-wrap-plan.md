@@ -5,92 +5,13 @@ sentence-per-line ("semantic line breaks" / "ventilated prose") so that
 line-by-line diffs become sentence-scoped. Rendered output is identical
 because Markdown collapses consecutive non-blank lines into a paragraph.
 
-This file is temporary. Delete it after the reformat lands.
+This file is temporary. Delete it after the reformat lands (see "Commit and merge shape" below).
 
 ## Scope
 
-**In scope (actively edited docs):**
+In-scope files are numbered. The numbers are stable handles for subagent coordination -- "run the script on file 12" refers to `skills/create-architecture/SKILL.md` throughout this document's life.
 
-- `README.md`
-- `CLAUDE.md`
-- `bin/CLAUDE.md`
-- `cli-design-notes.md`
-- `cli-integration-plan.md`
-- `cli/clif-d/backpressure.md`
-- `cli/clif-d/dev-environment.md`
-- `skills/*/SKILL.md` (10 files)
-- `skills/*/references/*.md` (18 files)
-
-**Out of scope (historical records, low-value to reformat):**
-
-- `cli/clif-d/plans/active/*.md` -- only `plan-REQ-023.md` is live; one file, trivial to reformat by hand if desired. Default: skip.
-- `cli/clif-d/plans/executed/*.md` -- frozen completion records. Skip.
-- `cli/clif-d/plans/archive/*.md` -- already compacted, frozen. Skip.
-- `cli/clif-d/plans/lessons_learned/*.md` -- awaiting compactification (will be deleted). Skip.
-
-Rationale: reformatting historical artifacts inflates the diff for no forward-looking review benefit. They either never change again or get deleted. Revisit if a plan/lesson file is ever edited post-hoc.
-
-## Approach: one-shot Node script
-
-### Script
-
-- Location: `cli/scripts/semantic-wrap.mjs` (sits alongside the existing bash scripts; `cli/` is dev-only, never ships).
-- Runtime: Node 18+, zero npm deps (ESM, stdlib only). Matches the zero-dep ethos of `bin/clif-d`.
-- Invocation: `node cli/scripts/semantic-wrap.mjs <file> [<file> ...]`. Processes each file in place, idempotent (running twice is a no-op).
-- Top-of-file comment: terse, 3-5 lines -- what it does, when to run it, the fact that it is a maintenance tool not part of the shipped plugin. No separate README entry.
-
-### Behavior
-
-For each input file, split prose paragraphs at sentence boundaries. Leave every other construct untouched.
-
-**Must skip (pass through byte-for-byte):**
-
-- Fenced code blocks (``` and ~~~), including the fence lines.
-- Indented code blocks (4-space / tab-prefixed).
-- YAML frontmatter (opening and closing `---` and everything between).
-- HTML comments `<!-- ... -->`.
-- Markdown tables (lines containing `|` that sit in a table region).
-- Heading lines (`#`, `##`, ...).
-- Blank lines (preserve exactly; they are paragraph separators and must not be collapsed).
-- Existing line breaks inside paragraphs (script is idempotent -- if already split, do not re-split).
-- List-item continuation lines that are already wrapped.
-
-**Split behavior for prose paragraphs:**
-
-- Detect sentence boundaries: `.`, `!`, `?` followed by whitespace and an uppercase letter, a digit, or `` ` ``.
-- Abbreviation guard: do NOT split after `e.g.`, `i.e.`, `etc.`, `vs.`, `cf.`, `Mr.`, `Mrs.`, `Ms.`, `Dr.`, `St.`, `No.`, single-letter initials (`A.`, `B.`, ...), or after a digit (version numbers like `18.`, `1.2.`).
-- Do not split inside inline code spans (`` `...` ``).
-- Do not split inside link text `[...]` or link destinations `(...)`.
-- For list items (`-`, `*`, `+`, or `1.`): split the leading text as usual; continuation lines are indented to align with the item text (standard Markdown continuation).
-
-**Idempotence check:** after producing output, re-run the splitter on the output; it must equal the first output. Script asserts this before writing.
-
-### Script test harness
-
-Before running across the repo, add a tiny inline self-test at the top of `main()`:
-
-- Handful of fixture strings covering: normal prose, `e.g.` guard, version-number guard, code fence pass-through, list item with two sentences, table pass-through, heading pass-through.
-- If any fixture fails, exit non-zero with a diff. No external test file, no test runner -- self-contained.
-
-## Execution
-
-### Step 1: commit the script
-
-Commit only `cli/scripts/semantic-wrap.mjs`. No markdown changes yet. Allows the script to be reviewed in isolation.
-
-### Step 2: commit the CLAUDE.md rule
-
-Add one terse bullet under the existing "ASCII only" rule in `CLAUDE.md`:
-
-> - **One sentence per line in prose.** Markdown renders consecutive non-blank lines as a single paragraph, so physical line breaks do not change rendered output but keep diffs sentence-scoped. Skip code blocks, tables, headings.
-
-Concern raised: `CLAUDE.md` is loaded when editing the plugin, not when running the plugin's skills in a user repo. A terse instruction is safe and does not leak into user sessions. This assumption is true as long as `CLAUDE.md` is a project-instruction file at the plugin repo root and is not bundled into skill context. Confirm before committing if uncertain.
-
-This is a content edit, not a reformat; keep it as its own small commit.
-
-### Step 3: per-file reformat, one commit per file
-
-For each in-scope file, in this order (pilot first, then skills, then references, then the rest):
+### In-scope files
 
 1. `README.md`
 2. `CLAUDE.md`
@@ -99,57 +20,127 @@ For each in-scope file, in this order (pilot first, then skills, then references
 5. `cli-integration-plan.md`
 6. `cli/clif-d/backpressure.md`
 7. `cli/clif-d/dev-environment.md`
-8. `skills/*/SKILL.md` (alphabetical)
-9. `skills/*/references/*.md` (alphabetical)
+8. `skills/bootstrap-dev-environment/SKILL.md`
+9. `skills/compactify-artifacts/SKILL.md`
+10. `skills/create-architecture/SKILL.md`
+11. `skills/create-architecture/references/testing-organization.md`
+12. `skills/create-architecture/references/testing-strategy.md`
+13. `skills/create-architecture/references/testing-types.md`
+14. `skills/create-initial-prd/SKILL.md`
+15. `skills/create-initial-prd/references/cli-design-guide.md`
+16. `skills/create-product-concept/SKILL.md`
+17. `skills/design-backpressure/SKILL.md`
+18. `skills/design-backpressure/references/testing-coverage.md`
+19. `skills/design-backpressure/references/testing-enforcement.md`
+20. `skills/design-backpressure/references/testing-smoke.md`
+21. `skills/extend-low-level-requirements/SKILL.md`
+22. `skills/implement-plan/SKILL.md`
+23. `skills/implement-plan/references/git-hygiene.md`
+24. `skills/implement-plan/references/testing-cheat-sheet.md`
+25. `skills/implement-plan/references/testing-integration.md`
+26. `skills/implement-plan/references/testing-overview.md`
+27. `skills/implement-plan/references/testing-principles.md`
+28. `skills/implement-plan/references/testing-unit.md`
+29. `skills/plan-requirement/SKILL.md`
+30. `skills/plan-requirement/references/testing-acceptance.md`
+31. `skills/plan-requirement/references/testing-organization.md`
+32. `skills/plan-requirement/references/testing-strategy.md`
+33. `skills/plan-requirement/references/testing-types.md`
+34. `skills/workshop-names/SKILL.md`
+35. `skills/workshop-names/references/evaluation-filters.md`
+36. `skills/workshop-names/references/sound-symbolism.md`
 
-For each file:
+### Out of scope (historical records)
 
-1. Run `node cli/scripts/semantic-wrap.mjs <file>`.
-2. **Mechanical check:** `git diff -w -- <file>` must be empty. This proves no words changed; only whitespace was shuffled. If non-empty, abort and investigate -- the script mangled content.
-3. **Subagent verification (see next section).**
-4. If both checks pass, commit with message: `docs(<short-path>): semantic line breaks`. No other changes in the commit.
-5. If a check fails, revert (`git checkout -- <file>`), fix the script, re-run from step 1 after re-committing the script fix.
+- `cli/clif-d/plans/active/*.md` -- only one active plan (`plan-REQ-023.md`); reformat by hand if touched.
+- `cli/clif-d/plans/executed/*.md` -- frozen completion records.
+- `cli/clif-d/plans/archive/*.md` -- already compacted, frozen.
+- `cli/clif-d/plans/lessons_learned/*.md` -- awaiting compactification (will be deleted).
 
-One commit per file keeps each review surface small. Reviewers can spot-check by rendering before/after, but the mechanical `-w` diff is the real proof.
+Rationale: reformatting historical artifacts inflates diffs for no forward-looking review benefit. Revisit if a plan/lesson file is ever edited post-hoc.
 
-### Subagent verification protocol
+## Tooling
 
-After each file reformat, spawn one general-purpose subagent per file. Self-contained prompt template:
+**Script:** `cli/scripts/semantic-wrap.mjs`. Node ESM, lives under `cli/` (dev-only tree, never shipped). Uses remark / mdast (`unified`, `remark-parse`, `remark-gfm`, `remark-frontmatter`, `unist-util-visit-parents`) as devDependencies so block-level Markdown structure is identified by a real parser rather than hand-rolled regex. The script itself is the source of truth for parser choices, skip rules, abbreviation guards, and idempotence checks; this plan does not re-document them. Run `node cli/scripts/semantic-wrap.mjs <file>` from the repo root.
 
-> You are verifying a pure-reformatting change to a Markdown file. The only intended change is that sentence-ending whitespace (space after `.`, `!`, `?`) has been replaced with a newline so each sentence starts on its own line. No words, links, code, lists, tables, or headings should have changed.
+**Dev-only dependencies are fine.** The runtime CLI (`bin/clif-d`) stays zero-dep per CTX-001, but this script lives in `cli/scripts/` alongside other dev tooling; adding remark to `cli/package.json` devDependencies matches the existing ESLint/Prettier/tsc/jscpd/husky model.
+
+**Invariants the script enforces (asserted at runtime):**
+
+- After writing, running the script on the output is a no-op (idempotence).
+- Inline self-tests run on every invocation before any file is touched; failure aborts before writing anything.
+
+## Execution: one subagent per file
+
+The coordination model is **one subagent per in-scope file**. Each subagent owns a short-lived branch, produces one PR, and reports back.
+
+### Base branch
+
+This PR's branch (`claude/improve-readme-formatting-xs3Oa`) is the integration trunk. It carries the plan, the script, and the `CLAUDE.md` rule. Subagent branches fork from it, subagent PRs target it, and only after all subagent PRs merge does this branch merge to `main`.
+
+### Subagent prompt template
+
+For each in-scope file number N, spawn one subagent with this self-contained prompt:
+
+> **Goal:** apply the semantic-wrap reformat to file N of the plan in `semantic-wrap-plan.md` and open a PR against `claude/improve-readme-formatting-xs3Oa` with the result.
 >
-> Task:
-> 1. Run `git diff -w -- <file>` and confirm the output is empty.
-> 2. Run `git diff -- <file>` and inspect the changes.
-> 3. Confirm: (a) no text content changed, only whitespace; (b) code fences, tables, and YAML frontmatter were left untouched; (c) line breaks land at sentence boundaries and not mid-sentence (no `e.g.` / version-number / abbreviation splits); (d) list items are still valid Markdown (continuation lines indented correctly); (e) no paragraph got accidentally merged or split.
-> 4. Report PASS or FAIL with a one-line reason. Under 100 words.
+> **Steps:**
+> 1. Read `semantic-wrap-plan.md` on the base branch and confirm which file is number N.
+> 2. Check out a new branch off `claude/improve-readme-formatting-xs3Oa` named `claude/semantic-wrap-NN-<short-slug>` (two-digit N, short slug of the file path).
+> 3. Run `node cli/scripts/semantic-wrap.mjs <path-to-file-N>` from the repo root.
+> 4. **Mechanical check:** non-whitespace content must be byte-identical. Run `cmp <(tr -d '[:space:]' < <(git show HEAD:<path-to-file-N>)) <(tr -d '[:space:]' < <path-to-file-N>)`; it must exit 0 with no output. This proves no non-whitespace character changed. (`git diff -w` is not sufficient because the transformation changes line counts, which `-w` treats as add/delete rather than reflow.) If the check fails, stop and report.
+> 5. **Semantic check:** read the diff (`git diff -- <path-to-file-N>`) and confirm: no content changed; code fences, tables, headings, and frontmatter untouched; breaks land at sentence boundaries (no `e.g.` / version-number / abbreviation splits); list-item continuations stay valid Markdown; no paragraph was merged or split at the block level.
+> 6. Commit with message: `docs: semantic line breaks in <path-to-file-N>`. No other changes.
+> 7. Push the branch and open a PR against `claude/improve-readme-formatting-xs3Oa`.
+> 8. In the PR body, report: PASS or any issues found (e.g. unexpected Markdown constructs, false-positive splits, script bugs). Include suggested script adjustments if any.
+>
+> **Do not** modify the script or the plan. If the script needs changes, surface them in the PR report; a separate PR on the base branch will fix the script and subagents will be re-run.
 
-Spawn the subagents in parallel when reformatting batches of files (e.g. the 18 references). For the initial pilot files, run serially so script bugs surface early.
+### Batching
 
-### Step 4: retire the plan
+- Pilot: run subagents for files 1-3 serially first. Any script bug surfaces early with low blast radius.
+- Main wave: files 4-36 in parallel. remark-based parsing is robust enough that parallel runs should not have cross-file interference (subagents operate on separate branches anyway).
+- If a pilot surfaces a script bug: fix the script on the base branch in its own commit, re-spawn the affected subagents, then proceed.
 
-Delete `semantic-wrap-plan.md` in the last commit of the sequence, together with the final reformat. The CLAUDE.md rule is the durable encoding of the convention; this plan is disposable scaffolding.
+### What the orchestrator does
 
-## Commit shape summary
+- Spawns subagents per the template.
+- Reviews each subagent PR: mechanical `-w` diff empty, break points sensible, no unrelated changes.
+- Merges each subagent PR into the base branch (`claude/improve-readme-formatting-xs3Oa`).
+- If a subagent reports a script issue, patches the script on the base branch and re-spawns affected subagents.
+- After all 36 subagent PRs merge, opens the final commit on the base branch: delete `semantic-wrap-plan.md`. Then merges the base PR to `main`.
 
-1. `cli: add semantic-wrap maintenance script`
-2. `CLAUDE.md: require one sentence per line in prose`
-3. `docs(README): semantic line breaks`
-4. `docs(CLAUDE.md): semantic line breaks`
-5. ... one commit per in-scope file ...
-6. Final reformat commit also deletes `semantic-wrap-plan.md`.
+## CLAUDE.md rule
 
-All commits stay on branch `claude/improve-readme-formatting-xs3Oa`.
+Add one terse bullet under the existing "ASCII only" rule:
+
+> - **One sentence per line in prose.** Markdown renders consecutive non-blank lines as a single paragraph, so physical line breaks do not change rendered output but keep diffs sentence-scoped. Skip code blocks, tables, headings.
+
+Concern to verify: `CLAUDE.md` at the plugin repo root is loaded when editing the plugin, not when skills run in a user's product repo. Confirm this before committing the rule so the instruction does not leak into user sessions.
+
+This rule is added as a single small content commit on the base branch (not on a subagent branch), in the same commit as the script or alongside it.
+
+## Commit and merge shape
+
+On the base branch, in order:
+
+1. Plan commit (already landed): `Add semantic-wrap reformat plan`
+2. Script commit: `cli: add semantic-wrap maintenance script` (adds `cli/scripts/semantic-wrap.mjs` and devDependencies)
+3. `CLAUDE.md` rule commit: `CLAUDE.md: require one sentence per line in prose`
+4. 36 subagent PR merges, one per in-scope file, each as a separate merge commit.
+5. Final commit: `Delete semantic-wrap plan` (removes `semantic-wrap-plan.md`).
+6. Merge base PR into `main`.
+
+Squashing at merge time is an option if 40+ commits feels noisy; default is to keep the history granular since each per-file commit is independently verifiable.
 
 ## Risks and mitigations
 
-- **Sentence segmentation false positives (abbreviation not in the guard list).** Mitigation: the `git diff -w` check catches no content-change; the subagent review catches bad break points. Any false positive discovered during verification gets added to the guard list and the script re-run on the remaining files.
-- **Markdown construct not in the skip list (rare HTML, definition lists, footnotes).** Mitigation: inventory the in-scope files for unusual constructs before the full run; extend the script's skip logic if any are found.
-- **Idempotence bug (running twice produces a different result).** Mitigation: the script self-asserts idempotence before writing. If it fails, abort.
-- **Reviewer fatigue from ~35 commits.** Mitigation: all commits are pure-reformatting with empty `-w` diff, so a reviewer can verify the whole series with one command: `git log --format=%H <base>..HEAD -- '*.md' | xargs -I{} git show -w {}` should show only metadata, no content. Worst case, the series can be squashed at merge time if preferred.
+- **Sentence-segmentation false positive.** The non-whitespace byte-compare catches content change; subagent review catches bad break points. Any false positive gets added to the script's abbreviation list on the base branch; affected files re-run.
+- **Markdown construct not handled by remark plugins loaded.** remark-parse + remark-gfm + remark-frontmatter covers the observed constructs in scope. Anything exotic (definition lists, custom extensions) would surface as either an empty script change or an unexpected diff; the subagent reports it.
+- **Idempotence bug.** Script self-asserts idempotence before writing. Failure aborts with non-zero exit.
+- **Long-lived base PR.** 36 merges accumulate on this branch before it lands on main. Keep the base branch up to date with `main` via rebase or merge if other work lands; flag subagents to rebase their branches if the base moves.
 
-## Out of scope for this pass
+## Known limitations
 
-- Tightening prose, cutting redundancy, rewording. Pure reformatting only.
-- Reformatting `cli/clif-d/plans/**`. See scope section above.
-- Enforcing the convention via a pre-commit hook. Could be a follow-up if the convention drifts; for now the CLAUDE.md rule is enough.
+- Single-letter words at end of sentence (e.g. "A equals B. C equals D.") are not split, because the script cannot distinguish them from initials ("B. Smith"). Under-splitting is preferred to mis-splitting a name. The subagent review can flag cases where a manual split would improve readability; those can be fixed in a follow-up.
+- Blockquote content is not split. Blockquote continuation in Markdown requires a `> ` prefix on each line; handling this correctly adds complexity that the in-scope docs do not need (few blockquotes, mostly one-liners).
