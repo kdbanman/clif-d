@@ -375,9 +375,6 @@ Design the change accordingly.
   Documents the structure, purpose, and precedence of CLIF-D artifacts and their relationships.
   May partially overlap with the README, but the README should stay terse, so overlap is likely small.
   Decide whether this should be a skill or some other auto-exposed reference mechanism.
-- **Make all docs better line-separated.**  Right now, all markdown (skill files, reference files, instruction files, etc) have a lot of content per line.
-  That makes line-by-line diffs hard to review.
-  We should make better use of newline separation (e.g. between sentences) to make reviewing and surgical editing better.
 - **Review skills library against Anthropic best practices** -- audit all skills in this plugin against the current Anthropic guidance at https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices.
   Check frontmatter conventions, description quality, skill scoping, reference file organization, and any other guidance that has emerged since these skills were authored.
   Includes a per-skill audit against the HITL vs HOTL rubric above: does each skill's interrogation discipline match the discipline its disposition requires?

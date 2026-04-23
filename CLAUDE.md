@@ -29,6 +29,9 @@ When a skill says "the `clif-d/` directory", it always means the user's product 
   Match it.
 - **ASCII only.** No emojis, no complex UTF.
   Never use `\u2014` (em-dash) in any skill or design document -- use hyphens.
+- **One sentence per line in prose.** Markdown renders consecutive non-blank lines as a single paragraph, so physical line breaks do not change rendered output but keep diffs sentence-scoped.
+  Skip code blocks, tables, headings, and frontmatter.
+  `cli/scripts/semantic-wrap.mjs` will reformat a file to this convention; `cli/scripts/verify-changes.js` confirms a commit only touched whitespace.
 - **Skills are self-contained.** A user invoking one skill should not need to read another skill's text to understand it.
   Cross-skill knowledge lives in the README, not in skills referencing each other's internals.
 - **Interface changes ripple.** When you change a skill's inputs, outputs, artifact paths, or position in the pipeline, check the pipeline diagram in @README.md and update upstream/downstream skills that depend on the change.
