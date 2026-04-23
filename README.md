@@ -382,8 +382,6 @@ Design the change accordingly.
   Role play as a requirement planning agent and as a requirement implementation agent, and make sure relevant docs can be navigated to without blind searching.
 - **Eventually DRY up skill and reference files.** There is substantial repetition across skill and reference files.
   Once Claude plugins support a modular, composable context system (or if we build one ourselves), skill files should be compiled from a DRY dev directory instead of hand-maintained.
-- **Make `plan-requirement` explain why context items are relevant** -- current plans do a good job locating and citing related documents, PRD requirements, architecture sections, and preceding plans, but they do not consistently state why each item is relevant to the requirement being planned.
-  Update the skill so every cited context item includes a one-sentence rationale explaining its bearing on the plan (e.g. "architecture.md §4 -- defines the module boundary this requirement must not cross").
 - **Spike aggressive skill-file minimization on a branch** -- skill files are growing bloated.
   Create a branch that radically strips each `SKILL.md` down to the smallest set of instructions that still produces correct behavior: remove every sentence that restates context the agent already has, every example that does not change behavior, and every structural element that is ceremony rather than constraint.
   Reference files are out of scope for this pass; focus is the skill bodies only.

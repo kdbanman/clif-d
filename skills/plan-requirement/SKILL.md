@@ -247,6 +247,9 @@ Reference the requirement IDs.
 This is where you do the heavy lifting that makes the plan self-contained. **Inline everything the implementer needs** so they can work from this document alone.
 Be generous with context -- it's far better to include a paragraph the implementer skims than to omit something they'll need to go hunt for.
 
+For every cited context item -- PRD requirement, PRD context or architecture ref, architecture section, backpressure rule, preceding plan, or any other source -- include a one-sentence rationale stating its bearing on this plan (e.g. `architecture.md §4 -- defines the module boundary this requirement must not cross`).
+A citation without a rationale forces the implementer to reconstruct the planner's reasoning; the rationale is the planner's job.
+
 Include:
 
 - **Requirement description and acceptance criteria** -- copy verbatim from the PRD, not summarized.
@@ -386,6 +389,7 @@ Once you've explored the codebase and resolved any ambiguities:
 2. **Write the plan** following the output structure above.
 3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section.
    Every architecture element referenced by the requirements should appear in the Context Summary.
+   Every cited item in the Context Summary carries a one-sentence rationale stating its bearing on this plan.
    Every high-level requirement in §4 should have at least one status-transition step in §5.
 4. **Verify completeness**: every file mentioned in Implementation Steps should appear in the Files Created or Modified summary.
    Every test mentioned should have a corresponding implementation step.
