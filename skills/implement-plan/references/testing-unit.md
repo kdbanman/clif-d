@@ -2,7 +2,8 @@
 
 ## What They Are
 
-A unit test verifies the behavior of a small, isolated piece of code -- typically a single function, method, or class. It exercises the code through its public interface, asserts on observable output or state, and runs fast enough that an engineer can execute thousands of them in seconds.
+A unit test verifies the behavior of a small, isolated piece of code -- typically a single function, method, or class.
+It exercises the code through its public interface, asserts on observable output or state, and runs fast enough that an engineer can execute thousands of them in seconds.
 
 Google defines unit tests as tests of "relatively narrow scope, such as of a single class or method." They are usually (but not always) "small" in Google's size taxonomy: single-process, single-threaded, no I/O.
 
@@ -34,7 +35,8 @@ Use unit tests for:
 - **Solitary** tests isolate the unit from all collaborators using test doubles.
 - **Sociable** tests allow the unit to interact with real collaborators, as long as the test remains fast and deterministic.
 
-Google's current guidance leans sociable -- prefer real implementations when they are fast and deterministic. Use test doubles only for dependencies that are slow, nondeterministic, or have significant side effects.
+Google's current guidance leans sociable -- prefer real implementations when they are fast and deterministic.
+Use test doubles only for dependencies that are slow, nondeterministic, or have significant side effects.
 
 ## Worked Example: A Good Unit Test
 
@@ -127,7 +129,9 @@ def test_compute_subtotal():
     assert subtotal == 40.00
 ```
 
-If you rename `_compute_subtotal` or merge it into `calculate_total`, this test breaks. But no user-facing behavior changed. Test through `calculate_total` instead.
+If you rename `_compute_subtotal` or merge it into `calculate_total`, this test breaks.
+But no user-facing behavior changed.
+Test through `calculate_total` instead.
 
 ### Pitfall: Over-Mocking
 
@@ -142,7 +146,8 @@ def test_calculate_total_with_mock():
     assert total == 44.00
 ```
 
-`Item` is a simple data object -- using a real `Item` is faster to write, easier to read, and higher fidelity. Save mocking for dependencies that are slow or have side effects.
+`Item` is a simple data object -- using a real `Item` is faster to write, easier to read, and higher fidelity.
+Save mocking for dependencies that are slow or have side effects.
 
 ### Pitfall: Shared Mutable State
 
@@ -184,6 +189,7 @@ When writing or reviewing a unit test, verify:
 - [ ] **No logic:** No conditionals, loops, or computed expected values. *([Principles](./testing-principles.md) -- Don't Put Logic in Tests)*
 - [ ] **Complete and concise:** All relevant setup is visible; no irrelevant details. *([Principles](./testing-principles.md) -- Make Tests Complete and Concise)*
 - [ ] **Hardcoded expectations:** Expected values are literals, not computed from the same logic as production code. *([Principles](./testing-principles.md) -- Don't Put Logic in Tests)*
-- [ ] **Fast:** Completes in milliseconds. If it takes seconds, substitute a test double for the slow dependency. *([Principles](./testing-principles.md) -- Test Smells, Slow Tests)*
+- [ ] **Fast:** Completes in milliseconds.
+  If it takes seconds, substitute a test double for the slow dependency. *([Principles](./testing-principles.md) -- Test Smells, Slow Tests)*
 - [ ] **Fresh fixture:** Creates its own state; doesn't depend on other tests. *([Principles](./testing-principles.md) -- Test Smells, Erratic Test)*
 - [ ] **Clear failure message:** If the test fails, you can diagnose the problem from the test name and assertion output alone. *([Principles](./testing-principles.md) -- Write Clear Failure Messages)*
