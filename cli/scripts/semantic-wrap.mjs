@@ -2,8 +2,8 @@
 // Dev maintenance script. Reformats Markdown prose to one sentence per line
 // ("semantic line breaks"). Rendered output is unchanged because Markdown
 // collapses consecutive non-blank lines into a single paragraph; diffs become
-// sentence-scoped. Dev-only -- not part of the shipped plugin. See
-// semantic-wrap-plan.md (while present) or CLAUDE.md's prose rule for usage.
+// sentence-scoped. Dev-only -- not part of the shipped plugin. See CLAUDE.md's
+// "One sentence per line in prose" rule for the convention this enforces.
 
 import fs from 'node:fs';
 import process from 'node:process';
