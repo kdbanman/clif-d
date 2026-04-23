@@ -262,24 +262,6 @@
       "implementation_commit": "7af96fe9e01ad3a4b553f040a318e100f08c9016"
     },
     {
-      "id": "REQ-006",
-      "title": "[SUPERSEDED] Schema distribution",
-      "description": "SUPERSEDED (2026-04-23): The clif-d schema copy subcommand that realized this requirement has been removed. The PRD schema is plugin-owned and stays in the plugin repo; copying it into the user repo created a second, non-authoritative source of truth and risked drift. Skills now leave the PRD $schema field as a path into the plugin (same behavior as before REQ-022 shipped). This requirement and its low-level child REQ-022 are retained as historical records; status remains done because the feature did ship before being superseded.\n\nOriginal description: The create-initial-prd skill currently generates a prd.json with a $schema field pointing into the .claude/ directory where the plugin is installed. This is awkward because the schema path is machine-specific and breaks if the plugin is updated or reinstalled. The README TODO explicitly calls this out. The CLI should provide a way to copy the canonical schema into the product clif-d/ directory so the $schema field can use a stable, repo-relative path.",
-      "acceptance_criteria": "An agent can copy the PRD schema from the plugin into the product repository's clif-d/ directory via a CLI command. After copying, the $schema field in prd.json can reference the local copy with a relative path that works on any machine.",
-      "priority": 3,
-      "abstraction_level": "high",
-      "status": "done",
-      "context_refs": [
-        "CTX-009",
-        "CTX-010",
-        "CTX-011"
-      ],
-      "architecture_refs": [
-        "ARCH-001"
-      ],
-      "implementation_commit": "718ad14e6ed2c7589ac0fae6c0b7451ae673c4da"
-    },
-    {
       "id": "REQ-007",
       "title": "ID sequence management",
       "description": "Skills that add items to the PRD need to know the next available ID in a namespace (REQ, CTX, ARCH) before constructing the object. Currently Claude scans the JSON to find the highest existing ID and increments -- a manual process that is easy to get wrong, especially when multiple items are added in one session. The CLI should expose the next-ID calculation as a utility command.",
@@ -908,54 +890,13 @@
       "implementation_commit": "718ad14"
     },
     {
-      "id": "REQ-022",
-      "title": "[SUPERSEDED] Copy PRD schema to product repo",
-      "description": "SUPERSEDED (2026-04-23): The clif-d schema copy subcommand has been removed end-to-end -- from bin/clif-d, its test, and the skill documentation -- because the PRD schema is plugin-owned and copying it into user repos created a non-authoritative duplicate that risked drift on plugin upgrades. The skill create-initial-prd no longer uses this command; $schema continues to point at the plugin-bundled schema as it did before REQ-022 shipped. Kept for historical traceability of what was built and then retired.\n\nOriginal description: Addresses the README TODO about the $schema field pointing into .claude/. After running this command, the skill can set $schema to a repo-relative path. Related to REQ-006.",
-      "acceptance_criteria": {
-        "given": "A product repository with a clif-d/ directory",
-        "when": "The agent runs clif-d schema copy clif-d/",
-        "then": "The file clif-d/prd-schema.json is created, identical to the plugin's canonical schema. stdout contains the absolute path of the copied file. Exit code is 0."
-      },
-      "priority": 3,
-      "dependencies": [],
-      "abstraction_level": "low",
-      "context_refs": [
-        "CTX-009",
-        "CTX-010",
-        "CTX-011"
-      ],
-      "architecture_refs": [
-        "ARCH-001"
-      ],
-      "cli_spec": {
-        "tool_name": "clif-d",
-        "command": "schema copy",
-        "arguments": [
-          {
-            "name": "dest-dir",
-            "description": "The directory to copy prd-schema.json into.",
-            "required": true
-          }
-        ],
-        "stdout": "Absolute path of the copied schema file.",
-        "stderr": "Error if destination directory does not exist.",
-        "exit_codes": {
-          "0": "Schema copied.",
-          "1": "Destination directory does not exist.",
-          "2": "Plugin schema file not found (broken installation)."
-        }
-      },
-      "status": "done",
-      "implementation_commit": "718ad14"
-    },
-    {
       "id": "REQ-023",
       "title": "bin/README.md command reference",
       "description": "The bin/ directory in the plugin repo will house the clif-d executable. A README in that directory serves as the canonical command reference for contributors and developers browsing the plugin repo -- distinct from the top-level README.md which covers high-level CLIF-D pipeline context. The bin/README.md is the place to look when you want to know the exact syntax, flags, and exit codes for any command. It should be generated last, after all commands are stable.",
       "acceptance_criteria": {
-        "given": "All clif-d commands (REQ-008 through REQ-022) are implemented and stable",
+        "given": "All clif-d commands (REQ-008 through REQ-021) are implemented and stable",
         "when": "A developer or agent browses the bin/ directory of the plugin repo",
-        "then": "bin/README.md exists and documents every command group (req, ctx, arch, id, schema, validate) with: the full command syntax, all flags and arguments, stdout/stderr contract, and exit code semantics. The document matches the implemented behavior of bin/clif-d."
+        "then": "bin/README.md exists and documents every command group (req, ctx, arch, id, validate) with: the full command syntax, all flags and arguments, stdout/stderr contract, and exit code semantics. The document matches the implemented behavior of bin/clif-d."
       },
       "priority": 3,
       "dependencies": [
@@ -965,8 +906,7 @@
         "REQ-018",
         "REQ-019",
         "REQ-020",
-        "REQ-021",
-        "REQ-022"
+        "REQ-021"
       ],
       "abstraction_level": "low",
       "status": "not_started",
@@ -1151,12 +1091,12 @@
     },
     {
       "id": "REQ-032",
-      "description": "The CLIF-D skills under skills/ were authored before the clif-d CLI existed. They still instruct Claude to read, parse, and mutate clif-d/prd.json via raw file operations -- expensive in tokens, fragile against malformed edits, and sidestepping the structural validation built into every CLI mutation. The CLI is now feature-complete for every operation a skill performs on the PRD: req lifecycle (ls/show/next/start/done/block), req content mutation (add/edit), dependency graph (dep add/rm/graph), context and architecture item CRUD (ctx/arch ls/show/add/edit), schema distribution (schema copy), and structural validation (validate). Every raw PRD directive in skill text should be replaced with a concrete CLI invocation, with the replace-semantics gotcha on `req edit` called out explicitly. Scope: the six skills that touch prd.json -- create-initial-prd, create-architecture, design-backpressure, bootstrap-dev-environment, plan-requirement, implement-plan. Out of scope: create-product-concept and workshop-names (no PRD interaction); plan-file mv from active/ to executed/ (no CLI planned, stays a shell op); free-form Markdown artifacts (concept.md, architecture.md, backpressure.md, dev-environment.md, plan files, lessons-learned files -- stay as raw Write).",
+      "description": "The CLIF-D skills under skills/ were authored before the clif-d CLI existed. They still instruct Claude to read, parse, and mutate clif-d/prd.json via raw file operations -- expensive in tokens, fragile against malformed edits, and sidestepping the structural validation built into every CLI mutation. The CLI is now feature-complete for every operation a skill performs on the PRD: req lifecycle (ls/show/next/start/done/block), req content mutation (add/edit), dependency graph (dep add/rm/graph), context and architecture item CRUD (ctx/arch ls/show/add/edit), and structural validation (validate). Every raw PRD directive in skill text should be replaced with a concrete CLI invocation, with the replace-semantics gotcha on `req edit` called out explicitly. Scope: the six skills that touch prd.json -- create-initial-prd, create-architecture, design-backpressure, bootstrap-dev-environment, plan-requirement, implement-plan. Out of scope: create-product-concept and workshop-names (no PRD interaction); plan-file mv from active/ to executed/ (no CLI planned, stays a shell op); free-form Markdown artifacts (concept.md, architecture.md, backpressure.md, dev-environment.md, plan files, lessons-learned files -- stay as raw Write).",
       "title": "Migrate CLIF-D skills from raw PRD edits to clif-d CLI commands",
       "acceptance_criteria": {
         "given": "Skills under skills/ currently contain directives to read, parse, and mutate clif-d/prd.json via raw Read/Edit/Write operations, and the clif-d CLI is feature-complete for every such operation.",
         "when": "The migration is complete.",
-        "then": "No skill under skills/ contains a directive to hand-edit clif-d/prd.json. implement-plan uses `clif-d req done <REQ-ID> --commit=<sha>` (not raw JSON edits) and also calls `clif-d req start <REQ-ID>` at the top of its flow as an idempotent safety net, ending its PRD work with `clif-d validate`. plan-requirement uses `clif-d req next`, `clif-d req show`, `clif-d req ls --status=done`, and `clif-d req dep graph --root=<ID>` for PRD reads, and transitions the target requirement to in_progress via `clif-d req start` as its final action. create-architecture uses `clif-d arch add` for ARCH items, `clif-d req add` for new scaffolding requirements (embedding dependencies in the payload when known at creation), `clif-d req edit` for architecture_refs backfill on existing requirements, and `clif-d validate` as a final step. bootstrap-dev-environment and design-backpressure each use `clif-d ctx add` for their respective constraint context item and `clif-d req edit` to backfill context_refs, ending with `clif-d validate`. create-initial-prd runs `clif-d validate` after generating the PRD and uses `clif-d schema copy` to resolve the $schema path TODO. Every skill that uses `req edit` documents the replace-semantics gotcha (arrays are replaced wholesale; callers must read-then-write). create-product-concept and workshop-names remain unchanged. Plan-file mv from active/ to executed/ remains a shell op. `clif-d validate cli-prd.json` still exits 0."
+        "then": "No skill under skills/ contains a directive to hand-edit clif-d/prd.json. implement-plan uses `clif-d req done <REQ-ID> --commit=<sha>` (not raw JSON edits) and also calls `clif-d req start <REQ-ID>` at the top of its flow as an idempotent safety net, ending its PRD work with `clif-d validate`. plan-requirement uses `clif-d req next`, `clif-d req show`, `clif-d req ls --status=done`, and `clif-d req dep graph --root=<ID>` for PRD reads, and transitions the target requirement to in_progress via `clif-d req start` as its final action. create-architecture uses `clif-d arch add` for ARCH items, `clif-d req add` for new scaffolding requirements (embedding dependencies in the payload when known at creation), `clif-d req edit` for architecture_refs backfill on existing requirements, and `clif-d validate` as a final step. bootstrap-dev-environment and design-backpressure each use `clif-d ctx add` for their respective constraint context item and `clif-d req edit` to backfill context_refs, ending with `clif-d validate`. create-initial-prd runs `clif-d validate` after generating the PRD. Every skill that uses `req edit` documents the replace-semantics gotcha (arrays are replaced wholesale; callers must read-then-write). create-product-concept and workshop-names remain unchanged. Plan-file mv from active/ to executed/ remains a shell op. `clif-d validate cli-prd.json` still exits 0."
       },
       "priority": 2,
       "dependencies": [
@@ -1171,8 +1111,7 @@
         "REQ-017",
         "REQ-018",
         "REQ-019",
-        "REQ-020",
-        "REQ-022"
+        "REQ-020"
       ],
       "abstraction_level": "low",
       "status": "done",

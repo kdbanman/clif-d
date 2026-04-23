@@ -24,7 +24,6 @@ clif-d validate clif-d/prd.json
 **Skill text changes:**
 - ADD a final step to the generation process: "Run `clif-d validate` to verify the PRD."
 - REMOVE any ad-hoc "validate the JSON structure" instructions -- the CLI validate command replaces them.
-- The `$schema` guidance stays as-is: set `$schema` to a relative path pointing at the plugin's `assets/prd-schema.json`. The former plan to copy the schema into the user repo via `clif-d schema copy` has been retired (see superseded REQ-006 / REQ-022 in `cli-prd.json`).
 
 ---
 

@@ -29,7 +29,7 @@ Worth considering if the read-then-write pattern proves too cumbersome in practi
 ### Schema versioning
 
 The PRD schema will evolve.
-The schema ships inside the plugin and is read by `bin/clif-d` from its install location; user repos reference it there rather than carrying a copy.
+The schema ships inside the plugin and is read by `bin/clif-d` from its install location.
 If the schema changes in a breaking way, existing PRDs may fail validation.
 
 Options:
