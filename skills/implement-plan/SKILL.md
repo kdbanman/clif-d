@@ -103,6 +103,10 @@ Read the full plan before starting. Understand the overall arc -- what's being b
 
 Follow this sequence exactly:
 
+#### 0. Announce work on the target requirement(s) (once, before the first step)
+
+Before entering the per-step loop below, run `clif-d req start <REQ-ID>` for each low-level requirement and each partially-realized high-level requirement listed in the plan's §4 **High-level Requirements Realized**. This is an idempotent safety net: `plan-requirement` should have already transitioned each target to `in_progress`, but running it here ensures the PRD reflects claimed work even if the plan was hand-written or that step was skipped.
+
 #### 1. Announce the step
 
 State which step you're executing and what it will accomplish. This provides a clear progress trail.
@@ -175,7 +179,9 @@ State that the step is complete. Summarize what was implemented and what tests v
    - **Plan deviations** -- steps where the plan was wrong or insufficient, what the actual solution was, and why.
    - **Environment or tooling issues** -- dependency problems, version mismatches, configuration surprises.
    If nothing significant happened -- the implementation went smoothly with no surprises -- write a short file noting that and skip the categories above. Do not fabricate lessons for the sake of filling the file.
-8. **Commit the lifecycle updates** (PRD status changes, plan move, and lessons-learned file) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct. The bookkeeping commit follows the same format as the implementation commit (see [Git hygiene reference](references/git-hygiene.md)), but its body should: name the implementation commit's SHA in a `Refs:` trailer, list the PRD status transitions (e.g., "REQ-042: not_started -> done"), list plan-file moves, and name any lessons-learned file created.
+8. **Commit the lifecycle updates** (PRD status changes, plan move, and lessons-learned file) as a separate commit. This keeps the implementation commit clean and the lifecycle bookkeeping distinct.
+   - Before creating the lifecycle commit, run `clif-d validate clif-d/prd.json` and fix any reported errors. This is the skill's terminal gate on PRD state.
+   - The bookkeeping commit follows the same format as the implementation commit (see [Git hygiene reference](references/git-hygiene.md)), but its body should: name the implementation commit's SHA in a `Refs:` trailer, list the PRD status transitions (e.g., "REQ-042: not_started -> done"), list plan-file moves, and name any lessons-learned file created.
 9. **Summarize** what was implemented: files created/modified, tests written, any deviations from the plan and why. Include both commit SHAs (implementation and lifecycle).
 
 ---

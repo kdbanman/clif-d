@@ -9,7 +9,7 @@ description: >
   Decomposition (CLIF-D). The PRD contains a complete picture of high-level requirements and a
   partial picture of low-level requirements -- only clear first steps are specified in detail.
   Pipeline position: after create-product-concept; before create-architecture.
-  Outputs clif-d/prd.json. Most relevant CLI: clif-d validate, clif-d id next, clif-d schema copy.
+  Outputs clif-d/prd.json. Most relevant CLI: clif-d validate, clif-d id next.
 ---
 
 # Generate Initial Product Requirements Document
@@ -170,5 +170,5 @@ Once the user confirms your understanding, generate the PRD:
 7. **Write high-level requirements first** -- the complete picture. Assign IDs as `REQ-001`, `REQ-002`, etc. Set `status: "not_started"` on every one.
 8. **Write low-level requirements** -- the clear first steps only. Continue the ID sequence. Set `status: "not_started"` on every one.
 9. **Cross-reference.** Ensure `dependencies`, `context_refs`, and `architecture_refs` are consistent. Every referenced ID must exist. Inline ID references in description text should also be valid.
-10. **Validate** the generated PRD against the schema for structural correctness.
+10. **Validate** the generated PRD by running `clif-d validate clif-d/prd.json`. Fix any errors before handing off.
 

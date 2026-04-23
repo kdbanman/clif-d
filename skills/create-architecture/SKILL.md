@@ -223,7 +223,7 @@ Once the user confirms your understanding:
 
 ### Part B: Add scaffolding requirements to the PRD
 
-After the architecture is settled, the concrete scaffolding work is now fully specifiable. Append low-level requirements to `clif-d/prd.json` that capture this work, so the standard `plan-requirement` → `implement-plan` cycle will execute it as the first rounds of implementation. These are not part of the architecture document -- they live in the PRD like any other requirement.
+After the architecture is settled, the concrete scaffolding work is now fully specifiable. Add low-level requirements to `clif-d/prd.json` via `clif-d req add` so the standard `plan-requirement` -> `implement-plan` cycle will execute them as the first rounds of implementation. These are not part of the architecture document -- they live in the PRD like any other requirement.
 
 **What scaffolding requirements typically cover:**
 
@@ -237,30 +237,26 @@ After the architecture is settled, the concrete scaffolding work is now fully sp
 **How to write them:**
 
 - Use `abstraction_level: "low"` with structured Given-When-Then acceptance criteria -- scaffolding work is concrete and must be unambiguously verifiable.
-- Assign new IDs continuing the PRD's existing sequence (`REQ-NNN`).
+- Embed `dependencies` inline in the `req add` payload when order is known (scaffolding almost always has a natural order). The CLI validates acyclicity on every add.
 - Set `architecture_refs` to the relevant ARCH items (repository structure, technology decisions).
-- Set `dependencies` to enforce ordering -- package manifest before directory skeleton, directory skeleton before entry point, etc.
 - Use `priority: 1` -- scaffolding blocks everything else.
 - Include a `cli_spec` where applicable (e.g., the minimal CLI entry point requirement should specify its command, stdout, stderr, and exit codes).
 
-**Important:** Do not perform the scaffolding yourself. The purpose of this step is to *specify* the scaffolding as requirements, so it flows through the standard backpressure → plan → implement pipeline. This ensures scaffolding code is written to the same quality standards as feature code and is covered by tests from day one.
+Pipe each requirement's JSON object into `clif-d req add`; the CLI auto-assigns the `REQ-NNN` ID and prints the added requirement. If an ARCH item is missing from the PRD, create it with `clif-d arch add` before the requirements that reference it.
+
+**Important:** Do not perform the scaffolding yourself. The purpose of this step is to *specify* the scaffolding as requirements, so it flows through the standard backpressure -> plan -> implement pipeline. This ensures scaffolding code is written to the same quality standards as feature code and is covered by tests from day one.
 
 ### Part C: Backfill PRD references
 
-Now that the architecture document exists, update `clif-d/prd.json` so that existing requirements reference the architecture they relate to:
+Now that the architecture document exists, update `clif-d/prd.json` so existing requirements reference the architecture they relate to. For each requirement that should reference one or more ARCH items (determined from the CLI-to-Module Mapping in §5 and the module decomposition in §4), read its current `architecture_refs` with `clif-d req show` and write back the full union with `clif-d req edit`.
 
-1. For each requirement in the PRD, determine which ARCH items are relevant based on the CLI-to-Module Mapping (§5) and the module decomposition (§4).
-2. Populate the `architecture_refs` field of each relevant requirement with the appropriate ARCH item IDs.
-3. Do not remove existing `architecture_refs` -- only add new ones.
-4. This step closes the referencing gap: the architecture document traces back to PRD items (§10), and now PRD items trace forward to architecture items.
+**Gotcha:** `clif-d req edit` replaces array fields wholesale rather than merging, so you MUST read-then-write and send the full union. Omitting an existing ref deletes it.
+
+This step closes the referencing gap: the architecture document traces back to PRD items (§10), and now PRD items trace forward to architecture items.
 
 ### Part D: Confirm
 
-Report to the user:
-- That `clif-d/architecture.md` has been written
-- How many scaffolding requirements were appended to the PRD (with their IDs and titles)
-- How many existing requirements had `architecture_refs` backfilled
-- The recommended next step: run `design-backpressure` (to decide quality guardrails), then `bootstrap-dev-environment` (to provision the toolchain and implement those guardrails), then `plan-requirement` on the scaffolding requirements
+Run `clif-d validate clif-d/prd.json` and fix any reported errors before handoff. Report to the user: where `clif-d/architecture.md` was written, how many scaffolding requirements were added (with IDs and titles), how many requirements had `architecture_refs` backfilled, and the recommended next step -- run `design-backpressure`, then `bootstrap-dev-environment`, then `plan-requirement` on the scaffolding requirements.
 
 ---
 

@@ -5,7 +5,8 @@
 **Preceding plans:** `cli/clif-d/plans/executed/plan-REQ-031.md` -- comparable broad mechanical sweep across many Markdown files. Also note `plan-REQ-019-REQ-020.md` and `plan-REQ-018-REQ-021-REQ-022.md` for context on the ctx/arch/schema-copy CLI commands this plan relies on.
 
 **Date:** 2026-04-18
-**Status:** Draft
+**Status:** Executed
+**Implementation commit:** a6d9f9a
 
 ## 1. Objective
 

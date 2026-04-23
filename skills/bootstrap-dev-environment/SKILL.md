@@ -10,7 +10,7 @@ description: >
   the pre-existing-suppression audit, verifies every Technology Decisions command and hook stage runs end-to-end,
   and writes a CLAUDE.md so Claude Code inherits environment context. Outputs clif-d/dev-environment.md plus
   setup scripts and configs.
-  Pipeline: after design-backpressure; before plan-requirement. Most relevant CLI: clif-d validate.
+  Pipeline: after design-backpressure; before plan-requirement. Most relevant CLI: clif-d ctx add, clif-d req edit, clif-d validate.
 ---
 
 # Bootstrap Dev Environment
@@ -344,11 +344,14 @@ Once the user confirms the plan:
 8. **Run the bootstrap end-to-end** from a fresh subshell in the product repo. If containerized, build the image and open a shell inside. If script-based, invoke the script in a subshell that does not inherit the user's interactive shell hooks (`env -i bash --noprofile --norc` or equivalent). This is the agent's-eye view. This step must also install the hooks -- confirm a fresh clone could run one command and end up with hooks active.
 9. **Run the pre-existing-suppression audit.** Run the suppression scanner over the whole working tree. For every hit, interactively ask the user whether to delete the suppression (preferred) or add a `§4` Relaxation with a written rationale in `clif-d/backpressure.md`. Do not proceed until the tree is clean of un-audited suppressions. Never silently grandfather.
 10. **Run the verification script** and confirm every command exits cleanly, the suppression-scanner negative test blocks the expected commit with the expected message, and the hook-presence check passes for every stage named in `clif-d/backpressure.md`. If anything fails, fix the bootstrap or amend the backpressure design (not the config), and repeat - do not ship a verification script that does not pass.
-11. **Backfill PRD references.** The dev environment is a shared constraint that affects all implementation. Update `clif-d/prd.json`:
-    - Add a context item (type `constraint`) for the dev environment approach if none exists, stating the bootstrap command and containerization choice.
-    - Add the dev-environment context item's ID to the `context_refs` of every requirement that will be implemented inside this environment (typically all of them).
-    - This closes the referencing gap: the dev-environment document traces back to PRD items (§11), and now PRD items trace forward to the dev-environment constraint.
-    - Do not re-create the backpressure context item -- `design-backpressure` already added it. Confirm it is present.
+11. **Backfill PRD references.** The dev environment is a shared constraint that affects all implementation. Update `clif-d/prd.json` via the CLI:
+
+    - Confirm (via `clif-d ctx ls`) that the backpressure context item added by `design-backpressure` is still present. If it is missing, stop and return to `design-backpressure`; do not re-create it here.
+    - If no `constraint`-type context item pointing at `clif-d/dev-environment.md` exists, add one with `clif-d ctx add`. Summarize the bootstrap command and containerization choice; set `reference_link` to `clif-d/dev-environment.md`.
+    - For every requirement that will be implemented inside this environment (typically all of them), add the new CTX ID to `context_refs` by reading the current array with `clif-d req show` and writing the full union back with `clif-d req edit`. **Gotcha:** `req edit` replaces array fields wholesale -- you must send the full union (including the backpressure CTX), not just the delta.
+    - Run `clif-d validate clif-d/prd.json` and fix any reported errors.
+
+   This closes the referencing gap: the dev-environment document traces back to PRD items (§11), and now PRD items trace forward to the dev-environment constraint.
 12. **Report** what was generated: design document path, setup artifact paths, backpressure config paths, suppression scanner path, `CLAUDE.md` path, `.claude/settings.json` SessionStart hook, verification result (including the scanner negative test and hook-presence check), audit result, PRD updates. Recommend the next step: run `plan-requirement` on the earliest scaffolding requirement.
 
 ---

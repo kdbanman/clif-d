@@ -1175,13 +1175,167 @@
         "REQ-022"
       ],
       "abstraction_level": "low",
-      "status": "not_started",
+      "status": "done",
       "context_refs": [
         "CTX-004",
         "CTX-006",
         "CTX-010"
       ],
-      "architecture_refs": []
+      "architecture_refs": [],
+      "implementation_commit": "a6d9f9a"
+    },
+    {
+      "id": "REQ-033",
+      "description": "The current CLI exposes structural mutations in schema terminology -- `req edit` takes a partial JSON and replaces array fields wholesale. Skills that work with reference arrays (`dependencies`, `architecture_refs`, `context_refs`) must read-then-write to avoid deleting existing entries, and must carry a 'Gotcha: replace semantics' paragraph everywhere that pattern appears. Similarly, confirming that a given constraint context item already exists before adding one currently requires grepping `ctx ls` output on fragile title substrings. These framings leak schema mechanics into skill prose and make simple, load-bearing operations (add one architecture_ref, remove one dependency, ensure one constraint context item pointing at a known document) verbose and error-prone. The CLI should instead expose CRUD operations in the terminology of the domain itself -- 'add an architecture ref', 'remove a dependency', 'ensure a constraint context item pointing at clif-d/<doc>.md' -- so that each skill invocation reads as an atomic, intent-named action rather than a read-merge-write dance. See also the README TODO items for `clif-d req ref add/rm` and `clif-d ctx ensure` / `clif-d arch ensure`, which propose concrete first commands to realize this requirement.",
+      "title": "Domainful CRUD on PRD schema elements",
+      "acceptance_criteria": "Every PRD schema element that a skill operates on has a corresponding domainful CLI operation -- single-element add/remove on reference arrays (architecture_refs, context_refs, dependencies), idempotent upsert keyed by reference_link for context and architecture items, and intent-named commands for any other schema-scoped mutation skills need to perform. These operations are documented in the CLI reference documentation, surfaced in each command's --help output, and invoked by name in every relevant skill file. After this requirement is realized, the read-then-write pattern and 'replace-semantics' gotcha are no longer load-bearing in any skill's prose, and no skill relies on fragile title-substring grepping to determine whether a schema element already exists.",
+      "priority": 2,
+      "dependencies": [
+        "REQ-004"
+      ],
+      "abstraction_level": "high",
+      "status": "not_started",
+      "context_refs": [
+        "CTX-004",
+        "CTX-005",
+        "CTX-006"
+      ],
+      "architecture_refs": [
+        "ARCH-002",
+        "ARCH-003"
+      ]
+    },
+    {
+      "id": "REQ-034",
+      "description": "The existing `clif-d req edit` command uses replace semantics on array fields, so a skill that wants to add a single entry to `architecture_refs` or `context_refs` must read the current array, compute the union, and send the full merged result back. Every such skill carries a 'Gotcha: replace semantics' paragraph to warn the implementer that omitting an existing entry silently deletes it. `clif-d req dep add/rm` (REQ-017) is the domainful answer for `dependencies`; `context_refs` and `architecture_refs` need the same shape. A `clif-d req ref add/rm <REQ-ID> <ITEM-ID>` command that routes by the ITEM-ID prefix (ARCH-* -> architecture_refs, CTX-* -> context_refs) removes the read-then-write dance and the gotcha paragraph from three skills (create-architecture, design-backpressure, bootstrap-dev-environment). Idempotency: add is a no-op when the ref is already present; rm is a no-op when the ref is absent. REQ-* IDs are out of scope for this command (req dep add/rm continues to own dependencies); adding REQ-* dispatch can be considered later as a unification pass. Realizes REQ-033.",
+      "title": "Idempotent single-reference CRUD on requirement reference arrays",
+      "acceptance_criteria": {
+        "given": "A valid prd.json where REQ-007 has context_refs [\"CTX-001\"] and architecture_refs [\"ARCH-001\"], and items CTX-010 and ARCH-003 exist",
+        "when": "The agent runs `clif-d req ref add REQ-007 CTX-010` and then `clif-d req ref add REQ-007 ARCH-003`, each once, followed by a third run of `clif-d req ref add REQ-007 CTX-010`",
+        "then": "After the first run, REQ-007.context_refs is [\"CTX-001\", \"CTX-010\"] and architecture_refs is unchanged. After the second run, architecture_refs is [\"ARCH-001\", \"ARCH-003\"]. The third run is a no-op: stdout contains the unchanged REQ-007 object, exit 0, and the PRD file is not rewritten. `clif-d req ref rm REQ-007 CTX-010` removes CTX-010 from context_refs; re-running the rm is a no-op exit 0. An add with an ITEM-ID that does not match any ARCH-*/CTX-* in the PRD exits 1 with a dangling-ref validation error. An ITEM-ID with a REQ-* prefix exits 2 with a usage error pointing at `req dep add/rm`. Exit codes: 0 success (including no-op), 1 validation error, 2 usage or I/O error."
+      },
+      "priority": 2,
+      "dependencies": [
+        "REQ-016",
+        "REQ-017"
+      ],
+      "abstraction_level": "low",
+      "status": "not_started",
+      "context_refs": [
+        "CTX-005",
+        "CTX-006",
+        "CTX-010"
+      ],
+      "architecture_refs": [
+        "ARCH-002",
+        "ARCH-003"
+      ],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "req ref add",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement to modify."
+          },
+          {
+            "name": "ITEM-ID",
+            "description": "The item to add. ARCH-* routes to architecture_refs; CTX-* routes to context_refs. REQ-* is out of scope (use `req dep add`)."
+          }
+        ],
+        "stdout": "The updated requirement object as JSON.",
+        "stderr": "Validation errors (dangling ref, unknown REQ-ID, wrong ITEM-ID prefix family).",
+        "exit_codes": {
+          "0": "Reference added (or already present) and PRD written (or unchanged).",
+          "1": "Validation error.",
+          "2": "PRD file not found, usage error, or REQ-* ITEM-ID (unsupported by this command)."
+        }
+      }
+    },
+    {
+      "id": "REQ-035",
+      "description": "Skills that maintain a 1:1 relationship between a constraint context item and a design document (design-backpressure with clif-d/backpressure.md; bootstrap-dev-environment with clif-d/dev-environment.md) need to check whether a matching item already exists before adding one. The current workaround is grepping `ctx ls` output on title substrings, which is fragile when the title drifts. A `clif-d ctx ensure` / `clif-d arch ensure` command keyed on `reference_link` replaces the existence-check-then-add pattern with a single atomic call: if no item with the given `reference_link` exists, add the supplied payload; if one already exists, exit 0 without modification and echo the existing item. This removes the fragile title-substring grep from two skills and reduces their backfill step by one sub-step each. Realizes REQ-033.",
+      "title": "Idempotent upsert of context and architecture items by reference_link",
+      "acceptance_criteria": {
+        "given": "A valid prd.json with no CTX item whose reference_link is \"clif-d/backpressure.md\" and no ARCH item whose reference_link is \"clif-d/architecture/modules.mmd\"",
+        "when": "The agent pipes a JSON payload with reference_link \"clif-d/backpressure.md\" into `clif-d ctx ensure`, then runs the same command with the same payload a second time, and separately pipes a JSON ARCH payload with reference_link \"clif-d/architecture/modules.mmd\" into `clif-d arch ensure`",
+        "then": "The first ctx ensure adds a new CTX item with the next available ID using the supplied fields; stdout contains the new item as JSON. The second ctx ensure is a no-op: exit 0, stdout contains the existing item's JSON unmodified, and the PRD file is not rewritten. The arch ensure has identical semantics for architecture items, keyed on reference_link. A payload without `reference_link` exits 1 (the key field is mandatory for ensure). A payload whose non-key fields differ from an existing item with the same reference_link still exits 0 as a no-op (ensure is upsert-or-ignore, not upsert-or-update) and the existing item is returned unchanged. Exit codes: 0 success (including no-op), 1 validation error, 2 PRD or usage error."
+      },
+      "priority": 2,
+      "dependencies": [
+        "REQ-019",
+        "REQ-020"
+      ],
+      "abstraction_level": "low",
+      "status": "not_started",
+      "context_refs": [
+        "CTX-005",
+        "CTX-006",
+        "CTX-010"
+      ],
+      "architecture_refs": [
+        "ARCH-002",
+        "ARCH-003"
+      ],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "ctx ensure",
+        "stdin": "JSON context item object. `reference_link` is mandatory; id is optional (auto-assigned if a new item is created).",
+        "stdout": "The resulting context item object as JSON -- either the newly added item or the existing item whose reference_link matched.",
+        "stderr": "Validation errors (missing reference_link, malformed payload, etc.).",
+        "exit_codes": {
+          "0": "Item ensured (added fresh or matched existing).",
+          "1": "Validation error (missing reference_link, schema violation).",
+          "2": "PRD file not found or usage error."
+        }
+      }
+    },
+    {
+      "id": "REQ-036",
+      "description": "The `implement-plan` skill's last raw file operation is a shell `mv clif-d/plans/active/plan-REQ-NNN.md clif-d/plans/executed/` followed by an Edit that appends `**Implementation commit:** <sha>` to the plan header. Neither step is validated: the mv silently overwrites if the destination already exists, and the header append happens via free-form text edit rather than against any known plan-header shape. A `clif-d plan archive <REQ-ID> --commit=<sha>` command performs both operations as a single atomic step and validates the preconditions (source file exists in active/, destination does not already exist in executed/, plan header has the expected shape) before any file is modified. The commit SHA is recorded as metadata; this command does not invoke git -- consistent with `clif-d req done --commit=<sha>` (REQ-011), which also records the SHA without verifying it against the repository. Realizes REQ-033 and closes out the last raw file-op in the skill pipeline.",
+      "title": "Atomic plan archive with commit stamp",
+      "acceptance_criteria": {
+        "given": "A file exists at clif-d/plans/active/plan-REQ-NNN.md with a header containing a recognizable `**Status:**` line, and no file exists at clif-d/plans/executed/plan-REQ-NNN.md",
+        "when": "The agent runs `clif-d plan archive REQ-NNN --commit=<sha>`",
+        "then": "The file is moved from active/ to executed/, and `**Implementation commit:** <sha>` is appended to the plan header (after the `**Status:**` line, which is updated from `Draft` to `Executed` when present). The move and the header edit land together or not at all -- a failed header edit leaves the plan in active/ untouched. Running when the source does not exist in active/ exits 1 with an actionable message. Running when the destination already exists exits 1. Running when the plan header has no recognizable `**Status:**` or `**Date:**` lines near the top exits 1. --commit is mandatory; its value is stored verbatim without git verification. Exit codes: 0 success, 1 validation error (missing source, existing destination, malformed header), 2 usage or I/O error."
+      },
+      "priority": 2,
+      "dependencies": [
+        "REQ-011"
+      ],
+      "abstraction_level": "low",
+      "status": "not_started",
+      "context_refs": [
+        "CTX-004",
+        "CTX-005",
+        "CTX-006"
+      ],
+      "architecture_refs": [
+        "ARCH-002"
+      ],
+      "cli_spec": {
+        "tool_name": "clif-d",
+        "command": "plan archive",
+        "arguments": [
+          {
+            "name": "REQ-ID",
+            "description": "The requirement ID whose plan file should be archived. The plan file is expected at clif-d/plans/active/plan-<REQ-ID>.md."
+          }
+        ],
+        "flags": [
+          {
+            "name": "--commit",
+            "description": "Git commit SHA to stamp into the plan header as `**Implementation commit:** <sha>`. Mandatory. Not verified against the repository."
+          }
+        ],
+        "stdout": "The new path of the archived plan file (clif-d/plans/executed/plan-<REQ-ID>.md).",
+        "stderr": "Validation errors (missing source, existing destination, malformed header, missing --commit).",
+        "exit_codes": {
+          "0": "Plan archived and header stamped.",
+          "1": "Validation error.",
+          "2": "Usage or I/O error."
+        }
+      }
     }
   ]
 }
