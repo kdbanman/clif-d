@@ -349,7 +349,6 @@ Claude Code's plugin system lacks lifecycle hooks we would normally use for arti
 
 - Artifact schemas stay plugin-owned.
   The PRD schema lives at `skills/create-initial-prd/assets/prd-schema.json` inside the plugin, not copied into the user's repo, so the skills and CLI that consume it remain the single source of truth for the contract.
-  (The `clif-d schema copy` command can pull a snapshot into the user's repo for local IDE tooling, but that copy is not authoritative.)
 - Each versioned artifact records the plugin version that wrote it. `prd.json` carries a top-level `clifd_version` field set from `.claude-plugin/plugin.json` at authoring time.
   Future migration tooling can compare that against the currently-installed plugin version to detect when a PRD predates a schema change.
 - Breaking changes are documented, not automated.
@@ -386,9 +385,6 @@ Design the change accordingly.
   Create a branch that radically strips each `SKILL.md` down to the smallest set of instructions that still produces correct behavior: remove every sentence that restates context the agent already has, every example that does not change behavior, and every structural element that is ceremony rather than constraint.
   Reference files are out of scope for this pass; focus is the skill bodies only.
   The goal is to learn how far minimization can go before quality degrades, not necessarily to ship the result.
-- **Remove `clif-d schema copy` functionality** -- the PRD schema is plugin-owned and should stay in the plugin repo, not be copied into user repos where it becomes a second, non-authoritative source of truth.
-  Delete the `schema copy` subcommand from `bin/clif-d`; mark `REQ-006` (high-level "Schema distribution") and `REQ-022` (low-level "Copy PRD schema to product repo") as superseded in `cli-prd.json`; remove the parenthetical in the "Current constraints" section of this README that still advertises the command; and purge any remaining references in `cli-design-notes.md` and `cli-integration-plan.md`.
-  Executed plan `cli/clif-d/plans/executed/plan-REQ-018-REQ-021-REQ-022.md` stays as-is (historical record).
 - **Design a universal/ambient context scope in the PRD schema** -- `design-backpressure` and `bootstrap-dev-environment` each produce one constraint context item that applies to every requirement in the product (backpressure guardrails apply to all implementation; the dev environment is where all implementation happens).
   The current mechanism is a per-requirement `context_refs` link on every requirement -- exhaustive, drift-prone, and the direct cause of the "typically all of them" loop in both skills.
   The underlying smell is universal context masquerading as per-requirement context.

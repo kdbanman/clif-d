@@ -233,7 +233,6 @@ const COMMAND_FLAG_SPECS = Object.freeze({
   "arch edit": [],
   validate: [],
   "id next": [],
-  "schema copy": [],
 });
 
 /**
@@ -1698,43 +1697,6 @@ function itemEdit(prdPath, prd, flags, cfg) {
   exit(0);
 }
 
-// -- schema copy ------------------------------------------------------------
-
-/**
- * Copy the canonical PRD schema to the specified destination directory.
- * @param {ParsedFlags} flags
- */
-function schemaCopy(flags) {
-  const destDir = flags.positional[0];
-  if (!destDir) {
-    stderr.write("Error: dest-dir argument is required.\n");
-    stderr.write("Usage: clif-d schema copy <dest-dir>\n");
-    return exit(2);
-  }
-
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- user-supplied dest is by design
-  if (!fs.existsSync(destDir) || !fs.statSync(destDir).isDirectory()) {
-    stderr.write(`Error: Destination directory does not exist: ${destDir}\n`);
-    return exit(1);
-  }
-
-  const binDir = path.dirname(process.argv[1] ?? __filename);
-  const schemaSource = path.resolve(
-    binDir,
-    "../skills/create-initial-prd/assets/prd-schema.json",
-  );
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved from plugin install path
-  if (!fs.existsSync(schemaSource)) {
-    stderr.write(`Error: Plugin schema file not found: ${schemaSource}\n`);
-    return exit(2);
-  }
-
-  const destFile = path.join(destDir, "prd-schema.json");
-  fs.copyFileSync(schemaSource, destFile);
-  stdout.write(`${path.resolve(destFile)}\n`);
-  exit(0);
-}
-
 // -- id next ----------------------------------------------------------------
 
 /** @type {ReadonlyMap<string, string>} */
@@ -2387,19 +2349,6 @@ const HELP_SPECS = {
       { code: 2, description: "PRD file not found or not valid JSON." },
     ],
   },
-  "schema copy": {
-    usage: "clif-d schema copy <dest-dir>",
-    description:
-      "Copy the canonical PRD schema (prd-schema.json) to the specified directory.",
-    exitCodes: [
-      { code: 0, description: "Schema copied; stdout has absolute path." },
-      { code: 1, description: "Destination directory does not exist." },
-      {
-        code: 2,
-        description: "Plugin schema file not found (broken install).",
-      },
-    ],
-  },
   "ctx ls": {
     usage: "clif-d ctx ls [flags] [prd-path]",
     description: "List context items from the PRD.",
@@ -2528,7 +2477,6 @@ function printMainHelp() {
   );
   stderr.write("  validate     Validate PRD structural integrity\n");
   stderr.write("  id next      Print the next available ID\n");
-  stderr.write("  schema copy  Copy PRD schema to a directory\n");
   stderr.write("\n");
   stderr.write("Run clif-d <command> --help for command-specific usage.\n");
 }
@@ -2583,29 +2531,6 @@ function routeItemDomain(command, commandArgs, cfg) {
       exit(2);
     }
   }
-}
-
-/**
- * Dispatch `schema` subcommands. Currently only `copy`.
- * @param {string | undefined} command
- * @param {string[]} commandArgs
- */
-function routeSchema(command, commandArgs) {
-  const flags = parseFlags(commandArgs);
-  if (flags.boolean.has("--help") || flags.boolean.has("-h")) {
-    writeHelp("schema copy");
-    exit(0);
-  }
-  if (command !== "copy") {
-    stderr.write(`Unknown schema command: ${String(command)}\n`);
-    return exit(2);
-  }
-  enforceKnownFlags(
-    flags,
-    COMMAND_FLAG_SPECS["schema copy"] ?? [],
-    "schema copy",
-  );
-  schemaCopy(flags);
 }
 
 /**
@@ -2816,10 +2741,6 @@ function main() {
     }
     case "id": {
       routeId(command, args.slice(2));
-      break;
-    }
-    case "schema": {
-      routeSchema(command, args.slice(2));
       break;
     }
     case "validate": {

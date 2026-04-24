@@ -9,7 +9,7 @@
 - `cli/clif-d/plans/active/plan-REQ-011-REQ-012-REQ-013.md` (`req done`, `req start`, `req block`)
 - `cli/clif-d/plans/active/plan-REQ-014.md` (`validate`)
 - `cli/clif-d/plans/active/plan-REQ-015-REQ-016-REQ-017.md` (`req add`, `req edit`, `req dep add`, `req dep rm`)
-- `cli/clif-d/plans/active/plan-REQ-018-REQ-021-REQ-022.md` (`req dep graph`, `id next`, `schema copy`)
+- `cli/clif-d/plans/active/plan-REQ-018-REQ-021-REQ-022.md` (`req dep graph`, `id next`)
 - `cli/clif-d/plans/active/plan-REQ-019-REQ-020.md` (`ctx` and `arch` CRUD)
 
 **Date:** 2026-04-14
@@ -17,7 +17,7 @@
 
 ## 1. Objective
 
-Author `bin/README.md`, the canonical command reference for `clif-d`. When complete, a developer or agent browsing the plugin repo's `bin/` directory finds a single document describing every command group (`req`, `ctx`, `arch`, `validate`, `id`, `schema`) with exact syntax, flag descriptions, stdout/stderr contracts, and exit-code semantics. The document is verified to match the implemented behavior of `bin/clif-d`.
+Author `bin/README.md`, the canonical command reference for `clif-d`. When complete, a developer or agent browsing the plugin repo's `bin/` directory finds a single document describing every command group (`req`, `ctx`, `arch`, `validate`, `id`) with exact syntax, flag descriptions, stdout/stderr contracts, and exit-code semantics. The document is verified to match the implemented behavior of `bin/clif-d`.
 
 ## 2. Context Summary
 
@@ -26,9 +26,9 @@ Author `bin/README.md`, the canonical command reference for `clif-d`. When compl
 **Description:** The `bin/` directory in the plugin repo houses the `clif-d` executable. A README in that directory serves as the canonical command reference for contributors and developers browsing the plugin repo -- distinct from the top-level `README.md` which covers high-level CLIF-D pipeline context. The `bin/README.md` is the place to look when you want to know the exact syntax, flags, and exit codes for any command. It should be generated last, after all commands are stable.
 
 **Acceptance criteria (Given-When-Then):**
-- **Given:** All `clif-d` commands (REQ-008 through REQ-022) are implemented and stable.
+- **Given:** All `clif-d` commands (REQ-008 through REQ-021) are implemented and stable.
 - **When:** A developer or agent browses the `bin/` directory of the plugin repo.
-- **Then:** `bin/README.md` exists and documents every command group (req, ctx, arch, id, schema, validate) with: the full command syntax, all flags and arguments, stdout/stderr contract, and exit code semantics. The document matches the implemented behavior of `bin/clif-d`.
+- **Then:** `bin/README.md` exists and documents every command group (req, ctx, arch, id, validate) with: the full command syntax, all flags and arguments, stdout/stderr contract, and exit code semantics. The document matches the implemented behavior of `bin/clif-d`.
 
 ### Command inventory (complete list this README must cover)
 
@@ -57,7 +57,6 @@ Every command below must appear in the README. Source of truth for each is linke
 | `clif-d arch add` | REQ-020 | same |
 | `clif-d arch edit` | REQ-020 | same |
 | `clif-d id next` | REQ-021 | `plans/active/plan-REQ-018-REQ-021-REQ-022.md` |
-| `clif-d schema copy` | REQ-022 | same |
 
 ### Cross-cutting conventions to describe once at the top of the README (not per command)
 
@@ -137,8 +136,6 @@ One-paragraph elevator pitch: what clif-d is, who it's for, where the PRD lives.
 
 ### id next
 
-### schema copy
-
 ## Hacking on clif-d
 
 - Source lives at bin/clif-d. Single-file, zero-dep, Node 18+.
@@ -204,14 +201,14 @@ The README itself is Markdown; no ESLint / TypeScript / node:test gate applies. 
 
 ## 3. Prerequisites
 
-- **All of REQ-008 through REQ-022 merged.** REQ-023 is terminal documentation -- it cannot be written before the commands exist and stabilize.
+- **All of REQ-008 through REQ-021 merged.** REQ-023 is terminal documentation -- it cannot be written before the commands exist and stabilize.
 - Status at time of planning (2026-04-14):
   - REQ-008, REQ-009: done.
   - REQ-010: planned.
   - REQ-011, REQ-012, REQ-013: planned.
   - REQ-014: planned.
   - REQ-015, REQ-016, REQ-017: planned.
-  - REQ-018, REQ-021, REQ-022: planned.
+  - REQ-018, REQ-021: planned.
   - REQ-019, REQ-020: planned.
 - This plan is therefore parked until those merge. The implementer should check the PRD (`./bin/clif-d req ls --status=done`) to confirm all prerequisite IDs are done before starting.
 - Node.js 18+ available. Dev tooling installed (for verification examples).
@@ -224,7 +221,7 @@ This plan has a different shape from the prior plans because the deliverable is 
 
 **Test first:**
 - Manual verification.
-- Description: Before writing any prose, confirm every REQ-008 through REQ-022 is marked `done` in `cli-prd.json`. Also check for any late-added low-level requirements (REQ-024+) that document a command -- if they exist, decide with the user whether to include them in this pass or defer.
+- Description: Before writing any prose, confirm every REQ-008 through REQ-021 is marked `done` in `cli-prd.json`. Also check for any late-added low-level requirements (REQ-024+) that document a command -- if they exist, decide with the user whether to include them in this pass or defer.
 - Check commands:
 ```bash
 ./bin/clif-d req ls --status=done | jq -r '.[].id'
@@ -278,7 +275,7 @@ This plan has a different shape from the prior plans because the deliverable is 
 
 **Implement:**
 - File: `bin/README.md`
-- Description: Add `### ctx`, `### arch`, `### validate`, `### id next`, `### schema copy` sections. Reuse the template. `ctx` and `arch` are near-mirrors of each other -- write `ctx` first, then adapt for `arch`. Do not collapse them into a single table -- readers scanning the file should be able to find either with Ctrl-F on the command name.
+- Description: Add `### ctx`, `### arch`, `### validate`, `### id next` sections. Reuse the template. `ctx` and `arch` are near-mirrors of each other -- write `ctx` first, then adapt for `arch`. Do not collapse them into a single table -- readers scanning the file should be able to find either with Ctrl-F on the command name.
 
 **Verify:**
 - Examples run; output matches; no invented flags.
