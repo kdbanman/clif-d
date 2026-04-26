@@ -32,7 +32,7 @@ Respecting it means each step is independently verifiable, which is the whole po
 
 ### Red-Green-Refactor, literally
 
-For every step that specifies a `Test:` (or legacy "Test first" section):
+For every step that specifies a `Test:`:
 
 1. **Red**: Write the test.
    Run it.
@@ -157,7 +157,7 @@ This provides a clear progress trail.
 
 #### 2. Write the test (Red)
 
-- Create or modify the test file specified in the plan's `Test:` bullet (or legacy "Test first" section).
+- Create or modify the test file specified in the plan's `Test:` bullet.
 - Follow the plan's test sketch, but write real, complete test code -- not pseudocode.
 - **Run the test.** It should fail (Red).
   If it passes, investigate:
@@ -167,7 +167,7 @@ This provides a clear progress trail.
 
 #### 3. Write the implementation (Green)
 
-- Create or modify the implementation files specified in the plan's `Implement:` bullet (or legacy "Implement" section).
+- Create or modify the implementation files specified in the plan's `Implement:` bullet.
 - Write the **minimum code** to make the failing test pass.
   Resist the urge to implement the next step's functionality.
 - **Run the step's test.** It should pass (Green).

@@ -38,7 +38,6 @@ The implementer has `CLAUDE.md` pointing at the PRD, architecture, and backpress
 
 Link to specific sections, not whole files: `backpressure.md §3.1`, `architecture.md §4.1 module:rng`, `prd.json REQ-007 acceptance_criteria`.
 Inline only what requires interpretive synthesis the implementer cannot do by following one link -- a chosen interface signature, a non-obvious data flow, an acceptance criterion mapped to a specific test predicate.
-If you find yourself copy-pasting a paragraph from an upstream doc, you have duplicated it; replace the paste with a section link.
 
 ### Vertical slices, not horizontal layers
 
