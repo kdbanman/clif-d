@@ -67,13 +67,9 @@ The implementer has their own references and judgment; trust them to turn a sign
 
 Specific anti-patterns the ceiling rules out:
 
-- Do not re-enumerate items the architecture or PRD already lists.
-  Write "add the deps in `architecture.md` §2 for `goose-core`", not the list.
-  The architecture is the source of truth; the plan is the trigger.
-- Test predicates are described in plain language. "`config/sim.toml` parses and contains every `SimParams` field" -- not a Python one-liner that asserts it.
-  The implementer writes the runnable form.
-- Never inline file contents -- JSON, TOML, YAML, fixture data -- even if the file is small.
-  Describe the shape by pointing at the struct it must satisfy.
+- Do not re-enumerate items the architecture or PRD already lists; write "add the deps in `architecture.md` §2 for `goose-core`", not the list.
+- Test predicates are described in plain language ("`config/sim.toml` parses and contains every `SimParams` field"), never as a Python one-liner or shell pipeline.
+- Never inline file contents (JSON, TOML, YAML, fixture data) -- describe the shape by pointing at the struct it must satisfy.
 
 ### Length is a planning signal
 
@@ -208,15 +204,10 @@ Most ambiguity in requirements can be resolved by reading upstream documents car
 The requirement author couldn't (and shouldn't) inline every detail -- that's what the reference graph is for.
 Your job is to follow the references, synthesize the answer, and bake it into the plan.
 
-### Resolve, do not punt
-
-If a question is answerable by reading official documentation -- a manifest reference, a library README, an RFC -- resolve it before writing the plan.
-"The implementer can trial it" is not an assumption; it is an unresolved question masquerading as one.
-Punting an answerable question downstream poisons the plan: the implementer pays the resolution cost mid-Red-Green-Refactor, when context is most expensive.
-
 ### Interrogation
 
-After upstream tracing and documentation lookup, interrogation is for genuine ambiguities that can't be answered by reading.
+After upstream tracing -- including any official documentation a question is answerable by (manifest reference, library README, RFC) -- interrogation is for genuine ambiguities that can't be answered by reading.
+"The implementer can trial it" is not an assumption; it is an unresolved question masquerading as one.
 Ask the user only when:
 - The requirement's acceptance criteria are ambiguous at a level that affects implementation approach, and no upstream document resolves it
 - There's a design choice not covered by the architecture document
@@ -263,14 +254,10 @@ Reference the requirement IDs.
 
 ### 2. Context Summary
 
-A short list of section-scoped links to the upstream items the implementer will need, each with a one-sentence rationale stating its bearing on this plan (e.g. `architecture.md §4 -- defines the module boundary this requirement must not cross`).
+**At most 8 bullets, each at most 1 sentence.** Each is a section-scoped link to an upstream item with a one-sentence rationale stating its bearing on this plan (e.g. `architecture.md §4 -- defines the module boundary this requirement must not cross`).
 A citation without a rationale forces the implementer to reconstruct the planner's reasoning; the rationale is the planner's job.
 
-**At most 8 bullets, each at most 1 sentence.**
-If you find yourself paraphrasing the cited section, delete the paraphrase -- the link suffices.
-
-Link, do not copy.
-The implementer follows the link if they need the full text.
+Link, do not copy: if you find yourself paraphrasing the cited section, delete the paraphrase -- the link suffices.
 Inline a snippet only when it embodies an interpretive choice the planner made (a chosen signature, a selected error mode, an acceptance criterion mapped to a specific test predicate) -- and even then, keep it to the minimum that conveys the choice.
 
 Typical links to include (omit any that are not load-bearing for this plan):
@@ -315,20 +302,14 @@ Each step is a tight bullet block, two to four lines:
 ```markdown
 ### Step N: <short title>
 - Files: `path/to/impl`, `path/to/test`
-- Test: <one-line description, with signature or assert predicate; reference the AC being verified, e.g. (REQ-007 AC: exits 0 on valid input)>
-- Implement: <one-line description, with the signature(s) to add or change>
+- Test: <one sentence describing what's verified, never a runnable script; reference the AC, e.g. (REQ-007 AC: exits 0 on valid input)>
+- Implement: <at most two sentences, with the signature(s) to add or change>
 - Done when: <the specific command that returns 0, or the assertion that holds>
 ```
 
 Drop a line if it is empty.
 A trivial step may be just `Files` + `Done when`; a step that closes a requirement may be just `Files` + `Done when: clif-d req done REQ-XXX --commit=<sha>`.
 Respect the detail ceiling: signatures and pseudocode only -- no full function bodies, no full file contents, no unified diffs.
-
-**Per-line budgets:**
-
-- Each step's `Implement:` line is **at most 2 sentences**.
-- Each step's `Test:` line is **one sentence describing what's verified** -- never a runnable shell or Python script.
-  The implementer translates the predicate into the test harness.
 
 The "Step ordering principles" and "Status transition steps" guidance below is **for you, the planner**.
 Do not echo it into the plan output.
@@ -344,9 +325,7 @@ Do not echo it into the plan output.
 
 - First step for each low-level requirement and each partially-realized high-level requirement not already `in_progress`: `clif-d req start REQ-XXX`.
 - Closing step for each low-level requirement and each fully-realized high-level requirement: `clif-d req done REQ-XXX --commit=<sha>`.
-- A single closing step may close multiple requirements when one commit delivers them all.
-- `clif-d req start` / `clif-d req done` are **one-line bullets, not full step blocks**.
-  When several requirements close in the same commit, group them into a single closing step.
+- These transitions are **one-line bullets, not full step blocks**; a single closing bullet may close multiple requirements when one commit delivers them all.
 
 ### 6. Acceptance Criteria Verification (optional)
 
@@ -372,10 +351,8 @@ If the per-step `Files:` lines already make the inventory obvious, this section 
 Any assumptions made during planning that the implementer should be aware of.
 Flag anything where the plan made a judgment call that might need revisiting.
 
-**At most 2 items, each at most 1 sentence.**
-Defending the assumption against alternatives turns a note into an essay; cut it or escalate to the user before writing the plan.
-
-If this section has more than one or two items, that's a signal of one of the following:
+**At most 2 items, each at most 1 sentence; do not defend the assumption against alternatives.**
+If you exceed that budget, that's a signal of one of the following:
 
 1. That the planning phase didn't resolve enough ambiguity.
    Go back to the upstream documents and the user before leaving questions for the implementer.
