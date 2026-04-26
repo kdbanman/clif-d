@@ -11,7 +11,7 @@
       "name": "clif-d",
       "source": "./",
       "description": "CLI-First Decomposition skills: concept, naming, and requirements",
-      "version": "3.0.0"
+      "version": "3.1.0"
     }
   ]
 }
