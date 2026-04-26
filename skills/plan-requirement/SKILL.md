@@ -31,15 +31,13 @@ This isn't dogma -- it's a practical constraint for agentic implementation.
 An agent that writes tests first has a built-in verification loop: run the tests, see them fail, write code, see them pass.
 Without this structure, the agent has no reliable signal for "done."
 
-### Plans are self-contained documents
+### Plans are reference-rich, not self-contained
 
-The plan must be **understandable and actionable without reading any other document during implementation**.
-The implementer may be a relatively junior developer or a narrowly-scoped agent -- they should not need to search the codebase, read the PRD, or interpret the architecture document to understand what to build.
-Your job as the planner is to do that interpretive work upfront and deliver a plan that is ready to execute.
+The plan must be **executable without re-doing the planner's interpretive work**, but it should not duplicate content that already lives in upstream docs.
+The implementer has `CLAUDE.md` pointing at the PRD, architecture, and backpressure documents; assume they can follow a link.
 
-This means inlining or summarizing all necessary context: the requirement's acceptance criteria, relevant architectural decisions, module interfaces, CLI specifications, data structures, error handling conventions, and quality check commands.
-Reference the source documents by path for traceability, but don't force the implementer to consult them.
-If a piece of information from an upstream document would help the implementer make a better decision, include it in the plan -- don't assume they'll go find it.
+Link to specific sections, not whole files: `backpressure.md §3.1`, `architecture.md §4.1 module:rng`, `prd.json REQ-007 acceptance_criteria`.
+Inline only what requires interpretive synthesis the implementer cannot do by following one link -- a chosen interface signature, a non-obvious data flow, an acceptance criterion mapped to a specific test predicate.
 
 ### Vertical slices, not horizontal layers
 
@@ -244,30 +242,20 @@ Reference the requirement IDs.
 
 ### 2. Context Summary
 
-This is where you do the heavy lifting that makes the plan self-contained. **Inline everything the implementer needs** so they can work from this document alone.
-Be generous with context -- it's far better to include a paragraph the implementer skims than to omit something they'll need to go hunt for.
-
-For every cited context item -- PRD requirement, PRD context or architecture ref, architecture section, backpressure rule, preceding plan, or any other source -- include a one-sentence rationale stating its bearing on this plan (e.g. `architecture.md §4 -- defines the module boundary this requirement must not cross`).
+A short list of section-scoped links to the upstream items the implementer will need, each with a one-sentence rationale stating its bearing on this plan (e.g. `architecture.md §4 -- defines the module boundary this requirement must not cross`).
 A citation without a rationale forces the implementer to reconstruct the planner's reasoning; the rationale is the planner's job.
 
-Include:
+Link, do not copy.
+The implementer follows the link if they need the full text.
+Inline a snippet only when it embodies an interpretive choice the planner made (a chosen signature, a selected error mode, an acceptance criterion mapped to a specific test predicate) -- and even then, keep it to the minimum that conveys the choice.
 
-- **Requirement description and acceptance criteria** -- copy verbatim from the PRD, not summarized.
-  The implementer needs the exact wording to verify against.
-- **CLI specification** -- the exact command, args, flags, stdin/stdout/stderr, exit codes.
-  Copy from PRD.
-- **Relevant architecture decisions** -- the specific modules involved, their public interfaces, key data structures, and how data flows between them.
-  Don't just name the modules; describe the interfaces the implementer will call or implement.
-  Pull from the architecture document's Module Architecture (§4) and Data Flow (§6) sections.
-- **Relevant context items** -- constraints, personas, domain definitions that affect implementation.
-  Copy from PRD context items.
-- **Quality guardrails** -- the exact commands to run for linting, type-checking, formatting, and testing.
-  Copy from `clif-d/backpressure.md` Practitioner Quick Reference.
-  The implementer should not need to look these up.
-- **Error handling conventions** -- how errors are represented, propagated, and mapped to exit codes.
-  Pull from the architecture document's Error Handling Strategy (§7).
-- **Relevant preceding implementation** -- if this plan extends code built by a preceding plan, summarize what already exists: which modules, which interfaces, which test patterns.
-  The implementer needs to know what they're building on top of.
+Typical links to include (omit any that are not load-bearing for this plan):
+
+- Requirement description, acceptance criteria, and CLI spec -- by ID, e.g. `prd.json REQ-007`.
+- Relevant architecture sections -- by §, e.g. `architecture.md §4.1 module:rng`, `architecture.md §6 (data flow)`, `architecture.md §7 (error handling)`.
+- Relevant context items -- by ID, e.g. `prd.json CTX-003`.
+- Quality guardrails -- one link to `backpressure.md` Practitioner Quick Reference; do not re-list the commands.
+- Preceding plans whose code this plan extends -- by path, with one sentence on what they established.
 
 ### 3. Prerequisites
 
@@ -298,73 +286,52 @@ Do not leave them to the implementer to infer.
 ### 5. Implementation Steps
 
 The core of the plan.
-Each step follows this structure:
+Each step is a tight bullet block, two to four lines:
 
 ```markdown
-### Step N: <Short description>
-
-**Test first:**
-- File: `path/to/test/file`
-- Description: What the test verifies, in plain language
-- Test sketch: signatures and pseudocode only; 1-5 lines, no full test bodies.
-  For CLI tests: the command invocation, expected stdout/stderr shape, expected exit code.
-  For unit tests: the function signature under test, example input, expected output shape, expected side effects.
-
-**Implement:**
-- File(s): `path/to/implementation/file(s)`
-- Description: What code to write, referencing specific modules and interfaces from the architecture
-- Signatures: the function/type signatures to add or change (names, parameter types, return types). No bodies.
-- Key decisions: Any implementation choices made and why
-
-**Verify:**
-- Run: `<the specific test command>`
-- Expected: All new tests pass, all existing tests still pass
-- Quality check: `<lint/typecheck command>` passes
+### Step N: <short title>
+- Files: `path/to/impl`, `path/to/test`
+- Test: <one-line description, with signature or assert predicate; reference the AC being verified, e.g. (REQ-007 AC: exits 0 on valid input)>
+- Implement: <one-line description, with the signature(s) to add or change>
+- Done when: <the specific command that returns 0, or the assertion that holds>
 ```
 
-Respect the detail ceiling from the Philosophy section: no full function bodies, no full file contents, no unified diffs.
-Signatures and pseudocode are the ceiling.
+Drop a line if it is empty.
+A trivial step may be just `Files` + `Done when`; a step that closes a requirement may be just `Files` + `Done when: clif-d req done REQ-XXX --commit=<sha>`.
+Respect the detail ceiling: signatures and pseudocode only -- no full function bodies, no full file contents, no unified diffs.
 
-#### Step ordering principles
+The "Step ordering principles" and "Status transition steps" guidance below is **for you, the planner**.
+Do not echo it into the plan output.
 
-1. **Start with the simplest end-to-end path.** The first step should produce a working (if minimal) CLI invocation that exercises the full stack from argument parsing to output.
-2. **Each subsequent step extends functionality.** Add one behavior, one edge case, or one error path per step.
-3. **Error handling is not deferred.** Each step that adds a success path should also add its corresponding error path in the same step or the immediately following step.
-4. **Refactoring gets its own steps.** If a step's implementation reveals a need to restructure, make that a separate step with its own tests.
+**Step ordering principles** (planner-only):
 
-#### Status transition steps
+1. Start with the simplest end-to-end path -- the first step should produce a working CLI invocation across the full stack.
+2. Each subsequent step adds one behavior, edge case, or error path.
+3. Pair each success path with its error path in the same or immediately following step.
+4. Refactoring gets its own steps with their own tests.
 
-Every status transition named in §4 **High-level Requirements Realized** must appear as an explicit step (or be folded into an existing step's Verify block).
-Low-level requirement transitions are similarly explicit -- do not rely on the implementer inferring which `clif-d req start`/`clif-d req done` commands to run.
+**Status transition steps** (planner-only -- emit as explicit steps in the output, but do not include this rationale):
 
-- **First step** for each low-level requirement and each partially-realized high-level requirement not already `in_progress`: transition to `in_progress` via `clif-d req start REQ-XXX`.
-- **Closing step** for each low-level requirement and each fully-realized high-level requirement: transition to `done` via `clif-d req done REQ-XXX --commit=<sha>` using the SHA of the commit that delivers the final acceptance criterion.
+- First step for each low-level requirement and each partially-realized high-level requirement not already `in_progress`: `clif-d req start REQ-XXX`.
+- Closing step for each low-level requirement and each fully-realized high-level requirement: `clif-d req done REQ-XXX --commit=<sha>`.
 - A single closing step may close multiple requirements when one commit delivers them all.
 
-### 6. Acceptance Criteria Verification
+### 6. Acceptance Criteria Verification (optional)
 
-A checklist mapping the requirement's acceptance criteria to specific tests:
+Include this section **only** when the steps do not already encode the AC mapping -- e.g. an AC verified by a combination of tests across multiple steps, or a prose AC whose verification is not obvious from any single test name.
+If each step's `Test:` line already names the AC it verifies (e.g. `(REQ-007 AC: exits 0 on valid input)`), omit this section entirely.
+
+When included, the format is a checklist:
 
 ```markdown
 - [ ] **Criterion**: "Given X, when Y, then Z"
   - **Verified by**: `test_file.py::test_name` (Step N)
-- [ ] **Criterion**: "The tool outputs valid JSON to stdout"
-  - **Verified by**: `test_file.py::test_json_output` (Step M)
 ```
 
-For high-level (prose) acceptance criteria, map them to the collection of tests that together verify the criterion.
+### 7. Files Created or Modified (optional)
 
-### 7. Files Created or Modified
-
-A summary list of every file the plan touches:
-
-```markdown
-| File | Action | Step |
-|------|--------|------|
-| `src/lib/auth.rs` | Create | 2 |
-| `tests/integration/test_auth_login.rs` | Create | 1 |
-| `src/cli/auth.rs` | Modify | 3 |
-```
+Include this section **only** when the steps' `Files:` lines do not already make the file inventory obvious -- e.g. when a file is touched across many steps and the implementer benefits from a consolidated view.
+If each step's `Files:` line is sufficient, omit this section.
 
 ### 8. Open Questions and Assumptions
 
@@ -387,12 +354,12 @@ Once you've explored the codebase and resolved any ambiguities:
 1. **Name the output file** using the convention `clif-d/plans/active/plan-<requirement-ids>.md` (e.g., `clif-d/plans/active/plan-REQ-003.md`) in the product repository.
    Create the directory if it does not yet exist.
 2. **Write the plan** following the output structure above.
-3. **Verify traceability**: every acceptance criterion from the target requirements should appear in the Acceptance Criteria Verification section.
-   Every architecture element referenced by the requirements should appear in the Context Summary.
-   Every cited item in the Context Summary carries a one-sentence rationale stating its bearing on this plan.
-   Every high-level requirement in §4 should have at least one status-transition step in §5.
-4. **Verify completeness**: every file mentioned in Implementation Steps should appear in the Files Created or Modified summary.
-   Every test mentioned should have a corresponding implementation step.
+3. **Verify traceability**: each step names the upstream item(s) it satisfies in a short reference like `(REQ-031 AC: cargo metadata exits 0)`.
+   Each Context Summary citation carries a one-sentence rationale.
+   Each high-level requirement in §4 has at least one status-transition step in §5.
+   Do not enumerate every AC and architecture element in prose -- the per-step references are the trace.
+4. **Verify completeness**: every test mentioned in a step has a corresponding implementation step.
+   If §6 or §7 is included, it adds information the per-step bullets do not already encode; if not, omit it.
 5. **Review step granularity**: each step should be completable and verifiable in isolation.
    If a step depends on uncommitted work from a previous step, that's fine -- but if a step can't be tested without completing the *next* step, the plan needs restructuring.
 6. **Enforce the detail ceiling**: scan each step for over-prescription.
