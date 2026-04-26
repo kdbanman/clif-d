@@ -65,6 +65,21 @@ Over-prescription is a failure mode, not thoroughness.
 When the plan hands the implementer a finished diff, it bypasses the Red-Green-Refactor loop, pins implementation choices that TDD should surface, and makes the plan expensive to review.
 The implementer has their own references and judgment; trust them to turn a signature plus a behaviour description into working code.
 
+Specific anti-patterns the ceiling rules out:
+
+- Do not re-enumerate items the architecture or PRD already lists.
+  Write "add the deps in `architecture.md` §2 for `goose-core`", not the list.
+  The architecture is the source of truth; the plan is the trigger.
+- Test predicates are described in plain language. "`config/sim.toml` parses and contains every `SimParams` field" -- not a Python one-liner that asserts it.
+  The implementer writes the runnable form.
+- Never inline file contents -- JSON, TOML, YAML, fixture data -- even if the file is small.
+  Describe the shape by pointing at the struct it must satisfy.
+
+### Length is a planning signal
+
+When a plan runs long, the planner is doing someone else's job: the implementer's (writing code), the architecture's (re-explaining context), or the user's (defending assumptions instead of asking).
+The fix is always to cut, not to compress.
+
 ---
 
 ## Input
@@ -193,9 +208,15 @@ Most ambiguity in requirements can be resolved by reading upstream documents car
 The requirement author couldn't (and shouldn't) inline every detail -- that's what the reference graph is for.
 Your job is to follow the references, synthesize the answer, and bake it into the plan.
 
+### Resolve, do not punt
+
+If a question is answerable by reading official documentation -- a manifest reference, a library README, an RFC -- resolve it before writing the plan.
+"The implementer can trial it" is not an assumption; it is an unresolved question masquerading as one.
+Punting an answerable question downstream poisons the plan: the implementer pays the resolution cost mid-Red-Green-Refactor, when context is most expensive.
+
 ### Interrogation
 
-After upstream tracing, interrogation is for genuine ambiguities that can't be answered by reading.
+After upstream tracing and documentation lookup, interrogation is for genuine ambiguities that can't be answered by reading.
 Ask the user only when:
 - The requirement's acceptance criteria are ambiguous at a level that affects implementation approach, and no upstream document resolves it
 - There's a design choice not covered by the architecture document
@@ -236,7 +257,7 @@ The implementer should be able to jump directly to the relevant module decomposi
 
 ### 1. Objective
 
-A concise summary (2-3 sentences) of what this plan delivers.
+A concise summary of what this plan delivers, in **at most 2 sentences**.
 State the user-visible behavior that will work when the plan is complete.
 Reference the requirement IDs.
 
@@ -244,6 +265,9 @@ Reference the requirement IDs.
 
 A short list of section-scoped links to the upstream items the implementer will need, each with a one-sentence rationale stating its bearing on this plan (e.g. `architecture.md §4 -- defines the module boundary this requirement must not cross`).
 A citation without a rationale forces the implementer to reconstruct the planner's reasoning; the rationale is the planner's job.
+
+**At most 8 bullets, each at most 1 sentence.**
+If you find yourself paraphrasing the cited section, delete the paraphrase -- the link suffices.
 
 Link, do not copy.
 The implementer follows the link if they need the full text.
@@ -300,6 +324,12 @@ Drop a line if it is empty.
 A trivial step may be just `Files` + `Done when`; a step that closes a requirement may be just `Files` + `Done when: clif-d req done REQ-XXX --commit=<sha>`.
 Respect the detail ceiling: signatures and pseudocode only -- no full function bodies, no full file contents, no unified diffs.
 
+**Per-line budgets:**
+
+- Each step's `Implement:` line is **at most 2 sentences**.
+- Each step's `Test:` line is **one sentence describing what's verified** -- never a runnable shell or Python script.
+  The implementer translates the predicate into the test harness.
+
 The "Step ordering principles" and "Status transition steps" guidance below is **for you, the planner**.
 Do not echo it into the plan output.
 
@@ -315,11 +345,14 @@ Do not echo it into the plan output.
 - First step for each low-level requirement and each partially-realized high-level requirement not already `in_progress`: `clif-d req start REQ-XXX`.
 - Closing step for each low-level requirement and each fully-realized high-level requirement: `clif-d req done REQ-XXX --commit=<sha>`.
 - A single closing step may close multiple requirements when one commit delivers them all.
+- `clif-d req start` / `clif-d req done` are **one-line bullets, not full step blocks**.
+  When several requirements close in the same commit, group them into a single closing step.
 
 ### 6. Acceptance Criteria Verification (optional)
 
-Include this section **only** when the steps do not already encode the AC mapping -- e.g. an AC verified by a combination of tests across multiple steps, or a prose AC whose verification is not obvious from any single test name.
-If each step's `Test:` line already names the AC it verifies (e.g. `(REQ-007 AC: exits 0 on valid input)`), omit this section entirely.
+**Default: omit.**
+Include only when an AC is verified by a combination of tests across multiple steps and that combination isn't visible from any single `Test:` line.
+If your per-step `Test:` lines already name the AC (e.g. `(REQ-007 AC: exits 0 on valid input)`), this section is duplication -- delete it.
 
 When included, the format is a checklist:
 
@@ -330,15 +363,19 @@ When included, the format is a checklist:
 
 ### 7. Files Created or Modified (optional)
 
-Include this section **only** when the steps' `Files:` lines do not already make the file inventory obvious -- e.g. when a file is touched across many steps and the implementer benefits from a consolidated view.
-If each step's `Files:` line is sufficient, omit this section.
+**Default: omit.**
+Include only when one file is touched across many steps and a consolidated view materially helps.
+If the per-step `Files:` lines already make the inventory obvious, this section is duplication -- delete it.
 
 ### 8. Open Questions and Assumptions
 
 Any assumptions made during planning that the implementer should be aware of.
 Flag anything where the plan made a judgment call that might need revisiting.
 
-**Open questions should be rare.** If this section has more than one or two items, that's a signal of one of the following:
+**At most 2 items, each at most 1 sentence.**
+Defending the assumption against alternatives turns a note into an essay; cut it or escalate to the user before writing the plan.
+
+If this section has more than one or two items, that's a signal of one of the following:
 
 1. That the planning phase didn't resolve enough ambiguity.
    Go back to the upstream documents and the user before leaving questions for the implementer.
@@ -365,11 +402,21 @@ Once you've explored the codebase and resolved any ambiguities:
 6. **Enforce the detail ceiling**: scan each step for over-prescription.
    No step should contain more than ~10 consecutive lines of code in any block, and no step should contain a unified diff or a full function/file body.
    If a snippet exceeds the ceiling, trim it to a signature plus pseudocode.
-7. **Commit the plan.** The plan file is a project artifact and should be committed when complete.
+7. **Self-audit before saving.** Run this checklist against the draft and fix any failure before committing:
+   - [ ] §1 Objective: at most 2 sentences?
+   - [ ] §2 Context Summary: at most 8 bullets, each at most 1 sentence, no paraphrase of cited material?
+   - [ ] No step inlines a list of items already enumerated upstream (deps, config fields, AC text)?
+   - [ ] No `Test:` line is a runnable script (`python3 -c ...`, multi-pipe shell, inline assertion code)?
+   - [ ] No step inlines file contents (JSON, TOML, YAML, fixture data)?
+   - [ ] §6 and §7 omitted unless they add information the per-step bullets do not?
+   - [ ] §8 at most 2 items, each at most 1 sentence, no defense-against-alternatives prose?
+   - [ ] `clif-d req start` / `req done` rendered as one-line bullets, not full step blocks?
+   - [ ] Length: scaffolding/config-only plan at most ~150 lines; feature plan at most ~300 lines?
+8. **Commit the plan.** The plan file is a project artifact and should be committed when complete.
    Use a clear commit message with a `Requirement:` trailer for each targeted requirement so the plan is discoverable via `git log --grep`.
    Example subject: `plans: Add implementation plan for REQ-003`.
    The body should briefly state what the plan covers and name the requirement IDs.
-8. **Transition the target requirement to `in_progress`.** As the final action of this skill, run `clif-d req start <REQ-ID>` for each target low-level requirement (and any partially-realized high-level requirement listed in §4 that is currently `not_started`).
+9. **Transition the target requirement to `in_progress`.** As the final action of this skill, run `clif-d req start <REQ-ID>` for each target low-level requirement (and any partially-realized high-level requirement listed in §4 that is currently `not_started`).
    This makes the claim visible to cross-worktree or cross-session agents before implementation begins.
 
 ---
