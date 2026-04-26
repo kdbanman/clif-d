@@ -1,7 +1,7 @@
 {
   "name": "clif-d",
   "description": "CLI-First Decomposition: structured product development skills from concept through requirements, architecture, quality guardrails, planning, and implementation",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "author": {
     "name": "kdbanman"
   },
